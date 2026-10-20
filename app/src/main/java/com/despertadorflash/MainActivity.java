@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
   Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);
   if(v!=null&&v.hasVibrator()){long[] pattern={0,900,300,900,300,900,300};if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(pattern,0));else v.vibrate(pattern,0);}
   AlertDialog dialog=new AlertDialog.Builder(this).setView(panel).setPositiveButton("ESTOY DESPIERTO",(d,w)->stopAlarmEffects()).setNeutralButton("POSPONER 10 MIN",null).setOnDismissListener(d->stopAlarmEffects()).setCancelable(false).create();
-  dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{if(snoozeAlarm())dialog.dismiss();}));
+  dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(buttonView->{if(snoozeAlarm())dialog.dismiss();}));
   dialog.show();
  }
 
