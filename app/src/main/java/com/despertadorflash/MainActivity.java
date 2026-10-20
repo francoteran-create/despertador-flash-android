@@ -101,6 +101,12 @@ public class MainActivity extends Activity {
  Button write=btn("Pedir que escriban");root.addView(write);write.setOnClickListener(v->showFullMessage("POR FAVOR, ESCRIBÍ LO QUE DECÍS"));
  Button urgent=btn("Mostrar LLAMÁ A EMERGENCIAS");root.addView(urgent);urgent.setOnClickListener(v->showFullMessage("LLAMÁ A EMERGENCIAS"));
  Button repeat=btn("Pedir que repitan despacio");root.addView(repeat);repeat.setOnClickListener(v->showFullMessage("POR FAVOR, REPETÍ MÁS DESPACIO"));
+ Button testFlash=btn("PROBAR FLASH LED · 5 SEGUNDOS");root.addView(testFlash);testFlash.setOnClickListener(v->{
+  if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);Toast.makeText(this,"Autorizá Cámara y volvé a tocar Probar flash",Toast.LENGTH_LONG).show();return;}
+  if(torch==null||!torch.start()){new AlertDialog.Builder(this).setTitle("Flash no disponible").setMessage("AURORA no pudo encender la linterna. Comprobá que el teléfono tenga flash trasero, que la cámara esté cerrada y que AURORA tenga permiso de Cámara.").setPositiveButton("Entendido",null).show();return;}
+  Toast.makeText(this,"El flash debe parpadear durante 5 segundos",Toast.LENGTH_LONG).show();
+  new Handler(Looper.getMainLooper()).postDelayed(()->{if(torch!=null)torch.stop();},5000);
+ });
  Button test=btn("Probar vibración");root.addView(test);test.setOnClickListener(v->vibrate());
  Button preview=btn("Probar pantalla de alarma");root.addView(preview);preview.setOnClickListener(v->showAlarm());
  Button stopVibration=btn("Detener vibración");root.addView(stopVibration);stopVibration.setOnClickListener(v->stopAlarmEffects());
