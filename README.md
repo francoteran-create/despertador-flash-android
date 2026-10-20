@@ -1,18 +1,18 @@
 # AURORA — Despertador accesible
 
-Proyecto Android para personas sordas e hipoacúsicas.
+Proyecto gratuito de accesibilidad para personas sordas e hipoacúsicas.
 
 ## Estado real (20 de octubre de 2026)
-- Preparada localmente la versión fuente 1.3: alarmas semanales, luz y vibración configurables, temporizador de 5/10 minutos y cartel de texto grande.
-- Este repositorio tiene configurado un flujo de GitHub Actions, pero **aún no contiene todo el código Android necesario para compilar**.
-- No existe una APK compilada y probada de esta versión.
+- **Código Android subido:** interfaz de alto contraste, cinco alarmas diarias configurables, vibración, temporizadores de 5/10 minutos y cartel de texto grande.
+- **GitHub Actions configurado:** compila APK debug mediante Gradle y publica el artefacto si el build tiene éxito.
+- **Sin verificación aún:** no se ha comprobado el resultado del build ni probado en teléfonos reales.
+- **Limitaciones actuales:** las alarmas todavía no incluyen repetición semanal configurable, destellos de pantalla/linterna, notificación de pantalla completa ni servicio persistente; la activación de pantalla desde segundo plano puede ser bloqueada por Android. El temporizador requiere mantener la actividad activa.
 
-## Plan integral
-1. Verificar compilación APK y pruebas de alarmas, permisos, batería y reinicios.
-2. Accesibilidad: controles grandes, alto contraste, personalización táctil, prevención de destellos fotosensibles.
-3. Comunicación: mensajes grandes y transcripción en tiempo real.
-4. Entorno: notificaciones de timbre y reconocimiento de sonidos (no como sistema de seguridad).
-5. Alertas: llamadas y contactos prioritarios, SOS con confirmación.
-6. Hardware opcional: wearables, vibrador de almohada y detectores certificados compatibles.
+## Próximas etapas
+1. Compilación comprobada y corrección de errores.
+2. Alarmas confiables con pantalla bloqueada, reinicio, batería y permisos.
+3. Configuración de vibración, luz y accesibilidad sin destellos obligatorios.
+4. Transcripción de voz a texto y avisos prioritarios.
+5. Integraciones opcionales con timbre, dispositivos vibratorios externos y sensores certificados.
 
-**Seguridad:** AURORA no sustituye detectores certificados de humo, incendio o monóxido de carbono ni servicios de emergencia. Nunca confiar exclusivamente en el teléfono para alertas críticas.
+**Seguridad:** AURORA no sustituye detectores certificados de humo, incendio o monóxido de carbono ni servicios de emergencia. No confiar exclusivamente en el teléfono para alertas críticas.
