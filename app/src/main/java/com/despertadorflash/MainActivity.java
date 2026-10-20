@@ -14,7 +14,7 @@ public class MainActivity extends Activity {
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(17);b.setMinHeight(dp(58));return b;}
- public void onCreate(Bundle b){super.onCreate(b);prefs=getSharedPreferences(PREF,0);render();if(getIntent().getBooleanExtra("ring",false))showAlarm();if(getIntent().getBooleanExtra("timer_finished",false))new AlertDialog.Builder(this).setTitle("AURORA").setMessage("¡Tiempo cumplido!").setPositiveButton("Aceptar",null).show();}
+ public void onCreate(Bundle b){super.onCreate(b);prefs=getSharedPreferences(PREF,0);render();if(getIntent().getBooleanExtra("ring",false))showAlarm();if(getIntent().getBooleanExtra("timer_finished",false))showTimerFinished();}
  void stopAlarmEffects(){
   alarmActive=false; activeAlarmId=-1;
   if(flashTask!=null){flashHandler.removeCallbacks(flashTask);flashTask=null;}
@@ -28,6 +28,14 @@ public class MainActivity extends Activity {
   Intent intent=new Intent(this,AlarmReceiver.class).putExtra("snooze",true).putExtra("id",activeAlarmId);
   PendingIntent pending=PendingIntent.getBroadcast(this,4100+activeAlarmId,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   try{long when=System.currentTimeMillis()+10*60000L;if(Build.VERSION.SDK_INT>=31&&!manager.canScheduleExactAlarms()){Toast.makeText(this,"Habilitá alarmas exactas para posponer",Toast.LENGTH_LONG).show();return false;}manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pending);Toast.makeText(this,"Alarma pospuesta 10 minutos",Toast.LENGTH_LONG).show();return true;}catch(SecurityException ex){Toast.makeText(this,"No se pudo posponer: falta permiso de alarmas",Toast.LENGTH_LONG).show();return false;}
+ }
+ void showTimerFinished(){
+  if(isFinishing())return;
+  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+  Vibrator vib=(Vibrator)getSystemService(VIBRATOR_SERVICE);
+  if(vib!=null&&vib.hasVibrator()){long[] pattern={0,900,250,900,250,900};if(Build.VERSION.SDK_INT>=26)vib.vibrate(VibrationEffect.createWaveform(pattern,0));else vib.vibrate(pattern,0);}
+  TextView message=txt("¡TIEMPO CUMPLIDO!",32);message.setGravity(Gravity.CENTER);message.setTypeface(null,Typeface.BOLD);message.setBackgroundColor(0xffffd633);message.setTextColor(Color.BLACK);
+  new AlertDialog.Builder(this).setTitle("AURORA · TEMPORIZADOR").setView(message).setPositiveButton("DETENER ALERTA",(d,w)->{if(vib!=null)vib.cancel();getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);}).setOnDismissListener(d->{if(vib!=null)vib.cancel();getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);}).setCancelable(false).show();
  }
  void showAlarm(){
   if(alarmActive)return;
@@ -47,7 +55,7 @@ public class MainActivity extends Activity {
  }
 
  @Override public void onBackPressed(){if(alarmActive){new AlertDialog.Builder(this).setTitle("Alarma activa").setMessage("Confirmá que estás despierto para detener la alarma.").setPositiveButton("Entendido",null).show();return;}super.onBackPressed();}
- @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);if(i.getBooleanExtra("ring",false))showAlarm();if(i.getBooleanExtra("timer_finished",false))new AlertDialog.Builder(this).setTitle("AURORA").setMessage("¡Tiempo cumplido!").setPositiveButton("Aceptar",null).show();}
+ @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);if(i.getBooleanExtra("ring",false))showAlarm();if(i.getBooleanExtra("timer_finished",false))showTimerFinished();}
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}}
  void render(){
@@ -69,7 +77,7 @@ public class MainActivity extends Activity {
  TextView timersHeading=txt("◷  TEMPORIZADORES",22);
  Button goTimers=btn("Ir a temporizadores ↓");root.addView(goTimers);goTimers.setOnClickListener(v->scroll.post(()->scroll.smoothScrollTo(0,timersHeading.getTop())));
  root.addView(timersHeading);
- long savedEnd=prefs.getLong("timer_end",0);long remaining=Math.max(0,savedEnd-System.currentTimeMillis());TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",32);root.addView(counter);if(remaining>0){timer=new CountDownTimer(remaining,1000){public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){counter.setText("Esperando aviso…");}}.start();}
+ long savedEnd=prefs.getLong("timer_end",0);long remaining=Math.max(0,savedEnd-System.currentTimeMillis());TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",32);root.addView(counter);if(remaining>0){timer=new CountDownTimer(remaining,1000){public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){counter.setText("¡TIEMPO CUMPLIDO!");if(prefs.getLong("timer_end",0)>0){prefs.edit().remove("timer_end").apply();showTimerFinished();}}}.start();}
  Button five=btn("Iniciar 5 minutos");root.addView(five);five.setOnClickListener(v->countdown(5,counter));
  Button ten=btn("Iniciar 10 minutos");root.addView(ten);ten.setOnClickListener(v->countdown(10,counter));
  Button stop=btn("Detener temporizador");root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("Detenido");});
@@ -123,7 +131,7 @@ public class MainActivity extends Activity {
    if(Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms()){new AlertDialog.Builder(this).setTitle("Permiso necesario").setMessage("Para avisarte a tiempo con la aplicación cerrada, habilitá las alarmas exactas.").setPositiveButton("Configurar",(d,w)->startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,android.net.Uri.parse("package:"+getPackageName())))).setNegativeButton("Cancelar",null).show();return;}
    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,end,pi);prefs.edit().putLong("timer_end",end).apply();
   }catch(SecurityException ex){new AlertDialog.Builder(this).setMessage("Android no permitió programar el temporizador exacto.").setPositiveButton("Aceptar",null).show();return;}
-  timer=new CountDownTimer(minutes*60000L,1000){public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){output.setText("Esperando aviso…");}}.start();
+  timer=new CountDownTimer(minutes*60000L,1000){public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){output.setText("¡TIEMPO CUMPLIDO!");if(prefs.getLong("timer_end",0)>0){prefs.edit().remove("timer_end").apply();showTimerFinished();}}}.start();
  }
  void vibrate(){Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null&&v.hasVibrator()){long[] pat={0,800,200,800,200,800};if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(pat,-1));else v.vibrate(pat,-1);}}
  @Override protected void onDestroy(){if(timer!=null)timer.cancel();if(alarmActive)stopAlarmEffects();super.onDestroy();}
