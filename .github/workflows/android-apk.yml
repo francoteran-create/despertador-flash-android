@@ -22,6 +22,10 @@ jobs:
           gradle-version: '8.7'
       - name: Compilar APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
+      - name: Inspeccionar manifiesto y paquete instalable
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk | head -n 20
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk | grep -q "package: name=\x27com.despertadorflash\x27"
       - name: Verificar APK generado y firma de depuración
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
