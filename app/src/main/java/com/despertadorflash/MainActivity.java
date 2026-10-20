@@ -58,6 +58,8 @@ public class MainActivity extends Activity {
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
  Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String s=msg.getText().toString().trim();if(!s.isEmpty()){TextView big=txt(s,30);big.setGravity(Gravity.CENTER);new AlertDialog.Builder(this).setView(big).setPositiveButton("Cerrar",null).show();}});
  Button test=btn("Probar vibración");root.addView(test);test.setOnClickListener(v->vibrate());
+ Button preview=btn("Probar pantalla de alarma");root.addView(preview);preview.setOnClickListener(v->showAlarm());
+ Button stopVibration=btn("Detener vibración");root.addView(stopVibration);stopVibration.setOnClickListener(v->stopAlarmEffects());
  root.addView(txt("Importante: este prototipo no reemplaza alarmas de emergencia certificadas. La ejecución en segundo plano depende de Android y del fabricante.",13));
  }
  void alarmRow(int id){
