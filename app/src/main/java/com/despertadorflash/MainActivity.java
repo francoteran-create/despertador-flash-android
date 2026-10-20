@@ -24,7 +24,7 @@ public class MainActivity extends Activity {
  }
  void snoozeAlarm(){
   AlarmManager manager=(AlarmManager)getSystemService(ALARM_SERVICE);
-  Intent intent=new Intent(this,AlarmReceiver.class).putExtra("snooze",true);
+  Intent intent=new Intent(this,AlarmReceiver.class).putExtra("snooze",true).putExtra("id",getIntent().getIntExtra("alarm_id",0));
   PendingIntent pending=PendingIntent.getBroadcast(this,4100,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   try{long when=System.currentTimeMillis()+10*60000L;if(Build.VERSION.SDK_INT>=31&&!manager.canScheduleExactAlarms()){Toast.makeText(this,"Habilitá alarmas exactas para posponer",Toast.LENGTH_LONG).show();return;}manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pending);Toast.makeText(this,"Alarma pospuesta 10 minutos",Toast.LENGTH_LONG).show();}catch(SecurityException ex){Toast.makeText(this,"No se pudo posponer: falta permiso de alarmas",Toast.LENGTH_LONG).show();}
  }
