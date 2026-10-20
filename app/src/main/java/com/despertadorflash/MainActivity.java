@@ -10,7 +10,7 @@ import android.widget.*;
 import java.util.*;
 public class MainActivity extends Activity {
  static final String PREF="aurora";
- LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch;
+ LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch; boolean alarmsPage=false;
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(17);b.setMinHeight(dp(58));return b;}
@@ -63,6 +63,7 @@ public class MainActivity extends Activity {
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}}
  void render(){
+ if(alarmsPage){renderAlarmsPage();return;}
  if(timer!=null){timer.cancel();timer=null;}
  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff090b11);scroll.addView(root);setContentView(scroll);
  TextView title=txt("✦ AURORA",34);title.setTextColor(0xffffd633);title.setTypeface(null,Typeface.BOLD);root.addView(title);
@@ -77,10 +78,7 @@ public class MainActivity extends Activity {
  if(Build.VERSION.SDK_INT>=23&&prefs.getBoolean("torch_alert",true)&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){Button torchPermission=btn("Autorizar flash LED (Cámara)");root.addView(torchPermission);torchPermission.setOnClickListener(v->requestPermissions(new String[]{android.Manifest.permission.CAMERA},2));}
  root.addView(txt("Aviso: el flash LED intermitente puede afectar a personas fotosensibles. Podés desactivarlo con el interruptor anterior.",13));
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
- TextView alarmsHeading=txt("⏰  MIS ALARMAS",22);
- Button goAlarms=btn("Ir a mis alarmas ↓");root.addView(goAlarms);goAlarms.setOnClickListener(v->scroll.post(()->scroll.smoothScrollTo(0,alarmsHeading.getTop())));
- root.addView(alarmsHeading);
- for(int id=0;id<5;id++)alarmRow(id);
+ Button openAlarms=btn("⏰  MIS ALARMAS  ›");root.addView(openAlarms);openAlarms.setOnClickListener(v->{alarmsPage=true;render();});
  TextView timersHeading=txt("◷  TEMPORIZADORES",22);
  Button goTimers=btn("Ir a temporizadores ↓");root.addView(goTimers);goTimers.setOnClickListener(v->scroll.post(()->scroll.smoothScrollTo(0,timersHeading.getTop())));
  root.addView(timersHeading);
@@ -113,11 +111,31 @@ public class MainActivity extends Activity {
   Button close=btn("Cerrar mensaje");layout.addView(close);close.setOnClickListener(v->dialog.dismiss());
   dialog.setContentView(layout);dialog.show();
  }
+ void renderAlarmsPage(){
+  if(timer!=null){timer.cancel();timer=null;}
+  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff090b11);scroll.addView(root);setContentView(scroll);
+  Button back=btn("← Volver al inicio");root.addView(back);back.setOnClickListener(v->{alarmsPage=false;render();});
+  TextView heading=txt("MIS ALARMAS",32);heading.setTextColor(0xffffd633);heading.setTypeface(null,Typeface.BOLD);root.addView(heading);
+  root.addView(txt("Creá una alarma y elegí la hora que quieras. No hay horarios predefinidos.",16));
+  int count=0;
+  for(int id=0;id<5;id++)if(prefs.getBoolean("created"+id,false)){alarmRow(id);count++;}
+  if(count==0)root.addView(txt("Todavía no creaste ninguna alarma.",18));
+  if(count<5){Button add=btn("+ Crear alarma");root.addView(add);add.setOnClickListener(v->{
+   int slot=-1;for(int j=0;j<5;j++)if(!prefs.getBoolean("created"+j,false)){slot=j;break;}
+   if(slot<0)return;final int id=slot;
+   Calendar now=Calendar.getInstance();
+   new TimePickerDialog(this,(picker,h,m)->{
+    prefs.edit().putBoolean("created"+id,true).putInt("h"+id,h).putInt("m"+id,m).putBoolean("on"+id,true).apply();
+    schedule(this,id);render();
+   },now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE),true).show();
+  });}
+ }
  void alarmRow(int id){
  int h=prefs.getInt("h"+id,7),m=prefs.getInt("m"+id,0);
  Switch sw=new Switch(this);sw.setText(String.format(Locale.getDefault(),"Alarma %d   %02d:%02d",id+1,h,m));sw.setTextColor(Color.WHITE);sw.setTextSize(20);sw.setChecked(prefs.getBoolean("on"+id,false));root.addView(sw);
  sw.setOnCheckedChangeListener((v,on)->{prefs.edit().putBoolean("on"+id,on).apply();schedule(this,id);if(on&&prefs.getInt("days"+id,127)==0)Toast.makeText(this,"Elegí al menos un día para esta alarma",Toast.LENGTH_LONG).show();});
  Button days=btn("Días de la alarma · "+(id+1));root.addView(days);days.setOnClickListener(v->{String[] labels={"Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};boolean[] checked=new boolean[7];int mask=prefs.getInt("days"+id,127);for(int j=0;j<7;j++)checked[j]=(mask&(1<<j))!=0;new AlertDialog.Builder(this).setTitle("Elegí los días").setMultiChoiceItems(labels,checked,(d,which,on)->checked[which]=on).setPositiveButton("Guardar",(d,w)->{int msk=0;for(int j=0;j<7;j++)if(checked[j])msk|=(1<<j);prefs.edit().putInt("days"+id,msk).apply();schedule(this,id);if(msk==0)Toast.makeText(this,"Sin días seleccionados: esta alarma no sonará",Toast.LENGTH_LONG).show();}).setNegativeButton("Cancelar",null).show();});
+ Button delete=btn("Eliminar alarma · "+(id+1));root.addView(delete);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Eliminar alarma").setMessage("¿Querés eliminar esta alarma?").setPositiveButton("Eliminar",(d,w)->{prefs.edit().putBoolean("on"+id,false).putBoolean("created"+id,false).apply();schedule(this,id);render();}).setNegativeButton("Cancelar",null).show());
  Button edit=btn("Cambiar hora · "+(id+1));root.addView(edit);edit.setOnClickListener(v->new TimePickerDialog(this,(picker,hh,mm)->{prefs.edit().putInt("h"+id,hh).putInt("m"+id,mm).putBoolean("on"+id,true).apply();schedule(this,id);render();},h,m,true).show());
  }
  static void schedule(Context c,int id){
