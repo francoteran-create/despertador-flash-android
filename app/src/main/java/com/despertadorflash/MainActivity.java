@@ -70,6 +70,9 @@ public class MainActivity extends Activity {
  root.addView(txt("COMUNICACIÓN VISUAL",22));
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
  Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
+ Button yes=btn("Mostrar SÍ");root.addView(yes);yes.setOnClickListener(v->showFullMessage("SÍ"));
+ Button no=btn("Mostrar NO");root.addView(no);no.setOnClickListener(v->showFullMessage("NO"));
+ Button help=btn("Mostrar NECESITO AYUDA");root.addView(help);help.setOnClickListener(v->showFullMessage("NECESITO AYUDA"));
  Button test=btn("Probar vibración");root.addView(test);test.setOnClickListener(v->vibrate());
  Button preview=btn("Probar pantalla de alarma");root.addView(preview);preview.setOnClickListener(v->showAlarm());
  Button stopVibration=btn("Detener vibración");root.addView(stopVibration);stopVibration.setOnClickListener(v->stopAlarmEffects());
