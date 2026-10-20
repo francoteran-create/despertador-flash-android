@@ -10,7 +10,7 @@ import android.widget.*;
 import java.util.*;
 public class MainActivity extends Activity {
  static final String PREF="aurora";
- LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; int activeAlarmId=-1; TorchFlasher torch;
+ LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch;
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(17);b.setMinHeight(dp(58));return b;}
@@ -32,13 +32,14 @@ public class MainActivity extends Activity {
   try{long when=System.currentTimeMillis()+10*60000L;if(Build.VERSION.SDK_INT>=31&&!manager.canScheduleExactAlarms()){Toast.makeText(this,"Habilitá alarmas exactas para posponer",Toast.LENGTH_LONG).show();return false;}manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,pending);Toast.makeText(this,"Alarma pospuesta 10 minutos",Toast.LENGTH_LONG).show();return true;}catch(SecurityException ex){Toast.makeText(this,"No se pudo posponer: falta permiso de alarmas",Toast.LENGTH_LONG).show();return false;}
  }
  void showTimerFinished(){
-  if(isFinishing())return;
+  if(isFinishing()||timerAlertActive||alarmActive)return;
+  timerAlertActive=true;
   getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
   startTorchAlert();
   Vibrator vib=(Vibrator)getSystemService(VIBRATOR_SERVICE);
   if(vib!=null&&vib.hasVibrator()){long[] pattern={0,900,250,900,250,900};if(Build.VERSION.SDK_INT>=26)vib.vibrate(VibrationEffect.createWaveform(pattern,0));else vib.vibrate(pattern,0);}
   TextView message=txt("¡TIEMPO CUMPLIDO!",32);message.setGravity(Gravity.CENTER);message.setTypeface(null,Typeface.BOLD);message.setBackgroundColor(0xffffd633);message.setTextColor(Color.BLACK);
-  new AlertDialog.Builder(this).setTitle("AURORA · TEMPORIZADOR").setView(message).setPositiveButton("DETENER ALERTA",(d,w)->{if(vib!=null)vib.cancel();if(torch!=null)torch.stop();getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);}).setOnDismissListener(d->{if(vib!=null)vib.cancel();getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);}).setCancelable(false).show();
+  new AlertDialog.Builder(this).setTitle("AURORA · TEMPORIZADOR").setView(message).setPositiveButton("DETENER ALERTA",(d,w)->{if(vib!=null)vib.cancel();if(torch!=null)torch.stop();timerAlertActive=false;getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);}).setOnDismissListener(d->{if(vib!=null)vib.cancel();if(torch!=null)torch.stop();timerAlertActive=false;getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);}).setCancelable(false).show();
  }
  void showAlarm(){
   if(alarmActive)return;
