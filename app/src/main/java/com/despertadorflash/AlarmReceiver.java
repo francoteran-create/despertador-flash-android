@@ -6,8 +6,9 @@ import android.graphics.Color;
 public class AlarmReceiver extends BroadcastReceiver {
  public void onReceive(Context c,Intent i){
   int id=i.getIntExtra("id",0);
-  if(!i.getBooleanExtra("snooze",false))MainActivity.schedule(c,id);
-  Intent open=new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("ring",true);
+  boolean snooze=i.getBooleanExtra("snooze",false);
+  if(!snooze)MainActivity.schedule(c,id);
+  Intent open=new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("ring",true).putExtra("alarm_id",id);
   PendingIntent tap=PendingIntent.getActivity(c,1000+id,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
   String channel="aurora_alarm";
