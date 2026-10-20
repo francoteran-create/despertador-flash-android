@@ -14,7 +14,9 @@ public class MainActivity extends Activity {
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(17);b.setMinHeight(dp(58));return b;}
- public void onCreate(Bundle b){super.onCreate(b);prefs=getSharedPreferences(PREF,0);render();if(getIntent().getBooleanExtra("ring",false))new AlertDialog.Builder(this).setTitle("AURORA").setMessage("Es hora de despertar").setPositiveButton("Estoy despierto",null).show();}
+ public void onCreate(Bundle b){super.onCreate(b);prefs=getSharedPreferences(PREF,0);render();if(getIntent().getBooleanExtra("ring",false))showAlarm();}
+ void showAlarm(){getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED|android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON|android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);new AlertDialog.Builder(this).setTitle("AURORA · ¡DESPERTÁ!").setMessage("Es hora de despertar.").setPositiveButton("Estoy despierto",(d,w)->{Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null)v.cancel();getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);}).setCancelable(false).show();}
+ @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);if(i.getBooleanExtra("ring",false))showAlarm();}
  void render(){
  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff0b1325);scroll.addView(root);setContentView(scroll);
  TextView title=txt("✦ AURORA",34);title.setTextColor(0xff91f0dd);title.setTypeface(null,Typeface.BOLD);root.addView(title);
@@ -45,7 +47,7 @@ public class MainActivity extends Activity {
  Intent i=new Intent(c,AlarmReceiver.class).putExtra("id",id);PendingIntent pi=PendingIntent.getBroadcast(c,id,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
  am.cancel(pi);if(!p.getBoolean("on"+id,false))return;
  Calendar at=Calendar.getInstance();at.set(Calendar.HOUR_OF_DAY,p.getInt("h"+id,7));at.set(Calendar.MINUTE,p.getInt("m"+id,0));at.set(Calendar.SECOND,0);at.set(Calendar.MILLISECOND,0);if(at.getTimeInMillis()<=System.currentTimeMillis())at.add(Calendar.DAY_OF_YEAR,1);
- if(Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms())return;
+ if(Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms()){android.util.Log.w("Aurora","Permiso de alarmas exactas pendiente");return;}
  try{am.setAlarmClock(new AlarmManager.AlarmClockInfo(at.getTimeInMillis(),PendingIntent.getActivity(c,100+id,new Intent(c,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE)),pi);}catch(SecurityException e){android.util.Log.e("Aurora","Exact alarm permission",e);}
  }
  void countdown(int minutes,TextView output){if(timer!=null)timer.cancel();timer=new CountDownTimer(minutes*60000L,1000){public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){output.setText("¡Tiempo!");vibrate();new AlertDialog.Builder(MainActivity.this).setTitle("Tiempo cumplido").setPositiveButton("Aceptar",null).show();}}.start();}
