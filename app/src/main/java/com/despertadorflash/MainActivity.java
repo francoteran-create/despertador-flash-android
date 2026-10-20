@@ -56,11 +56,19 @@ public class MainActivity extends Activity {
  Button stop=btn("Detener temporizador");root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("Detenido");});
  root.addView(txt("COMUNICACIÓN VISUAL",22));
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
- Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String s=msg.getText().toString().trim();if(!s.isEmpty()){TextView big=txt(s,30);big.setGravity(Gravity.CENTER);new AlertDialog.Builder(this).setView(big).setPositiveButton("Cerrar",null).show();}});
+ Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
  Button test=btn("Probar vibración");root.addView(test);test.setOnClickListener(v->vibrate());
  Button preview=btn("Probar pantalla de alarma");root.addView(preview);preview.setOnClickListener(v->showAlarm());
  Button stopVibration=btn("Detener vibración");root.addView(stopVibration);stopVibration.setOnClickListener(v->stopAlarmEffects());
  root.addView(txt("Importante: este prototipo no reemplaza alarmas de emergencia certificadas. La ejecución en segundo plano depende de Android y del fabricante.",13));
+ }
+ void showFullMessage(String message){
+  final Dialog dialog=new Dialog(this,android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);
+  LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);layout.setBackgroundColor(Color.WHITE);layout.setPadding(dp(20),dp(24),dp(20),dp(24));
+  TextView text=new TextView(this);text.setText(message);text.setTextColor(Color.BLACK);text.setTextSize(40);text.setGravity(Gravity.CENTER);text.setTypeface(null,Typeface.BOLD);layout.addView(text,new LinearLayout.LayoutParams(-1,0,1));
+  Button invert=btn("Invertir colores");layout.addView(invert);final boolean[] dark={false};invert.setOnClickListener(v->{dark[0]=!dark[0];layout.setBackgroundColor(dark[0]?Color.BLACK:Color.WHITE);text.setTextColor(dark[0]?Color.WHITE:Color.BLACK);});
+  Button close=btn("Cerrar mensaje");layout.addView(close);close.setOnClickListener(v->dialog.dismiss());
+  dialog.setContentView(layout);dialog.show();
  }
  void alarmRow(int id){
  int h=prefs.getInt("h"+id,7),m=prefs.getInt("m"+id,0);
