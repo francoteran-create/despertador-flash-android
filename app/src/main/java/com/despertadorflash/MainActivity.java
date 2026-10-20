@@ -50,9 +50,9 @@ public class MainActivity extends Activity {
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}}
  void render(){
  if(timer!=null){timer.cancel();timer=null;}
- ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff0b1325);scroll.addView(root);setContentView(scroll);
- TextView title=txt("✦ AURORA",34);title.setTextColor(0xff91f0dd);title.setTypeface(null,Typeface.BOLD);root.addView(title);
- root.addView(txt("Tu mañana, a tu manera.",21));root.addView(txt("Despertador accesible con vibración y avisos visuales.",15));
+ ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff090b11);scroll.addView(root);setContentView(scroll);
+ TextView title=txt("✦ AURORA",34);title.setTextColor(0xffffd633);title.setTypeface(null,Typeface.BOLD);root.addView(title);
+ root.addView(txt("ALERTAS QUE TE ACOMPAÑAN",17));root.addView(txt("Despertador accesible con vibración y avisos visuales.",15));
  AlarmManager alarmManager=(AlarmManager)getSystemService(ALARM_SERVICE);
  if(Build.VERSION.SDK_INT>=31&&!alarmManager.canScheduleExactAlarms()){TextView warning=txt("ATENCIÓN: las alarmas exactas no están habilitadas. Activá el permiso para que el despertador funcione a la hora elegida.",17);warning.setTextColor(0xffffcf70);root.addView(warning);}
  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){TextView warning=txt("ATENCIÓN: faltan permisos de notificaciones. Los avisos pueden no aparecer.",17);warning.setTextColor(0xffffcf70);root.addView(warning);}
@@ -60,14 +60,14 @@ public class MainActivity extends Activity {
  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){Button notificationPermission=btn("Habilitar notificaciones");root.addView(notificationPermission);notificationPermission.setOnClickListener(v->requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},1));}
  if(Build.VERSION.SDK_INT>=34){NotificationManager notificationManager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);if(!notificationManager.canUseFullScreenIntent()){TextView fullWarning=txt("Android restringe las alarmas a pantalla completa. Revisá el permiso de alertas de pantalla completa.",16);fullWarning.setTextColor(0xffffcf70);root.addView(fullWarning);Button fullPermission=btn("Permitir alertas a pantalla completa");root.addView(fullPermission);fullPermission.setOnClickListener(v->startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,android.net.Uri.parse("package:"+getPackageName()))));}}
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
- root.addView(txt("MIS ALARMAS",22));
+ root.addView(txt("⏰  MIS ALARMAS",22));
  for(int id=0;id<5;id++)alarmRow(id);
- root.addView(txt("TEMPORIZADOR TÁCTIL",22));
+ root.addView(txt("◷  TEMPORIZADORES",22));
  long savedEnd=prefs.getLong("timer_end",0);long remaining=Math.max(0,savedEnd-System.currentTimeMillis());TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",32);root.addView(counter);if(remaining>0){timer=new CountDownTimer(remaining,1000){public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){counter.setText("Esperando aviso…");}}.start();}
  Button five=btn("Iniciar 5 minutos");root.addView(five);five.setOnClickListener(v->countdown(5,counter));
  Button ten=btn("Iniciar 10 minutos");root.addView(ten);ten.setOnClickListener(v->countdown(10,counter));
  Button stop=btn("Detener temporizador");root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("Detenido");});
- root.addView(txt("COMUNICACIÓN VISUAL",22));
+ root.addView(txt("▣  COMUNICACIÓN VISUAL",22));
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
  Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
  Button yes=btn("Mostrar SÍ");root.addView(yes);yes.setOnClickListener(v->showFullMessage("SÍ"));
