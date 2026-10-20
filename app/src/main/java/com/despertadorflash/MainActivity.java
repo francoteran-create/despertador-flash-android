@@ -10,18 +10,21 @@ import android.widget.*;
 import java.util.*;
 public class MainActivity extends Activity {
  static final String PREF="aurora";
- LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask;
+ LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false;
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(17);b.setMinHeight(dp(58));return b;}
  public void onCreate(Bundle b){super.onCreate(b);prefs=getSharedPreferences(PREF,0);render();if(getIntent().getBooleanExtra("ring",false))showAlarm();if(getIntent().getBooleanExtra("timer_finished",false))new AlertDialog.Builder(this).setTitle("AURORA").setMessage("¡Tiempo cumplido!").setPositiveButton("Aceptar",null).show();}
  void stopAlarmEffects(){
+  alarmActive=false;
   if(flashTask!=null){flashHandler.removeCallbacks(flashTask);flashTask=null;}
   Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null)v.cancel();
   getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
   NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);for(int id=0;id<5;id++)nm.cancel(2000+id);
  }
  void showAlarm(){
+  if(alarmActive)return;
+  alarmActive=true;
   getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED|WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON|WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
   LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(22),dp(24),dp(22),dp(24));
   TextView big=txt("¡DESPERTÁ!",38);big.setGravity(Gravity.CENTER);big.setTypeface(null,Typeface.BOLD);panel.addView(big);
@@ -34,7 +37,7 @@ public class MainActivity extends Activity {
   new AlertDialog.Builder(this).setView(panel).setPositiveButton("ESTOY DESPIERTO",(d,w)->stopAlarmEffects()).setOnDismissListener(d->stopAlarmEffects()).setCancelable(false).show();
  }
 
- @Override public void onBackPressed(){if(flashTask!=null){new AlertDialog.Builder(this).setTitle("Alarma activa").setMessage("Confirmá que estás despierto para detener la alarma.").setPositiveButton("Entendido",null).show();return;}super.onBackPressed();}
+ @Override public void onBackPressed(){if(alarmActive){new AlertDialog.Builder(this).setTitle("Alarma activa").setMessage("Confirmá que estás despierto para detener la alarma.").setPositiveButton("Entendido",null).show();return;}super.onBackPressed();}
  @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);if(i.getBooleanExtra("ring",false))showAlarm();if(i.getBooleanExtra("timer_finished",false))new AlertDialog.Builder(this).setTitle("AURORA").setMessage("¡Tiempo cumplido!").setPositiveButton("Aceptar",null).show();}
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}}
@@ -101,5 +104,5 @@ public class MainActivity extends Activity {
   timer=new CountDownTimer(minutes*60000L,1000){public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){output.setText("Esperando aviso…");}}.start();
  }
  void vibrate(){Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null&&v.hasVibrator()){long[] pat={0,800,200,800,200,800};if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(pat,-1));else v.vibrate(pat,-1);}}
- @Override protected void onDestroy(){if(timer!=null)timer.cancel();if(flashTask!=null)flashHandler.removeCallbacks(flashTask);Vibrator vibrator=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(vibrator!=null)vibrator.cancel();super.onDestroy();}
+ @Override protected void onDestroy(){if(timer!=null)timer.cancel();if(alarmActive)stopAlarmEffects();super.onDestroy();}
 }
