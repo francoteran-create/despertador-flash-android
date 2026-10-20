@@ -75,6 +75,8 @@ public class MainActivity extends Activity {
  Button help=btn("Mostrar NECESITO AYUDA");root.addView(help);help.setOnClickListener(v->showFullMessage("NECESITO AYUDA"));
  Button okay=btn("Mostrar ESTOY BIEN");root.addView(okay);okay.setOnClickListener(v->showFullMessage("ESTOY BIEN"));
  Button write=btn("Pedir que escriban");root.addView(write);write.setOnClickListener(v->showFullMessage("POR FAVOR, ESCRIBÍ LO QUE DECÍS"));
+ Button urgent=btn("Mostrar LLAMÁ A EMERGENCIAS");root.addView(urgent);urgent.setOnClickListener(v->showFullMessage("LLAMÁ A EMERGENCIAS"));
+ Button repeat=btn("Pedir que repitan despacio");root.addView(repeat);repeat.setOnClickListener(v->showFullMessage("POR FAVOR, REPETÍ MÁS DESPACIO"));
  Button test=btn("Probar vibración");root.addView(test);test.setOnClickListener(v->vibrate());
  Button preview=btn("Probar pantalla de alarma");root.addView(preview);preview.setOnClickListener(v->showAlarm());
  Button stopVibration=btn("Detener vibración");root.addView(stopVibration);stopVibration.setOnClickListener(v->stopAlarmEffects());
