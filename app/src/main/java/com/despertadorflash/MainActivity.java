@@ -34,7 +34,8 @@ public class MainActivity extends Activity {
  void showTimerFinished(){
   if(isFinishing()||timerAlertActive||alarmActive)return;
   timerAlertActive=true;
-  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+  NotificationManager timerNotifications=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);if(timerNotifications!=null)timerNotifications.cancel(3100);
+  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON|WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
   startTorchAlert();
   Vibrator vib=(Vibrator)getSystemService(VIBRATOR_SERVICE);
   if(vib!=null&&vib.hasVibrator()){long[] pattern={0,900,250,900,250,900};if(Build.VERSION.SDK_INT>=26)vib.vibrate(VibrationEffect.createWaveform(pattern,0));else vib.vibrate(pattern,0);}
