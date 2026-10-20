@@ -11,7 +11,7 @@ public class TimerReceiver extends BroadcastReceiver {
   String channel="aurora_timer";
   if(Build.VERSION.SDK_INT>=26){NotificationChannel ch=new NotificationChannel(channel,"Temporizadores AURORA",NotificationManager.IMPORTANCE_HIGH);ch.enableVibration(true);manager.createNotificationChannel(ch);}
   Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(context,channel):new Notification.Builder(context);
-  b.setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("AURORA · Tiempo cumplido").setContentText("Tu temporizador terminó").setContentIntent(pending).setAutoCancel(true).setCategory(Notification.CATEGORY_ALARM).setPriority(Notification.PRIORITY_HIGH).setVibrate(new long[]{0,700,200,700,200,700});
+  b.setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("AURORA · Tiempo cumplido").setContentText("Tu temporizador terminó").setContentIntent(pending).setFullScreenIntent(pending,true).setVisibility(Notification.VISIBILITY_PUBLIC).setAutoCancel(true).setCategory(Notification.CATEGORY_ALARM).setPriority(Notification.PRIORITY_HIGH).setVibrate(new long[]{0,700,200,700,200,700});
   try{manager.notify(3100,b.build());}catch(SecurityException ex){android.util.Log.w("Aurora","Falta permiso de notificaciones",ex);}
   Vibrator v=(Vibrator)context.getSystemService(Context.VIBRATOR_SERVICE);
   if(v!=null&&v.hasVibrator()){if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(new long[]{0,700,200,700,200,700},-1));else v.vibrate(new long[]{0,700,200,700,200,700},-1);}
