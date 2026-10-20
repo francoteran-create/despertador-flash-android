@@ -68,6 +68,7 @@ public class MainActivity extends Activity {
  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff090b11);scroll.addView(root);setContentView(scroll);
  TextView title=txt("✦ AURORA",34);title.setTextColor(0xffffd633);title.setTypeface(null,Typeface.BOLD);root.addView(title);
  root.addView(txt("ALERTAS QUE TE ACOMPAÑAN",17));root.addView(txt("Despertador accesible con vibración y avisos visuales.",15));
+ AuroraClockView clock=new AuroraClockView(this);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
  AlarmManager alarmManager=(AlarmManager)getSystemService(ALARM_SERVICE);
  if(Build.VERSION.SDK_INT>=31&&!alarmManager.canScheduleExactAlarms()){TextView warning=txt("ATENCIÓN: las alarmas exactas no están habilitadas. Activá el permiso para que el despertador funcione a la hora elegida.",17);warning.setTextColor(0xffffcf70);root.addView(warning);}
  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){TextView warning=txt("ATENCIÓN: faltan permisos de notificaciones. Los avisos pueden no aparecer.",17);warning.setTextColor(0xffffcf70);root.addView(warning);}
