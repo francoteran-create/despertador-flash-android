@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
   new AlertDialog.Builder(this).setView(panel).setPositiveButton("ESTOY DESPIERTO",(d,w)->stopAlarmEffects()).setOnDismissListener(d->stopAlarmEffects()).setCancelable(false).show();
  }
 
+ @Override public void onBackPressed(){if(flashTask!=null){new AlertDialog.Builder(this).setTitle("Alarma activa").setMessage("Confirmá que estás despierto para detener la alarma.").setPositiveButton("Entendido",null).show();return;}super.onBackPressed();}
  @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);if(i.getBooleanExtra("ring",false))showAlarm();if(i.getBooleanExtra("timer_finished",false))new AlertDialog.Builder(this).setTitle("AURORA").setMessage("¡Tiempo cumplido!").setPositiveButton("Aceptar",null).show();}
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}}
