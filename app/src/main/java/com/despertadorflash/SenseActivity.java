@@ -108,14 +108,14 @@ public final class SenseActivity extends Activity {
    root.addView(sensitivityRow,new LinearLayout.LayoutParams(-1,dp(65)));
    String[] titles={"ALTA","EQUILIBRADA","PRECISA"};
    final Button[] choices=new Button[3];
-   int initial=Math.max(0,Math.min(2,getPreferences(MODE_PRIVATE).getInt("sense_sensitivity",1)));
-   minConfidence=initial==0?22:initial==2?45:30;
+   int selectedSensitivity=Math.max(0,Math.min(2,getPreferences(MODE_PRIVATE).getInt("sense_sensitivity",1)));
+   minConfidence=selectedSensitivity==0?22:selectedSensitivity==2?45:30;
    for(int i=0;i<choices.length;i++){
     final int selected=i;
     Button choice=button(titles[i]);choice.setTextSize(12);choices[i]=choice;
-    int from=i==initial?0xff126979:0xff182b42;
-    int to=i==initial?0xff255b79:0xff242849;
-    AuroraDesign.action(choice,from,to,i==initial?0xff89fbeb:0xff426783);
+    int from=i==selectedSensitivity?0xff126979:0xff182b42;
+    int to=i==selectedSensitivity?0xff255b79:0xff242849;
+    AuroraDesign.action(choice,from,to,i==selectedSensitivity?0xff89fbeb:0xff426783);
     LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(63),1f);
     if(i>0)lp.leftMargin=dp(6);
     sensitivityRow.addView(choice,lp);
