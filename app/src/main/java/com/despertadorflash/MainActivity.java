@@ -212,9 +212,17 @@ public class MainActivity extends Activity {
 
   TextView subtitle=txt("TU ENTORNO, EN UNA NUEVA DIMENSIÓN",12);
   subtitle.setTextColor(0xff93d9e5);subtitle.setLetterSpacing(.12f);subtitle.setPadding(dp(2),0,0,dp(10));root.addView(subtitle);
-  AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);
-  root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
-  root.addView(AuroraDesign.overline(this,"EXPLORAR  /  ACCESOS DIRECTOS"));
+  root.addView(AuroraDesign.overline(this,"TOCÁ UNA FUNCIÓN  /  EL PERSONAJE TE ACOMPAÑA"));
+  AuroraCharacterStage character=new AuroraCharacterStage(this,feature->{
+   if(feature==AuroraCharacterStage.SOUNDS){openSense(SenseActivity.MODE_SOUND);}
+   else if(feature==AuroraCharacterStage.VOICE){openSense(SenseActivity.MODE_SPEECH);}
+   else if(feature==AuroraCharacterStage.ALARMS){alarmsPage=true;render();}
+   else if(feature==AuroraCharacterStage.MESSAGES){stopHomeSpeech();communicationPage=true;render();}
+   else if(feature==AuroraCharacterStage.PROFILE){stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));}
+   else if(feature==AuroraCharacterStage.RECORDS){stopHomeSpeech();startActivity(new Intent(this,RecordsActivity.class));}
+  });
+  root.addView(character,new LinearLayout.LayoutParams(-1,-2));
+  root.addView(AuroraDesign.overline(this,"ACCESOS RÁPIDOS  /  TAMBIÉN PODÉS TOCARLOS"));
 
   LinearLayout shortcuts=new LinearLayout(this);shortcuts.setOrientation(LinearLayout.HORIZONTAL);root.addView(shortcuts);
   LinearLayout soundTile=homeTile("◖))","SONIDOS","Detección del entorno",0xff102c42,0xff192b51);
