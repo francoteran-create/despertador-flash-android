@@ -188,9 +188,9 @@ public final class SenseActivity extends Activity {
  }
  private void startSpeech(){
   state.setText("ESCUCHANDO CONVERSACIÓN");
-  result.setText(lastTranscript.isEmpty()?"Hablá cerca del teléfono…":lastTranscript);
+  if(lastTranscript.isEmpty()&&eventCount==0)result.setText("Hablá cerca del teléfono…");
   detail.setText("Transcribiendo en vivo. Guardado automático al detener o salir.");
-  if(!SpeechRecognizer.isRecognitionAvailable(this)){state.setText("SIN RECONOCIMIENTO DE VOZ");result.setText("Este teléfono no tiene un servicio de transcripción disponible.");mode=MODE_NONE;return;}
+  if(!SpeechRecognizer.isRecognitionAvailable(this)){state.setText("SIN RECONOCIMIENTO DE VOZ");result.setText("Este teléfono no tiene un servicio de transcripción disponible.");mode=MODE_NONE;finishHistory();return;}
   try{
    if(Build.VERSION.SDK_INT>=31&&SpeechRecognizer.isOnDeviceRecognitionAvailable(this))recognizer=SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
    else recognizer=SpeechRecognizer.createSpeechRecognizer(this);
@@ -200,9 +200,26 @@ public final class SenseActivity extends Activity {
     public void onRmsChanged(float rms){}
     public void onBufferReceived(byte[] buffer){}
     public void onEndOfSpeech(){state.setText("PROCESANDO PALABRAS…");}
-    public void onError(int error){if(mode==MODE_SPEECH){state.setText("TRANSCRIPCIÓN DETENIDA");detail.setText("Android informó un problema de reconocimiento (código "+error+"). Tocá Transcribir para reintentar.");mode=MODE_NONE;releaseSpeech();finishHistory();}}
+    public void onError(int error){
+     if(mode!=MODE_SPEECH)return;
+     releaseSpeech();
+     if(error==SpeechRecognizer.ERROR_NO_MATCH||error==SpeechRecognizer.ERROR_SPEECH_TIMEOUT){
+      state.setText("ESCUCHANDO · REINICIANDO");
+      main.postDelayed(()->{if(mode==MODE_SPEECH)startSpeech();},650);
+     }else{
+      state.setText("TRANSCRIPCIÓN DETENIDA");
+      detail.setText("Android no pudo continuar (código "+error+"). Se guardó la sesión.");
+      mode=MODE_NONE;finishHistory();
+     }
+    }
     public void onResults(Bundle data){ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-     if(mode==MODE_SPEECH){String phrase=matches!=null&&!matches.isEmpty()?matches.get(0):"";if(!phrase.isEmpty()){result.setText(phrase);saveTranscript(phrase);recordEvent("Voz: "+phrase);}else result.setText("No se entendieron palabras.");state.setText("TRANSCRIPCIÓN COMPLETADA");detail.setText("Tocá Transcribir otra vez para escuchar una nueva frase. Traducir es opcional.");mode=MODE_NONE;releaseSpeech();finishHistory();}}
+     if(mode==MODE_SPEECH){
+      String phrase=matches!=null&&!matches.isEmpty()?matches.get(0):"";
+      if(!phrase.isEmpty()){result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);}
+      state.setText("ESCUCHANDO · NUEVA FRASE");
+      releaseSpeech();
+      main.postDelayed(()->{if(mode==MODE_SPEECH)startSpeech();},650);
+     }}
     public void onPartialResults(Bundle data){ArrayList<String> partial=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);if(mode==MODE_SPEECH&&partial!=null&&!partial.isEmpty())result.setText(partial.get(0));}
     public void onEvent(int event,Bundle params){}
    });
@@ -261,18 +278,39 @@ public final class SenseActivity extends Activity {
  }
  private static String toSpanish(String label){
   String l=label.toLowerCase(Locale.ROOT);
-  if(l.contains("speech")||l.contains("conversation"))return "Posible conversación";
-  if(l.contains("dog")||l.contains("bark"))return "Posible ladrido";
-  if(l.contains("siren"))return "Posible sirena";
-  if(l.contains("alarm")||l.contains("smoke detector"))return "Posible alarma";
-  if(l.contains("doorbell"))return "Posible timbre";
-  if(l.contains("knock")||l.contains("tap"))return "Posibles golpes";
-  if(l.contains("telephone")||l.contains("ringtone"))return "Posible teléfono";
-  if(l.contains("cry")||l.contains("baby"))return "Posible llanto";
-  if(l.contains("car")||l.contains("vehicle")||l.contains("engine"))return "Posible vehículo";
-  if(l.contains("music"))return "Posible música";
-  if(l.contains("water")||l.contains("rain"))return "Posible agua";
-  return "Posible sonido: "+label;
+  if(l.contains("doorbell")||l.contains("ding-dong"))return "POSIBLE TIMBRE DE PUERTA";
+  if(l.contains("knock")||l.contains("tap")||l.contains("thump")||l.contains("slam")||l.contains("bang"))return "POSIBLES GOLPES EN UNA PUERTA";
+  if(l.contains("door"))return "POSIBLE PUERTA ABRIÉNDOSE O CERRÁNDOSE";
+  if(l.contains("speech")||l.contains("conversation")||l.contains("whisper")||l.contains("narration")||l.contains("babbling"))return "POSIBLE CONVERSACIÓN";
+  if(l.contains("shout")||l.contains("scream")||l.contains("yell"))return "POSIBLES GRITOS";
+  if(l.contains("laughter")||l.contains("giggle"))return "POSIBLES RISAS";
+  if(l.contains("baby")||l.contains("cry")||l.contains("sob"))return "POSIBLE LLANTO";
+  if(l.contains("dog")||l.contains("bark")||l.contains("howl"))return "POSIBLE LADRIDO DE PERRO";
+  if(l.contains("cat")||l.contains("meow")||l.contains("purr"))return "POSIBLE GATO";
+  if(l.contains("bird")||l.contains("chirp")||l.contains("tweet"))return "POSIBLES PÁJAROS";
+  if(l.contains("siren"))return "POSIBLE SIRENA";
+  if(l.contains("smoke detector")||l.contains("fire alarm"))return "POSIBLE ALARMA DE INCENDIO";
+  if(l.contains("alarm")||l.contains("buzzer")||l.contains("beep"))return "POSIBLE ALARMA O PITIDO";
+  if(l.contains("telephone")||l.contains("ringtone")||l.contains("phone"))return "POSIBLE TELÉFONO SONANDO";
+  if(l.contains("bell"))return "POSIBLE CAMPANA";
+  if(l.contains("footstep")||l.contains("walk")||l.contains("stomp"))return "POSIBLES PASOS";
+  if(l.contains("glass")||l.contains("shatter"))return "POSIBLE VIDRIO O ROTURA";
+  if(l.contains("explosion")||l.contains("firecracker"))return "POSIBLE EXPLOSIÓN";
+  if(l.contains("thunder"))return "POSIBLE TRUENO";
+  if(l.contains("rain")||l.contains("water")||l.contains("splash"))return "POSIBLE AGUA";
+  if(l.contains("wind"))return "POSIBLE VIENTO";
+  if(l.contains("traffic")||l.contains("engine")||l.contains("vehicle")||l.contains("car")||l.contains("truck"))return "POSIBLE VEHÍCULO";
+  if(l.contains("horn")||l.contains("honk"))return "POSIBLE BOCINA";
+  if(l.contains("motorcycle"))return "POSIBLE MOTO";
+  if(l.contains("train"))return "POSIBLE TREN";
+  if(l.contains("aircraft")||l.contains("airplane")||l.contains("helicopter"))return "POSIBLE AERONAVE";
+  if(l.contains("music")||l.contains("singing")||l.contains("guitar")||l.contains("piano"))return "POSIBLE MÚSICA";
+  if(l.contains("applause")||l.contains("clap"))return "POSIBLES APLAUSOS";
+  if(l.contains("vacuum")||l.contains("blender")||l.contains("drill")||l.contains("machine"))return "POSIBLE ELECTRODOMÉSTICO O MÁQUINA";
+  if(l.contains("typing")||l.contains("keyboard"))return "POSIBLE TECLADO";
+  if(l.contains("clock")||l.contains("tick"))return "POSIBLE RELOJ";
+  if(l.contains("silence")||l.contains("noise")||l.contains("static")||l.contains("inside, small room"))return "Sonido sin identificar";
+  return "Sonido sin identificar";
  }
  private void stopAll(boolean show){
   mode=MODE_NONE;soundRunning=false;
