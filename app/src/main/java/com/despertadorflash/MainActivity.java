@@ -14,7 +14,25 @@ public class MainActivity extends Activity {
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(17);b.setMinHeight(dp(58));return b;}
- public void onCreate(Bundle b){super.onCreate(b);prefs=getSharedPreferences(PREF,0);torch=new TorchFlasher(this);render();if(getIntent().getBooleanExtra("ring",false))showAlarm();if(getIntent().getBooleanExtra("timer_finished",false))showTimerFinished();}
+ boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
+ public void onCreate(Bundle b){
+  super.onCreate(b);
+  prefs=getSharedPreferences(PREF,0);torch=new TorchFlasher(this);
+  if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true);}
+  render();
+  pendingAlarmLaunch=getIntent().getBooleanExtra("ring",false);
+  pendingTimerLaunch=getIntent().getBooleanExtra("timer_finished",false);
+ }
+ @Override protected void onPostResume(){
+  super.onPostResume();
+  if(pendingAlarmLaunch){
+   pendingAlarmLaunch=false;
+   showAlarm();
+  }else if(pendingTimerLaunch){
+   pendingTimerLaunch=false;
+   showTimerFinished();
+  }
+ }
  void startTorchAlert(){if(prefs.getBoolean("torch_alert",true)){if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Para usar el flash LED, autorizá Cámara en AURORA",Toast.LENGTH_LONG).show();return;}if(torch!=null&&!torch.start())Toast.makeText(this,"Flash LED: "+torch.getLastError(),Toast.LENGTH_LONG).show();}}
  void stopAlarmEffects(){
   if(torch!=null)torch.stop();
@@ -60,7 +78,15 @@ public class MainActivity extends Activity {
  }
 
  @Override public void onBackPressed(){if(alarmActive){new AlertDialog.Builder(this).setTitle("Alarma activa").setMessage("Confirmá que estás despierto para detener la alarma.").setPositiveButton("Entendido",null).show();return;}if(alarmsPage){alarmsPage=false;render();return;}super.onBackPressed();}
- @Override protected void onNewIntent(Intent i){super.onNewIntent(i);setIntent(i);if(i.getBooleanExtra("ring",false))showAlarm();if(i.getBooleanExtra("timer_finished",false))showTimerFinished();}
+ @Override protected void onNewIntent(Intent i){
+  super.onNewIntent(i);setIntent(i);
+  pendingAlarmLaunch=i.getBooleanExtra("ring",false);
+  pendingTimerLaunch=i.getBooleanExtra("timer_finished",false);
+  if(hasWindowFocus()){
+   if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm();}
+   else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
+  }
+ }
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
  void render(){
