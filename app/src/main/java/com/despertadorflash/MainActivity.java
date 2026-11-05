@@ -259,6 +259,16 @@ public class MainActivity extends Activity {
  }
  void renderSettingsPage(){
   setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
+  TextView motionTitle=section("AURORA VISUAL ENGINE");root.addView(motionTitle);
+  android.widget.Switch motion=new android.widget.Switch(this);motion.setText("Auroras y núcleo animados");
+  motion.setTextColor(Color.WHITE);motion.setTextSize(17);motion.setPadding(dp(12),dp(12),dp(12),dp(12));
+  motion.setChecked(prefs.getBoolean("aurora_motion",true));
+  root.addView(motion);motion.setOnCheckedChangeListener((control,enabled)->{
+   prefs.edit().putBoolean("aurora_motion",enabled).apply();
+   Toast.makeText(this,enabled?"Animaciones habilitadas":"Animaciones reducidas",Toast.LENGTH_SHORT).show();
+  });
+  root.addView(txt("Los efectos se reducen automáticamente si Android tiene activada la opción de reducir animaciones o el modo ahorro de batería.",13));
+
  Button testFlash=btn("⚡  PROBAR FLASH LED · 5 SEGUNDOS");accent(testFlash,0xff752c97,0xff116a92,0xff64e8f5);root.addView(testFlash);testFlash.setOnClickListener(v->{
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);Toast.makeText(this,"Autorizá Cámara y volvé a tocar Probar flash",Toast.LENGTH_LONG).show();return;}
   if(torch==null||!torch.start()){new AlertDialog.Builder(this).setTitle("Flash no disponible").setMessage("AURORA no pudo encender la linterna: "+(torch==null?"Control no inicializado":torch.getLastError())+". Comprobá que la cámara esté cerrada y que AURORA tenga permiso de Cámara.").setPositiveButton("Entendido",null).show();return;}
