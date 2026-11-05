@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 18; versionName '1.8' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 19; versionName '1.9' }
 }
 
 dependencies { implementation 'com.google.mediapipe:tasks-audio:1.2.2'; implementation 'com.google.mlkit:translate:17.0.3' }
