@@ -201,6 +201,11 @@ public class MainActivity extends Activity {
   LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);root.addView(heading);
   TextView title=txt("A U R O R A",28);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
   heading.addView(title,new LinearLayout.LayoutParams(0,dp(68),1f));
+  Button profile=btn("◉");profile.setContentDescription("Abrir Mi perfil AURORA");profile.setTextSize(25);
+  accent(profile,0xff1c4866,0xff32285a,0xff7bdcec);
+  LinearLayout.LayoutParams profileParams=new LinearLayout.LayoutParams(dp(54),dp(54));profileParams.rightMargin=dp(8);
+  heading.addView(profile,profileParams);
+  profile.setOnClickListener(v->{stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));});
   Button settings=btn("⚙");settings.setContentDescription("Configuración y permisos");settings.setTextSize(24);accent(settings,0xff17203e,0xff22284c,0xff3e5981);
   heading.addView(settings,new LinearLayout.LayoutParams(dp(54),dp(54)));settings.setOnClickListener(v->{settingsPage=true;render();});
   TextView subtitle=txt("ALARMA VISUAL Y SENSORIAL ACCESIBLE",12);subtitle.setGravity(Gravity.CENTER);subtitle.setTextColor(0xffa2edfd);root.addView(subtitle);
@@ -238,6 +243,7 @@ public class MainActivity extends Activity {
   setupPage();pageTitle("COMUNICACIÓN");
   Button recognize=btn("◖))  ESCUCHAR SONIDOS");accent(recognize,0xff285b93,0xff19415b,0xff6af7ef);root.addView(recognize);recognize.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   Button transcribe=btn("🎙  TRANSCRIBIR CONVERSACIÓN");accent(transcribe,0xff632e8e,0xff28285a,0xffbb8fff);root.addView(transcribe);transcribe.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  Button myProfile=btn("◉  MI PERFIL AURORA");accent(myProfile,0xff22506d,0xff362a62,0xff83d6ed);root.addView(myProfile);myProfile.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class)));
   Button records=btn("📁  CARPETA DE REGISTROS");accent(records,0xff1a3f62,0xff23305a,0xff62cbe8);root.addView(records);records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
   root.addView(txt("Elegí una frase o escribí un mensaje para mostrarlo en pantalla completa.",16));
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
