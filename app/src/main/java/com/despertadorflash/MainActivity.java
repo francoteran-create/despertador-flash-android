@@ -198,37 +198,83 @@ public class MainActivity extends Activity {
   if(communicationPage){stopHomeSpeech();renderCommunicationPage();return;}
   if(settingsPage){stopHomeSpeech();renderSettingsPage();return;}
   setupPage();
+  root.setPadding(dp(17),dp(10),dp(17),dp(32));
   LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);root.addView(heading);
-  TextView title=txt("A U R O R A",28);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
-  heading.addView(title,new LinearLayout.LayoutParams(0,dp(68),1f));
-  Button profile=btn("◉");profile.setContentDescription("Abrir Mi perfil AURORA");profile.setTextSize(25);
-  accent(profile,0xff1c4866,0xff32285a,0xff7bdcec);
-  LinearLayout.LayoutParams profileParams=new LinearLayout.LayoutParams(dp(54),dp(54));profileParams.rightMargin=dp(8);
-  heading.addView(profile,profileParams);
+  TextView title=txt("AURORA",34);title.setTextColor(0xfff0ffff);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
+  title.setLetterSpacing(.18f);heading.addView(title,new LinearLayout.LayoutParams(0,dp(64),1f));
+  Button profile=btn("◉");profile.setContentDescription("Mi perfil");
+  accent(profile,0xff17435b,0xff243b61,0xff7bdcec);
+  LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(dp(50),dp(50));pp.rightMargin=dp(7);heading.addView(profile,pp);
   profile.setOnClickListener(v->{stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));});
-  Button settings=btn("⚙");settings.setContentDescription("Configuración y permisos");settings.setTextSize(24);accent(settings,0xff17203e,0xff22284c,0xff3e5981);
-  heading.addView(settings,new LinearLayout.LayoutParams(dp(54),dp(54)));settings.setOnClickListener(v->{settingsPage=true;render();});
-  TextView subtitle=txt("EXPERIENCIA SENSORIAL · ACCESIBILIDAD",12);subtitle.setGravity(Gravity.CENTER);subtitle.setTextColor(0xffa2edfd);root.addView(subtitle);
-  AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
-  root.addView(AuroraDesign.overline(this,"TU ESPACIO  /  FUNCIONES PRINCIPALES"));
-  Button alarms=btn("◷    MIS ALARMAS       ›");accent(alarms,0xff60431e,0xff6b4d26,0xffffd775);root.addView(alarms);alarms.setOnClickListener(v->{alarmsPage=true;render();});
-  LinearLayout soundsCard=auroraCard(0xff102b3e,0xff1b254b);
-  TextView soundsHeading=txt("◖))  RECONOCER SONIDOS",20);soundsHeading.setTypeface(null,Typeface.BOLD);soundsHeading.setTextColor(0xffbcecff);soundsCard.addView(soundsHeading);
-  TextView soundsHint=txt("Detectar sonidos del entorno con IA",14);soundsHint.setTextColor(0xffc5d8f0);soundsCard.addView(soundsHint);
-  Button listenSounds=btn("◖))  ESCUCHAR");accent(listenSounds,0xff145b8a,0xff2c3877,0xff5bdbff);soundsCard.addView(listenSounds);
-  soundsCard.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
-  listenSounds.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
-  root.addView(soundsCard);
-  LinearLayout transcriptCard=auroraCard(0xff201b3d,0xff14334c);
-  TextView speechHeading=txt("◉  TRANSCRIPCIÓN EN VIVO",20);speechHeading.setTypeface(null,Typeface.BOLD);speechHeading.setTextColor(0xffe7ccff);transcriptCard.addView(speechHeading);
-  homeTranscript=txt(prefs.getString("sense_last_transcript","").isEmpty()?"Acá aparecerá lo que se está diciendo…":prefs.getString("sense_last_transcript",""),21);
-  homeTranscript.setMinHeight(dp(80));homeTranscript.setMaxLines(3);homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
-  homeSpeechStatus=txt("Tocá el micrófono para escuchar · tocá el cuadro para ampliar",13);homeSpeechStatus.setTextColor(0xffbad3ec);transcriptCard.addView(homeSpeechStatus);
-  homeSpeechToggle=btn("🎙  ESCUCHAR CONVERSACIÓN");accent(homeSpeechToggle,0xff6540a0,0xff234c78,0xffbd8ef4);transcriptCard.addView(homeSpeechToggle);
-  transcriptCard.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  Button settings=btn("⚙");settings.setContentDescription("Configuración");
+  accent(settings,0xff1e2748,0xff2b2950,0xff8b87cd);heading.addView(settings,new LinearLayout.LayoutParams(dp(50),dp(50)));
+  settings.setOnClickListener(v->{settingsPage=true;render();});
+
+  TextView subtitle=txt("TU ENTORNO, EN UNA NUEVA DIMENSIÓN",12);
+  subtitle.setTextColor(0xff93d9e5);subtitle.setLetterSpacing(.12f);subtitle.setPadding(dp(2),0,0,dp(10));root.addView(subtitle);
+  AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);
+  root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
+  root.addView(AuroraDesign.overline(this,"EXPLORAR  /  ACCESOS DIRECTOS"));
+
+  LinearLayout shortcuts=new LinearLayout(this);shortcuts.setOrientation(LinearLayout.HORIZONTAL);root.addView(shortcuts);
+  LinearLayout soundTile=homeTile("◖))","SONIDOS","Detección del entorno",0xff102c42,0xff192b51);
+  LinearLayout speechTile=homeTile("◉","CONVERSACIÓN","Voz en texto",0xff282044,0xff183750);
+  LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(158),1f);
+  left.rightMargin=dp(8);shortcuts.addView(soundTile,left);shortcuts.addView(speechTile,new LinearLayout.LayoutParams(0,dp(158),1f));
+  soundTile.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
+  speechTile.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  soundTile.setContentDescription("Reconocer sonidos del entorno");
+  speechTile.setContentDescription("Transcribir una conversación");
+
+  LinearLayout services=new LinearLayout(this);services.setOrientation(LinearLayout.HORIZONTAL);
+  LinearLayout.LayoutParams serviceParams=new LinearLayout.LayoutParams(-1,-2);serviceParams.topMargin=dp(9);root.addView(services,serviceParams);
+  Button alarms=btn("◷  ALARMAS");accent(alarms,0xff534120,0xff564021,0xffd6ad5f);
+  LinearLayout.LayoutParams halfA=new LinearLayout.LayoutParams(0,dp(66),1f);halfA.rightMargin=dp(8);services.addView(alarms,halfA);
+  alarms.setOnClickListener(v->{alarmsPage=true;render();});
+  Button messages=btn("▣  COMUNICAR");accent(messages,0xff432a69,0xff2a3466,0xffb28af1);
+  services.addView(messages,new LinearLayout.LayoutParams(0,dp(66),1f));
+  messages.setOnClickListener(v->{stopHomeSpeech();communicationPage=true;render();});
+
+  root.addView(AuroraDesign.overline(this,"TRANSCRIPCIÓN INMEDIATA"));
+  LinearLayout transcriptCard=auroraCard(0xff172b43,0xff201e42);
+  transcriptCard.setPadding(dp(17),dp(14),dp(17),dp(15));
+  TextView speechHeading=txt("PALABRAS EN VIVO",16);speechHeading.setTypeface(null,Typeface.BOLD);
+  speechHeading.setTextColor(0xffa8ecff);transcriptCard.addView(speechHeading);
+  String previous=prefs.getString("sense_last_transcript","");
+  homeTranscript=txt(previous.isEmpty()?"Acá aparece lo que se está diciendo…":previous,21);
+  homeTranscript.setMinHeight(dp(66));homeTranscript.setMaxLines(3);
+  homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
+  homeSpeechStatus=txt("Micrófono apagado · escuchá desde acá o ampliá",13);
+  homeSpeechStatus.setTextColor(0xffb5cce7);transcriptCard.addView(homeSpeechStatus);
+  LinearLayout speechControls=new LinearLayout(this);speechControls.setOrientation(LinearLayout.HORIZONTAL);transcriptCard.addView(speechControls);
+  homeSpeechToggle=btn("🎙  ESCUCHAR");accent(homeSpeechToggle,0xff4b388b,0xff275177,0xffac97f1);
+  LinearLayout.LayoutParams speechHalf=new LinearLayout.LayoutParams(0,dp(62),1f);speechHalf.rightMargin=dp(8);
+  speechControls.addView(homeSpeechToggle,speechHalf);
+  Button expand=btn("AMPLIAR  ↗");accent(expand,0xff1a455d,0xff273452,0xff62bdda);
+  speechControls.addView(expand,new LinearLayout.LayoutParams(0,dp(62),1f));
   homeSpeechToggle.setOnClickListener(v->{if(homeListening)stopHomeSpeech();else startHomeSpeech();});
+  expand.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
   root.addView(transcriptCard);
-  Button messages=btn("▣    COMUNICACIÓN       ›");accent(messages,0xff5d287e,0xff35205e,0xffc889ff);root.addView(messages);messages.setOnClickListener(v->{stopHomeSpeech();communicationPage=true;render();});
+
+  LinearLayout lower=new LinearLayout(this);lower.setOrientation(LinearLayout.HORIZONTAL);
+  LinearLayout.LayoutParams lowerParams=new LinearLayout.LayoutParams(-1,-2);lowerParams.topMargin=dp(8);root.addView(lower,lowerParams);
+  Button records=btn("📁  REGISTROS");accent(records,0xff193f53,0xff223557,0xff60baca);
+  LinearLayout.LayoutParams recordParam=new LinearLayout.LayoutParams(0,dp(60),1f);recordParam.rightMargin=dp(8);lower.addView(records,recordParam);
+  records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
+  Button timerButton=btn("◷  TEMPORIZADOR");accent(timerButton,0xff33344f,0xff243757,0xff8e9dd5);
+  lower.addView(timerButton,new LinearLayout.LayoutParams(0,dp(60),1f));
+  timerButton.setOnClickListener(v->{timerPage=true;render();});
+  TextView foot=txt("AURORA  /  ACCESIBILIDAD CON IDENTIDAD",12);
+  foot.setGravity(Gravity.CENTER);foot.setTextColor(0xff719bb9);root.addView(foot);
+ }
+ LinearLayout homeTile(String symbol,String name,String subtitle,int top,int bottom){
+  LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);
+  AuroraDesign.panel(tile,top,bottom);tile.setPadding(dp(16),dp(12),dp(12),dp(10));
+  tile.setClickable(true);tile.setFocusable(true);
+  TextView glyph=txt(symbol,34);glyph.setTextColor(0xff84ecf5);glyph.setPadding(0,0,0,dp(3));tile.addView(glyph);
+  TextView title=txt(name,19);title.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));title.setPadding(0,0,0,0);tile.addView(title);
+  TextView hint=txt(subtitle,12);hint.setTextColor(0xffbed5e9);hint.setPadding(0,dp(4),0,0);tile.addView(hint);
+  return tile;
  }
  void renderTimerPage(){
   setupPage();pageTitle("TEMPORIZADOR");
