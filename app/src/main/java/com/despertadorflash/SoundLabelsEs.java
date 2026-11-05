@@ -12,7 +12,7 @@ public final class SoundLabelsEs {
   String s=raw.toLowerCase(Locale.ROOT);
   if(has(s,"doorbell","ding-dong"))return "POSIBLE TIMBRE DE PUERTA";
   if(has(s,"knock","door slam","sliding door"))return "POSIBLES GOLPES EN UNA PUERTA";
-  if(has(s,"door","drawer"))return "POSIBLE PUERTA O CAJÓN";
+  if((s.contains("door")&&!s.contains("indoor"))||s.contains("drawer"))return "POSIBLE PUERTA O CAJÓN";
   if(has(s,"tap","thump","bang","thud","pounding","hammer","slam"))return "POSIBLES GOLPES O IMPACTOS";
   if(has(s,"speech","conversation","narration","whisper","babbling","child speech"))return "POSIBLE CONVERSACIÓN";
   if(has(s,"shout","scream","yell"))return "POSIBLES GRITOS";
