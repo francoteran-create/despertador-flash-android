@@ -424,10 +424,10 @@ public class MainActivity extends Activity {
  }
  void renderAlarmsPage(){
   if(timer!=null){timer.cancel();timer=null;}
-  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff080d21,0xff0e1735,0xff071122}));getWindow().setStatusBarColor(0xff080d21);getWindow().setNavigationBarColor(0xff071122);scroll.addView(root);setContentView(scroll);
-  Button back=btn("← Volver al inicio");root.addView(back);back.setOnClickListener(v->{alarmsPage=false;render();});
-  TextView heading=txt("MIS ALARMAS",32);heading.setTextColor(0xffffd633);heading.setTypeface(null,Typeface.BOLD);root.addView(heading);
-  root.addView(txt("Creá una alarma y elegí la hora que quieras. No hay horarios predefinidos.",16));
+  setupPage();pageTitle("MIS ALARMAS");
+  root.addView(AuroraDesign.overline(this,"DESPERTADOR  /  MIS HORARIOS"));
+  TextView intro=txt("Elegí tus horarios y días. Cada alarma se puede activar, editar o eliminar.",16);
+  intro.setTextColor(0xffc2d7ea);root.addView(intro);
   Button timerTool=btn("⌛  TEMPORIZADOR Y PRUEBAS");root.addView(timerTool);timerTool.setOnClickListener(v->{alarmsPage=false;timerPage=true;render();});
   int count=0;
   for(int id=0;id<5;id++)if(prefs.getBoolean("created"+id,false)){alarmRow(id);count++;}
@@ -444,11 +444,15 @@ public class MainActivity extends Activity {
  }
  void alarmRow(int id){
  int h=prefs.getInt("h"+id,7),m=prefs.getInt("m"+id,0);
- Switch sw=new Switch(this);sw.setText(String.format(Locale.getDefault(),"Alarma %d   %02d:%02d",id+1,h,m));sw.setTextColor(Color.WHITE);sw.setTextSize(20);sw.setChecked(prefs.getBoolean("on"+id,false));root.addView(sw);
+ LinearLayout card=auroraCard(0xff16283f,0xff211f3e);
+ card.setPadding(dp(16),dp(15),dp(16),dp(13));
+ TextView mark=AuroraDesign.overline(this,"ALARMA  "+(id+1));card.addView(mark);
+ Switch sw=new Switch(this);sw.setText(String.format(Locale.getDefault(),"Alarma %d   %02d:%02d",id+1,h,m));sw.setTextColor(Color.WHITE);sw.setTextSize(25);sw.setPadding(dp(9),dp(8),dp(9),dp(8));sw.setChecked(prefs.getBoolean("on"+id,false));card.addView(sw);
  sw.setOnCheckedChangeListener((v,on)->{prefs.edit().putBoolean("on"+id,on).apply();schedule(this,id);if(on&&prefs.getInt("days"+id,127)==0)Toast.makeText(this,"Elegí al menos un día para esta alarma",Toast.LENGTH_LONG).show();});
- Button days=btn("Días de la alarma · "+(id+1));root.addView(days);days.setOnClickListener(v->{String[] labels={"Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};boolean[] checked=new boolean[7];int mask=prefs.getInt("days"+id,127);for(int j=0;j<7;j++)checked[j]=(mask&(1<<j))!=0;new AlertDialog.Builder(this).setTitle("Elegí los días").setMultiChoiceItems(labels,checked,(d,which,on)->checked[which]=on).setPositiveButton("Guardar",(d,w)->{int msk=0;for(int j=0;j<7;j++)if(checked[j])msk|=(1<<j);prefs.edit().putInt("days"+id,msk).apply();schedule(this,id);if(msk==0)Toast.makeText(this,"Sin días seleccionados: esta alarma no sonará",Toast.LENGTH_LONG).show();}).setNegativeButton("Cancelar",null).show();});
- Button delete=btn("Eliminar alarma · "+(id+1));root.addView(delete);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Eliminar alarma").setMessage("¿Querés eliminar esta alarma?").setPositiveButton("Eliminar",(d,w)->{prefs.edit().putBoolean("on"+id,false).putBoolean("created"+id,false).apply();schedule(this,id);render();}).setNegativeButton("Cancelar",null).show());
- Button edit=btn("Cambiar hora · "+(id+1));root.addView(edit);edit.setOnClickListener(v->new TimePickerDialog(this,(picker,hh,mm)->{prefs.edit().putInt("h"+id,hh).putInt("m"+id,mm).putBoolean("on"+id,true).apply();schedule(this,id);render();},h,m,true).show());
+ Button days=btn("Días de la alarma · "+(id+1));card.addView(days);days.setOnClickListener(v->{String[] labels={"Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};boolean[] checked=new boolean[7];int mask=prefs.getInt("days"+id,127);for(int j=0;j<7;j++)checked[j]=(mask&(1<<j))!=0;new AlertDialog.Builder(this).setTitle("Elegí los días").setMultiChoiceItems(labels,checked,(d,which,on)->checked[which]=on).setPositiveButton("Guardar",(d,w)->{int msk=0;for(int j=0;j<7;j++)if(checked[j])msk|=(1<<j);prefs.edit().putInt("days"+id,msk).apply();schedule(this,id);if(msk==0)Toast.makeText(this,"Sin días seleccionados: esta alarma no sonará",Toast.LENGTH_LONG).show();}).setNegativeButton("Cancelar",null).show();});
+ Button delete=btn("Eliminar alarma · "+(id+1));card.addView(delete);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Eliminar alarma").setMessage("¿Querés eliminar esta alarma?").setPositiveButton("Eliminar",(d,w)->{prefs.edit().putBoolean("on"+id,false).putBoolean("created"+id,false).apply();schedule(this,id);render();}).setNegativeButton("Cancelar",null).show());
+ Button edit=btn("Cambiar hora · "+(id+1));card.addView(edit);edit.setOnClickListener(v->new TimePickerDialog(this,(picker,hh,mm)->{prefs.edit().putInt("h"+id,hh).putInt("m"+id,mm).putBoolean("on"+id,true).apply();schedule(this,id);render();},h,m,true).show());
+  root.addView(card);
  }
  static void schedule(Context c,int id){
  SharedPreferences p=c.getSharedPreferences(PREF,0);AlarmManager am=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
