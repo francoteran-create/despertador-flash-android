@@ -6,50 +6,55 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-/** Locally stored text event sessions; no microphone audio is written to disk. */
+/**
+ * A single listening session lives in RAM until the user stops listening or
+ * leaves SenseActivity. Only recognized text is persisted, never raw audio.
+ */
 public final class SenseHistory {
  private static final String FOLDER="aurora_sense";
  private final File folder;
- private File current;
+ private final ArrayList<String> events=new ArrayList<>();
+ private boolean active=false;
  private long started;
- private int events;
+ private String kind;
  public SenseHistory(Context context){
   folder=new File(context.getFilesDir(),FOLDER);
   if(!folder.exists())folder.mkdirs();
  }
- private static String stamp(long time,String format){return new SimpleDateFormat(format,new Locale("es","AR")).format(new Date(time));}
- public synchronized File begin(String type) throws IOException {
-  finish();
-  started=System.currentTimeMillis();events=0;
-  String name=stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS")+"_"+(type.equals("sonidos")?"SONIDOS":"CONVERSACION")+".txt";
-  current=new File(folder,name);
-  appendRaw("AURORA SENSE | "+(type.equals("sonidos")?"Reconocimiento de sonidos":"Transcripción de conversación")+"\n");
-  appendRaw("Inicio: "+stamp(started,"dd/MM/yyyy HH:mm:ss")+"\n");
-  appendRaw("Las detecciones son estimaciones automáticas. No se almacena el audio.\n\n");
-  return current;
+ private static String stamp(long time,String format){
+  return new SimpleDateFormat(format,new Locale("es","AR")).format(new Date(time));
  }
- private void appendRaw(String line) throws IOException {
-  if(current==null)return;
-  try(FileOutputStream out=new FileOutputStream(current,true)){
-   out.write(line.getBytes(StandardCharsets.UTF_8));out.flush();out.getFD().sync();
-  }
+ public synchronized void begin(String type){
+  started=System.currentTimeMillis();
+  kind=type.equals("sonidos")?"sonidos":"conversacion";
+  events.clear();active=true;
  }
- public synchronized void event(String observation) throws IOException {
-  if(current==null)return;
+ public synchronized void event(String observation){
+  if(!active)return;
   String clean=observation.replace('\r',' ').replace('\n',' ').trim();
-  if(clean.isEmpty())return;
-  appendRaw("["+stamp(System.currentTimeMillis(),"HH:mm:ss")+"] "+clean+"\n");
-  events++;
+  if(!clean.isEmpty()&&events.size()<2000)events.add(clean);
  }
  public synchronized File finish() throws IOException{
-  File saved=current;
-  if(saved!=null){
-   appendRaw("\nFin: "+stamp(System.currentTimeMillis(),"dd/MM/yyyy HH:mm:ss")+"\n");
-   appendRaw("Eventos reconocidos: "+events+"\n");
-  }
-  current=null;return saved;
+  if(!active)return null;
+  active=false;
+  if(events.isEmpty()){events.clear();return null;}
+  if(!folder.exists()&&!folder.mkdirs())throw new IOException("No se pudo crear carpeta de registros");
+  String suffix=kind.equals("sonidos")?"SONIDOS":"CONVERSACION";
+  File output=new File(folder,stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS")+"_"+suffix+".txt");
+  try(FileOutputStream stream=new FileOutputStream(output,false)){
+   StringBuilder text=new StringBuilder();
+   text.append("AURORA SENSE | ").append(kind.equals("sonidos")?"Reconocimiento de sonidos":"Transcripción de conversación").append("\n");
+   text.append("Fecha: ").append(stamp(started,"dd/MM/yyyy")).append("\n");
+   text.append("Inicio: ").append(stamp(started,"HH:mm")).append("\n");
+   text.append("Finalización: ").append(stamp(System.currentTimeMillis(),"HH:mm")).append("\n");
+   text.append("Resultados estimados por IA. No se guardó audio.\n\n");
+   for(int i=0;i<events.size();i++)text.append(i+1).append(". ").append(events.get(i)).append("\n");
+   text.append("\nTotal de eventos: ").append(events.size()).append("\n");
+   stream.write(text.toString().getBytes(StandardCharsets.UTF_8));stream.flush();stream.getFD().sync();
+  }finally{events.clear();}
+  return output;
  }
- public synchronized File getCurrent(){return current;}
+ public synchronized boolean hasActive(){return active;}
  public File[] list(){
   File[] files=folder.listFiles((dir,name)->name.endsWith(".txt"));
   if(files==null)return new File[0];
