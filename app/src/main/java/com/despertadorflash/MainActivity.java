@@ -204,12 +204,6 @@ public class MainActivity extends Activity {
   TextView subtitle=txt("ALARMA VISUAL Y SENSORIAL ACCESIBLE",12);subtitle.setGravity(Gravity.CENTER);subtitle.setTextColor(0xffa2edfd);root.addView(subtitle);
   AuroraClockView clock=new AuroraClockView(this);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
   Button alarms=btn("◷    MIS ALARMAS       ›");accent(alarms,0xff60431e,0xff6b4d26,0xffffd775);root.addView(alarms);alarms.setOnClickListener(v->{alarmsPage=true;render();});
- Button testFlash=btn("⚡  PROBAR FLASH LED · 5 SEGUNDOS");accent(testFlash,0xff752c97,0xff116a92,0xff64e8f5);root.addView(testFlash);testFlash.setOnClickListener(v->{
-  if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);Toast.makeText(this,"Autorizá Cámara y volvé a tocar Probar flash",Toast.LENGTH_LONG).show();return;}
-  if(torch==null||!torch.start()){new AlertDialog.Builder(this).setTitle("Flash no disponible").setMessage("AURORA no pudo encender la linterna: "+(torch==null?"Control no inicializado":torch.getLastError())+". Comprobá que la cámara esté cerrada y que AURORA tenga permiso de Cámara.").setPositiveButton("Entendido",null).show();return;}
-  Toast.makeText(this,"El flash debe parpadear durante 5 segundos",Toast.LENGTH_LONG).show();
-  new Handler(Looper.getMainLooper()).postDelayed(()->{if(torch!=null)torch.stop();},5000);
- });
   LinearLayout soundsCard=auroraCard(0xff123b59,0xff241d58);
   TextView soundsHeading=txt("◖))  RECONOCER SONIDOS",20);soundsHeading.setTypeface(null,Typeface.BOLD);soundsHeading.setTextColor(0xffbcecff);soundsCard.addView(soundsHeading);
   TextView soundsHint=txt("Detectar sonidos del entorno con IA",14);soundsHint.setTextColor(0xffc5d8f0);soundsCard.addView(soundsHint);
@@ -240,8 +234,8 @@ public class MainActivity extends Activity {
  }
  void renderCommunicationPage(){
   setupPage();pageTitle("COMUNICACIÓN");
-  Button sense=btn("◉  AURORA SENSE · ESCUCHAR EL ENTORNO");accent(sense,0xff285b93,0xff4e216b,0xff6af7ef);root.addView(sense);sense.setOnClickListener(v->startActivity(new Intent(this,SenseActivity.class)));
-  root.addView(txt("Transcribí conversaciones y reconocé posibles sonidos con IA.",15));
+  Button recognize=btn("◖))  ESCUCHAR SONIDOS");accent(recognize,0xff285b93,0xff19415b,0xff6af7ef);root.addView(recognize);recognize.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
+  Button transcribe=btn("🎙  TRANSCRIBIR CONVERSACIÓN");accent(transcribe,0xff632e8e,0xff28285a,0xffbb8fff);root.addView(transcribe);transcribe.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
   root.addView(txt("Elegí una frase o escribí un mensaje para mostrarlo en pantalla completa.",16));
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
  Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
