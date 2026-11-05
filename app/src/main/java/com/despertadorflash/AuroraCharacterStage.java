@@ -12,6 +12,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.graphics.drawable.ColorDrawable;
 import android.widget.FrameLayout;
 import java.util.Random;
 
@@ -21,9 +22,9 @@ import java.util.Random;
  */
 public final class AuroraCharacterStage extends FrameLayout {
  public interface OnFeature { void open(int which); }
- public static final int SOUNDS=0, VOICE=1, ALARMS=2, MESSAGES=3, PROFILE=4, RECORDS=5;
- private final String[] labels={"◖)) SONIDOS","◉ VOZ","◷ ALARMAS","▣ MENSAJES","◉ PERFIL","▤ REGISTROS"};
- private final Button[] features=new Button[6];
+ public static final int SOUNDS=0, VOICE=1, ALARMS=2, MESSAGES=3, PROFILE=4, RECORDS=5, TIMER=6, SETTINGS=7;
+ private final String[] labels={"SONIDOS","VOZ A TEXTO","ALARMAS","MENSAJES","MI PERFIL","REGISTROS","TEMPORIZADOR","AJUSTES"};
+ private final Button[] features=new Button[8];
  private final Sketch drawing;
  private final OnFeature callback;
  private int selected=-1;
@@ -36,12 +37,13 @@ public final class AuroraCharacterStage extends FrameLayout {
   drawing=new Sketch(c);addView(drawing,new LayoutParams(-1,-1));
   for(int i=0;i<features.length;i++){
    final int index=i;Button b=new Button(c);
-   b.setText(labels[i]);b.setAllCaps(false);b.setTextSize(11);
+   b.setText(labels[i]);b.setAllCaps(false);b.setTextSize(13);b.setLetterSpacing(.06f);
    b.setTextColor(0xfff1f4f8);b.setGravity(Gravity.CENTER);
    b.setPadding(dp(3),dp(3),dp(3),dp(3));
    b.setContentDescription("Abrir "+labels[i].replaceAll("[^\\p{L}\\p{N} ]","").trim());
    b.setMinHeight(0);b.setMinimumHeight(0);b.setMinWidth(0);b.setMinimumWidth(0);
    b.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));
+   b.setElevation(0);
    b.setBackground(bubble(false));
    features[i]=b;addView(b,new LayoutParams(dp(122),dp(50)));
    b.setOnClickListener(v->activate(index));
@@ -50,32 +52,36 @@ public final class AuroraCharacterStage extends FrameLayout {
   try{reduceMotion=Settings.Global.getFloat(c.getContentResolver(),Settings.Global.ANIMATOR_DURATION_SCALE,1f)==0f;}catch(Exception ignored){}
  }
  private android.graphics.drawable.Drawable bubble(boolean hot){
-  GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-   new int[]{hot?0xff145055:0xff10131b,hot?0xff132c38:0xff0e0e17});
-  g.setCornerRadius(dp(18));
-  g.setStroke(dp(hot?2:1),hot?0xff81e3d5:0xff56616c);
-  return new RippleDrawable(ColorStateList.valueOf(0x4453d8d2),g,null);
+  // No chips, cards or panels: controls are only lettering on true black.
+  return new ColorDrawable(Color.TRANSPARENT);
  }
  public void activate(int which){
   if(which<0||which>=6)return;
   selected=which;gestureStart=System.currentTimeMillis();
-  for(int j=0;j<features.length;j++)features[j].setBackground(bubble(j==which));
+  for(int j=0;j<features.length;j++){
+   features[j].setTextColor(j==which?0xff7be0d5:0xffeef0ee);
+   features[j].setBackground(bubble(j==which));
+  }
   drawing.invalidate();
   // A 240 ms gesture shows the selection without imposing a long animation wait.
   if(callback!=null)postDelayed(()->callback.open(which),240L);
  }
  @Override protected void onMeasure(int widthMeasureSpec,int heightMeasureSpec){
+  // Fill available display space, not a scrolling fixed-aspect card.
   int width=MeasureSpec.getSize(widthMeasureSpec);
-  int target=(int)(width*1.16f);
-  super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(target,MeasureSpec.EXACTLY));
+  int height=MeasureSpec.getSize(heightMeasureSpec);
+  if(height==0)height=Math.round(width*1.8f);
+  super.onMeasure(MeasureSpec.makeMeasureSpec(width,MeasureSpec.EXACTLY),
+   MeasureSpec.makeMeasureSpec(height,MeasureSpec.EXACTLY));
  }
  @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){
   super.onSizeChanged(w,h,oldw,oldh);
-  // Bubble grid leaves the middle of the stage to the animated character.
-  float[][] places={{.02f,.13f},{.63f,.13f},{.015f,.43f},{.65f,.43f},{.02f,.74f},{.64f,.74f}};
+  // Pairs of functional captions orbit the figure with no visible backing shape.
+  float[][] places={{.01f,.17f},{.63f,.17f},{.01f,.36f},{.63f,.36f},
+   {.01f,.61f},{.63f,.61f},{.01f,.81f},{.63f,.81f}};
   for(int i=0;i<features.length;i++){
    LayoutParams lp=(LayoutParams)features[i].getLayoutParams();
-   lp.width=Math.round(w*.34f);lp.height=Math.round(h*.115f);
+   lp.width=Math.round(w*.36f);lp.height=Math.max(dp(48),Math.round(h*.075f));
    lp.leftMargin=Math.round(w*places[i][0]);lp.topMargin=Math.round(h*places[i][1]);
    features[i].setLayoutParams(lp);
   }
@@ -102,23 +108,18 @@ public final class AuroraCharacterStage extends FrameLayout {
   }
   @Override protected void onDraw(Canvas actual){
    float width=getWidth(),height=getHeight();if(width<=0||height<=0)return;
-   actual.save();actual.scale(width/360f,height/430f);
+   actual.save();
+   float scale=Math.min(width/360f,height/550f);
+   actual.translate((width-360f*scale)/2f,(height-550f*scale)/2f);
+   actual.scale(scale,scale);
+   actual.translate(0,64);
    float t=reduceMotion?0:(System.currentTimeMillis()-created)/1000f;
    int chalk=0xffedf0ef,dim=0xff9aa7b2,teal=0xff5fbcb9;
    p.setStyle(Paint.Style.FILL);
-   p.setShader(new LinearGradient(0,0,360,430,0xff05070a,0xff08090f,Shader.TileMode.CLAMP));
-   actual.drawRoundRect(0,0,360,430,25,25,p);p.setShader(null);
-   for(int i=0;i<26;i++){
-    p.setColor(i%4==0?0x335ed4c9:0x22567e9a);
-    actual.drawCircle(stars[i]*360,stars[(i+17)%52]*430,i%7==0?1.5f:.7f,p);
-   }
-   path(actual,1.6f,0x554f6477,8,393,56,375,90,394);
-   path(actual,1.6f,0x554f6477,268,395,308,378,353,392);
-   p.setColor(0xffd9e5e8);p.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));
-   p.setTextSize(17);p.setTextAlign(Paint.Align.CENTER);
-   actual.drawText("AURORA  /  STREET CONTROL",180,28,p);
-   path(actual,2f,teal,118,41,154,41);
-   path(actual,2f,0xff6b567a,207,41,244,41);
+   p.setColor(Color.BLACK);actual.drawColor(Color.BLACK);
+   // Sparse, quiet lines, no starfield or luminous panels.
+   path(actual,1.2f,0x335e9895,55,58,86,52);
+   path(actual,1.2f,0x335e9895,279,60,300,54);
 
    float bob=reduceMotion?0:(float)Math.sin(t*1.7f)*2.2f;
    actual.save();actual.translate(0,bob);
@@ -140,8 +141,13 @@ public final class AuroraCharacterStage extends FrameLayout {
    path(actual,5,chalk,137,270,112,294,125,321);
    path(actual,4,chalk,125,321,133,328,141,322);
    float fx=252f,fy=180f;
-   if(selected>=0){float[][] targets={{95,94},{263,94},{94,225},{266,225},{100,354},{267,354}};
-    fx=targets[selected][0];fy=targets[selected][1];
+   if(selected>=0){
+    Button chosen=features[selected];
+    // Translate real Android button position back into the sketch coordinate system.
+    float centerX=chosen.getLeft()+chosen.getWidth()*.5f;
+    float centerY=chosen.getTop()+chosen.getHeight()*.5f;
+    fx=(centerX-(width-360f*scale)/2f)/scale;
+    fy=(centerY-(height-550f*scale)/2f)/scale-64;
    }
    float startX=210,startY=266;
    float bendX=(startX+fx)*.5f+12;
@@ -169,7 +175,7 @@ public final class AuroraCharacterStage extends FrameLayout {
    path(actual,3.1f,dim,215,212,222,213,219,222);
    path(actual,3.7f,chalk,164,233,161,249,179,255,200,249,197,233);
    actual.restore();
-   if(isShown()&&!reduceMotion)postInvalidateDelayed(80);
+   if(isShown()&&!reduceMotion)postInvalidateDelayed(110);
    actual.restore();
   }
  }
