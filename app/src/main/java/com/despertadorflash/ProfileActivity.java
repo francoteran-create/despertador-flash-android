@@ -29,10 +29,10 @@ public final class ProfileActivity extends Activity {
  private int avatarColor=0, avatarStyle=0;
  private final int[] colors={0xff4f87b6,0xff7254bb,0xff248b84,0xffba6f40,0xffb45881,0xff546b8c};
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
- private GradientDrawable gradient(int a,int b){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{a,b});d.setCornerRadius(dp(18));d.setStroke(dp(1),0xff447c9d);return d;}
+ private GradientDrawable gradient(int a,int b){return AuroraDesign.surface(this,a,b,0xff447c9d,22);}
  private TextView label(String s,int size){TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(0xffe1f4ff);v.setPadding(dp(8),dp(9),dp(8),dp(5));return v;}
- private Button button(String text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(16);b.setTextColor(-1);b.setBackground(gradient(0xff244a70,0xff382f68));return b;}
- private EditText edit(String hint){EditText field=new EditText(this);field.setHint(hint);field.setHintTextColor(0xff94b8cb);field.setTextColor(-1);field.setTextSize(17);field.setSingleLine(true);field.setPadding(dp(14),dp(13),dp(14),dp(13));field.setBackground(gradient(0xff112b3d,0xff1b2244));return field;}
+ private Button button(String text){Button b=new Button(this);b.setText(text);AuroraDesign.action(b,0xff244a70,0xff382f68,0xff5589a9);return b;}
+ private EditText edit(String hint){EditText field=new EditText(this);field.setHint(hint);field.setHintTextColor(0xff94b8cb);field.setTextColor(-1);field.setTextSize(17);field.setSingleLine(true);field.setPadding(dp(14),dp(13),dp(14),dp(13));AuroraDesign.entry(field);return field;}
  @Override public void onCreate(Bundle saved){super.onCreate(saved);prefs=getSharedPreferences(PREF,0);avatarColor=prefs.getInt("avatar_color",0);avatarStyle=prefs.getInt("avatar_style",0);usePhoto=prefs.getBoolean("photo",false);draw();}
  private void draw(){
   ScrollView scroll=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(18),dp(20),dp(18),dp(28));root.setBackground(new AuroraSkyDrawable());scroll.addView(root);setContentView(scroll);
@@ -45,6 +45,7 @@ public final class ProfileActivity extends Activity {
   LinearLayout imageActions=new LinearLayout(this);imageActions.setOrientation(LinearLayout.HORIZONTAL);root.addView(imageActions);
   Button choosePhoto=button("FOTO DEL CELULAR");imageActions.addView(choosePhoto,new LinearLayout.LayoutParams(0,dp(58),1f));choosePhoto.setOnClickListener(v->pickPhoto());
   Button chooseAvatar=button("CREAR AVATAR");LinearLayout.LayoutParams avatarBtnParams=new LinearLayout.LayoutParams(0,dp(58),1f);avatarBtnParams.leftMargin=dp(8);imageActions.addView(chooseAvatar,avatarBtnParams);chooseAvatar.setOnClickListener(v->showAvatarEditor());
+  root.addView(AuroraDesign.overline(this,"IDENTIDAD PERSONAL"));
   root.addView(label("DATOS PERSONALES",20));
   root.addView(label("Nombre (opcional)",14));name=edit("¿Cómo querés que te llamemos?");name.setText(prefs.getString("name",""));root.addView(name);
   root.addView(label("Apodo o nombre para mostrar (opcional)",14));nickname=edit("Nombre visible en AURORA");nickname.setText(prefs.getString("nickname",""));root.addView(nickname);
