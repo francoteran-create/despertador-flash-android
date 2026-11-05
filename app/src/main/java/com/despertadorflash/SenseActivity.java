@@ -103,21 +103,34 @@ public final class SenseActivity extends Activity {
   lastTranscript=initial;
   if(screenMode==MODE_SOUND){
    root.addView(AuroraDesign.overline(this,"SENSIBILIDAD DE ESCUCHA"));
-   Spinner sensitivity=new Spinner(this);
-   String[] levels={"Alta · más detecciones","Equilibrada · recomendada","Precisa · menos falsos positivos"};
-   ArrayAdapter<String> sensitivityAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,levels);
-   sensitivity.setAdapter(sensitivityAdapter);sensitivity.setBackground(bg(0xff182a43,0xff222653));
-   int chosen=getPreferences(MODE_PRIVATE).getInt("sense_sensitivity",1);
-   sensitivity.setSelection(Math.max(0,Math.min(2,chosen)));
-   minConfidence=chosen==0?22:chosen==2?45:30;
-   sensitivity.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
-    public void onNothingSelected(android.widget.AdapterView<?> parent){}
-    public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
-     minConfidence=position==0?22:position==2?45:30;
-     getPreferences(MODE_PRIVATE).edit().putInt("sense_sensitivity",position).apply();
-    }
-   });
-   root.addView(sensitivity,new LinearLayout.LayoutParams(-1,dp(58)));
+   LinearLayout sensitivityRow=new LinearLayout(this);sensitivityRow.setOrientation(LinearLayout.HORIZONTAL);
+   root.addView(sensitivityRow,new LinearLayout.LayoutParams(-1,dp(65)));
+   String[] titles={"ALTA","EQUILIBRADA","PRECISA"};
+   final Button[] choices=new Button[3];
+   int initial=Math.max(0,Math.min(2,getPreferences(MODE_PRIVATE).getInt("sense_sensitivity",1)));
+   minConfidence=initial==0?22:initial==2?45:30;
+   for(int i=0;i<choices.length;i++){
+    final int selected=i;
+    Button choice=button(titles[i]);choice.setTextSize(12);choices[i]=choice;
+    int from=i==initial?0xff126979:0xff182b42;
+    int to=i==initial?0xff255b79:0xff242849;
+    AuroraDesign.action(choice,from,to,i==initial?0xff89fbeb:0xff426783);
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(63),1f);
+    if(i>0)lp.leftMargin=dp(6);
+    sensitivityRow.addView(choice,lp);
+    choice.setOnClickListener(v->{
+     minConfidence=selected==0?22:selected==2?45:30;
+     getPreferences(MODE_PRIVATE).edit().putInt("sense_sensitivity",selected).apply();
+     for(int k=0;k<choices.length;k++){
+      AuroraDesign.action(choices[k],k==selected?0xff126979:0xff182b42,
+       k==selected?0xff255b79:0xff242849,k==selected?0xff89fbeb:0xff426783);
+      choices[k].setSelected(k==selected);
+     }
+     Toast.makeText(this,"Sensibilidad: "+titles[selected].toLowerCase(Locale.ROOT),Toast.LENGTH_SHORT).show();
+    });
+   }
+   TextView sensitivityHint=text("Alta: más detecciones · Precisa: menos avisos falsos",13,0xffa8cadd);
+   root.addView(sensitivityHint);
   }else{
    root.addView(AuroraDesign.overline(this,"IDIOMA DE LA CONVERSACIÓN"));
    languagePicker=new Spinner(this);
