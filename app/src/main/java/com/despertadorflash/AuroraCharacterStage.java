@@ -61,8 +61,8 @@ public final class AuroraCharacterStage extends FrameLayout {
   selected=which;gestureStart=System.currentTimeMillis();
   for(int j=0;j<features.length;j++)features[j].setBackground(bubble(j==which));
   drawing.invalidate();
-  // Feature opens immediately; the character's reaction never blocks access.
-  if(callback!=null)callback.open(which);
+  // A 240 ms gesture shows the selection without imposing a long animation wait.
+  if(callback!=null)postDelayed(()->callback.open(which),240L);
  }
  @Override protected void onMeasure(int widthMeasureSpec,int heightMeasureSpec){
   int width=MeasureSpec.getSize(widthMeasureSpec);
