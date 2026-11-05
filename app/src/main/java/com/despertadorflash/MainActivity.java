@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
  TextView section(String s){TextView v=txt(s,21);v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
  boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
  SpeechRecognizer homeRecognizer; boolean homeListening=false; TextView homeTranscript,homeSpeechStatus; Button homeSpeechToggle;
+ SenseHistory homeSpeechHistory;
  final Handler speechHandler=new Handler(Looper.getMainLooper());
  public void onCreate(Bundle b){
   super.onCreate(b);
@@ -121,6 +122,8 @@ public class MainActivity extends Activity {
    homeSpeechStatus.setText("No hay un servicio de reconocimiento de voz disponible en Android.");return;
   }
   homeListening=true;
+  if(homeSpeechHistory==null)homeSpeechHistory=new SenseHistory(this);
+  homeSpeechHistory.begin("conversacion");
   homeSpeechToggle.setText("■  DETENER ESCUCHA");
   homeSpeechStatus.setText("MICRÓFONO ACTIVO · escuchando conversación");
   try{
@@ -139,7 +142,7 @@ public class MainActivity extends Activity {
     }
     public void onResults(Bundle data){if(!homeListening)return;
      java.util.ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-     if(matches!=null&&!matches.isEmpty()){String phrase=matches.get(0);homeTranscript.setText(phrase);prefs.edit().putString("sense_last_transcript",phrase).apply();}
+     if(matches!=null&&!matches.isEmpty()){String phrase=matches.get(0);homeTranscript.setText(phrase);prefs.edit().putString("sense_last_transcript",phrase).apply();if(homeSpeechHistory!=null)homeSpeechHistory.event(phrase);}
      speechHandler.postDelayed(()->{if(homeListening)listenHomeSpeech();},650);
     }
     public void onPartialResults(Bundle data){if(!homeListening)return;
@@ -160,10 +163,20 @@ public class MainActivity extends Activity {
   try{homeRecognizer.startListening(i);}catch(Exception e){stopHomeSpeech();homeSpeechStatus.setText("Escucha interrumpida: "+e.getMessage());}
  }
  void stopHomeSpeech(){
+  boolean wasListening=homeListening;
   homeListening=false;speechHandler.removeCallbacksAndMessages(null);
+  if(homeSpeechHistory!=null&&homeSpeechHistory.hasActive()){
+   try{
+    java.io.File saved=homeSpeechHistory.finish();
+    if(saved!=null&&wasListening&&homeSpeechStatus!=null)
+     homeSpeechStatus.setText("Guardado: "+SenseHistory.readableName(saved));
+   }catch(java.io.IOException e){
+    if(homeSpeechStatus!=null)homeSpeechStatus.setText("Error guardando conversación: "+e.getMessage());
+   }
+  }
   if(homeRecognizer!=null){SpeechRecognizer old=homeRecognizer;homeRecognizer=null;old.destroy();}
   if(homeSpeechToggle!=null)homeSpeechToggle.setText("🎙  ESCUCHAR CONVERSACIÓN");
-  if(homeSpeechStatus!=null)homeSpeechStatus.setText("Micrófono apagado · tocá para escuchar");
+  if(homeSpeechStatus!=null&&homeSpeechStatus.getText().toString().startsWith("MICRÓFONO"))homeSpeechStatus.setText("Micrófono apagado · tocá para escuchar");
  }
  void setupPage(){
   if(timer!=null){timer.cancel();timer=null;}
