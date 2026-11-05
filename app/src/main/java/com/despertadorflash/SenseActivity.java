@@ -49,6 +49,7 @@ public final class SenseActivity extends Activity {
  private AuroraVisualEngineView visual;
  private Button speechButton, soundsButton, translateButton;
  private Spinner languagePicker;
+ private int languageSelection=0;
  private Translator translator;
  private String lastTranscript="";
  private boolean speechLaunching=false;
@@ -133,10 +134,28 @@ public final class SenseActivity extends Activity {
    root.addView(sensitivityHint);
   }else{
    root.addView(AuroraDesign.overline(this,"IDIOMA DE LA CONVERSACIÓN"));
-   languagePicker=new Spinner(this);
-   ArrayAdapter<String> languages=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Español","Inglés","Portugués"});
-   languagePicker.setAdapter(languages);languagePicker.setBackground(bg(0xff182a43,0xff222653));
-   root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(58)));
+   LinearLayout languageRow=new LinearLayout(this);languageRow.setOrientation(LinearLayout.HORIZONTAL);
+   root.addView(languageRow,new LinearLayout.LayoutParams(-1,dp(64)));
+   String[] languageLabels={"ESPAÑOL","INGLÉS","PORTUGUÉS"};
+   Button[] languageButtons=new Button[3];
+   languageSelection=Math.max(0,Math.min(2,getPreferences(MODE_PRIVATE).getInt("sense_language",0)));
+   for(int k=0;k<3;k++){
+    int chosen=k;
+    Button item=button(languageLabels[k]);item.setTextSize(12);languageButtons[k]=item;
+    AuroraDesign.action(item,k==languageSelection?0xff155a70:0xff1b2e46,
+     k==languageSelection?0xff2c4b7a:0xff242741,k==languageSelection?0xff86f4ed:0xff44647d);
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(60),1f);
+    if(k>0)lp.leftMargin=dp(6);
+    languageRow.addView(item,lp);
+    item.setOnClickListener(v->{
+     languageSelection=chosen;
+     getPreferences(MODE_PRIVATE).edit().putInt("sense_language",chosen).apply();
+     for(int j=0;j<3;j++)AuroraDesign.action(languageButtons[j],
+      j==chosen?0xff155a70:0xff1b2e46,j==chosen?0xff2c4b7a:0xff242741,
+      j==chosen?0xff86f4ed:0xff44647d);
+     if(mode==MODE_SPEECH){stopAll(true);toggle(MODE_SPEECH);}
+    });
+   }
   }
   LinearLayout controls=new LinearLayout(this);controls.setOrientation(LinearLayout.HORIZONTAL);
   LinearLayout.LayoutParams controlsParams=new LinearLayout.LayoutParams(-1,-2);controlsParams.topMargin=dp(12);
@@ -272,7 +291,7 @@ public final class SenseActivity extends Activity {
   if(translateButton!=null)translateButton.setVisibility(isSpeech?View.VISIBLE:View.GONE);
  }
  private String recognizedLanguage(){
-  int selected=languagePicker==null?0:languagePicker.getSelectedItemPosition();return selected==1?"en-US":selected==2?"pt-BR":"es-AR";
+  int selected=languageSelection;return selected==1?"en-US":selected==2?"pt-BR":"es-AR";
  }
  private void saveTranscript(String phrase){
   lastTranscript=phrase;getSharedPreferences("aurora",0).edit().putString("sense_last_transcript",phrase).apply();
