@@ -168,8 +168,10 @@ public class MainActivity extends Activity {
   if(homeSpeechHistory!=null&&homeSpeechHistory.hasActive()){
    try{
     java.io.File saved=homeSpeechHistory.finish();
-    if(saved!=null&&wasListening&&homeSpeechStatus!=null)
-     homeSpeechStatus.setText("Guardado: "+SenseHistory.readableName(saved));
+    if(saved!=null){
+     try{new SavedFolderManager(this).copyOne(saved);}catch(java.io.IOException copyError){android.util.Log.w("Aurora","No se pudo copiar el archivo a carpeta elegida",copyError);}
+     if(wasListening&&homeSpeechStatus!=null)homeSpeechStatus.setText("Guardado: "+SenseHistory.readableName(saved));
+    }
    }catch(java.io.IOException e){
     if(homeSpeechStatus!=null)homeSpeechStatus.setText("Error guardando conversación: "+e.getMessage());
    }
@@ -236,6 +238,7 @@ public class MainActivity extends Activity {
   setupPage();pageTitle("COMUNICACIÓN");
   Button recognize=btn("◖))  ESCUCHAR SONIDOS");accent(recognize,0xff285b93,0xff19415b,0xff6af7ef);root.addView(recognize);recognize.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   Button transcribe=btn("🎙  TRANSCRIBIR CONVERSACIÓN");accent(transcribe,0xff632e8e,0xff28285a,0xffbb8fff);root.addView(transcribe);transcribe.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  Button records=btn("📁  CARPETA DE REGISTROS");accent(records,0xff1a3f62,0xff23305a,0xff62cbe8);root.addView(records);records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
   root.addView(txt("Elegí una frase o escribí un mensaje para mostrarlo en pantalla completa.",16));
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
  Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
