@@ -28,7 +28,7 @@ public final class RecordsActivity extends Activity {
  private EditText search;
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextSize(size);v.setTextColor(Color.WHITE);v.setPadding(dp(10),dp(10),dp(10),dp(10));return v;}
- private Button btn(String name){Button b=new Button(this);b.setText(name);b.setAllCaps(false);b.setTextColor(Color.WHITE);b.setTextSize(15);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff304b76));return b;}
+ private Button btn(String name){Button b=new Button(this);b.setText(name);AuroraDesign.action(b,0xff163e5a,0xff282857,0xff477e9c);return b;}
  @Override public void onCreate(Bundle saved){super.onCreate(saved);history=new SenseHistory(this);destination=new SavedFolderManager(this);draw();}
  private void draw(){
   ScrollView sc=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(16),dp(18),dp(16),dp(24));root.setBackground(new AuroraSkyDrawable());sc.addView(root);setContentView(sc);
@@ -38,8 +38,9 @@ public final class RecordsActivity extends Activity {
   folderStatus=txt("",14);folderStatus.setTextColor(0xffc0e2ef);root.addView(folderStatus);
   Button select=btn("📁  ELEGIR CARPETA DEL TELÉFONO");root.addView(select);select.setOnClickListener(v->chooseFolder());
   Button browse=btn("↗  BUSCAR ARCHIVOS EN LA CARPETA ELEGIDA");root.addView(browse);browse.setOnClickListener(v->browseFolder());
+  root.addView(AuroraDesign.overline(this,"EXPLORADOR DE SESIONES"));
   count=txt("",15);root.addView(count);
-  search=new EditText(this);search.setSingleLine(true);search.setTextColor(Color.WHITE);search.setHintTextColor(0xffbed3e2);search.setHint("Buscar por fecha, tipo o nombre");root.addView(search);
+  search=new EditText(this);search.setSingleLine(true);AuroraDesign.entry(search);search.setTextColor(Color.WHITE);search.setHintTextColor(0xffbed3e2);search.setHint("Buscar por fecha, tipo o nombre");root.addView(search);
   search.addTextChangedListener(new android.text.TextWatcher(){
    public void beforeTextChanged(CharSequence a,int b,int c,int d){}
    public void onTextChanged(CharSequence a,int b,int before,int c){refresh();}
