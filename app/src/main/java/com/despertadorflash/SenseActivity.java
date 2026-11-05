@@ -281,7 +281,7 @@ public final class SenseActivity extends Activity {
    try{
     BaseOptions options=BaseOptions.builder().setModelAssetPath("yamnet.tflite").build();
     AudioClassifierOptions settings=AudioClassifierOptions.builder().setBaseOptions(options).setRunningMode(RunningMode.AUDIO_STREAM)
-     .setMaxResults(3).setScoreThreshold(0.18f)
+     .setMaxResults(6).setScoreThreshold(0.15f)
      .setResultListener(r->{
       if(!soundRunning||r.classificationResults().isEmpty()||r.classificationResults().get(0).classifications().isEmpty())return;
       java.util.List<Category> cats=r.classificationResults().get(0).classifications().get(0).categories();
