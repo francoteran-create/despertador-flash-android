@@ -87,6 +87,13 @@ public class MainActivity extends Activity {
    else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
   }
  }
+ @Override public void onWindowFocusChanged(boolean hasFocus){
+  super.onWindowFocusChanged(hasFocus);
+  if(hasFocus&&!alarmActive&&!timerAlertActive){
+   if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm();}
+   else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
+  }
+ }
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
  void render(){
