@@ -209,7 +209,7 @@ public class MainActivity extends Activity {
   Button settings=btn("⚙");settings.setContentDescription("Configuración y permisos");settings.setTextSize(24);accent(settings,0xff17203e,0xff22284c,0xff3e5981);
   heading.addView(settings,new LinearLayout.LayoutParams(dp(54),dp(54)));settings.setOnClickListener(v->{settingsPage=true;render();});
   TextView subtitle=txt("ALARMA VISUAL Y SENSORIAL ACCESIBLE",12);subtitle.setGravity(Gravity.CENTER);subtitle.setTextColor(0xffa2edfd);root.addView(subtitle);
-  AuroraClockView clock=new AuroraClockView(this);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
+  AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
   Button alarms=btn("◷    MIS ALARMAS       ›");accent(alarms,0xff60431e,0xff6b4d26,0xffffd775);root.addView(alarms);alarms.setOnClickListener(v->{alarmsPage=true;render();});
   LinearLayout soundsCard=auroraCard(0xff123b59,0xff241d58);
   TextView soundsHeading=txt("◖))  RECONOCER SONIDOS",20);soundsHeading.setTypeface(null,Typeface.BOLD);soundsHeading.setTextColor(0xffbcecff);soundsCard.addView(soundsHeading);
