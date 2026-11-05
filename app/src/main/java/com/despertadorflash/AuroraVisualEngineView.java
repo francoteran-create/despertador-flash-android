@@ -28,15 +28,16 @@ public final class AuroraVisualEngineView extends View {
  private long eventPulseAt=0L;
  private float energy=0.1f;
  private long epoch=System.currentTimeMillis();
- private int widthPx=0, heightPx=0;
  private boolean reducedMotion;
+ private final android.graphics.Rect visibleBounds=new android.graphics.Rect();
+ private boolean lowPowerGraphics=false;
  private final PowerManager power;
  private final Runnable nextFrame=new Runnable(){public void run(){invalidate();}};
  public AuroraVisualEngineView(Context context,int mode){
   super(context);
   this.mode=mode;this.prefs=context.getSharedPreferences("aurora",0);
   power=(PowerManager)context.getSystemService(Context.POWER_SERVICE);
-  setLayerType(View.LAYER_TYPE_HARDWARE,null);
+  // Hardware accelerated canvas where supported; avoid forcing a software bitmap layer.
   for(int i=0;i<starsX.length;i++){starsX[i]=random.nextFloat();starsY[i]=random.nextFloat();starsR[i]=.5f+random.nextFloat()*1.3f;}
   setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
   refreshMotion();
@@ -45,6 +46,7 @@ public final class AuroraVisualEngineView extends View {
   float scale=1;
   try{scale=Settings.Global.getFloat(getContext().getContentResolver(),Settings.Global.ANIMATOR_DURATION_SCALE,1f);}catch(Exception ignored){}
   reducedMotion=!prefs.getBoolean("aurora_motion",true)||scale==0f||(Build.VERSION.SDK_INT>=26&&!ValueAnimator.areAnimatorsEnabled());
+  lowPowerGraphics=prefs.getBoolean("aurora_smooth_mode",true);
   invalidate();
  }
  public void setListening(boolean active){listening=active;invalidate();}
@@ -95,7 +97,9 @@ public final class AuroraVisualEngineView extends View {
  }
  @Override protected void onDraw(Canvas c){
   super.onDraw(c);float w=getWidth(),h=getHeight();if(w<=0||h<=0)return;
-  boolean animating=!reducedMotion&&isShown()&&running&&(power==null||!power.isPowerSaveMode());
+  boolean visible=getGlobalVisibleRect(visibleBounds)&&visibleBounds.width()>getWidth()/4&&visibleBounds.height()>getHeight()/4;
+  boolean powerSaving=power!=null&&power.isPowerSaveMode();
+  boolean animating=!reducedMotion&&isShown()&&visible&&running&&!powerSaving;
   float t=animating?(System.currentTimeMillis()-epoch)/1000f:0f;
   paint.setStyle(Paint.Style.FILL);paint.setShader(new LinearGradient(0,0,w,h,new int[]{0xff080e25,0xff0b1d38,0xff100d2c},null,Shader.TileMode.CLAMP));
   c.drawRoundRect(0,0,w,h,w*.045f,w*.045f,paint);paint.setShader(null);
@@ -103,7 +107,7 @@ public final class AuroraVisualEngineView extends View {
   drawRibbon(c,w,h,.4f,0,t);drawRibbon(c,w,h,2.0f,1,t);drawRibbon(c,w,h,3.7f,2,t);
   fill(c,w*.10f,h*.15f,w*.52f,0x20365beb,0x00142465);
   fill(c,w*.93f,h*.8f,w*.43f,0x3048d4ba,0x000d1020);
-  for(int i=0;i<starsX.length;i++){
+  for(int i=0;i<(lowPowerGraphics?36:starsX.length);i++){
    float shimmer=animating?(float)Math.sin(t*(.3+i%5*.11)+i)*.24f+.76f:1f;
    paint.setColor(Color.argb((int)(shimmer*(i%6==0?140:85)),206,244,255));
    paint.setStyle(Paint.Style.FILL);
@@ -122,7 +126,7 @@ public final class AuroraVisualEngineView extends View {
     new float[]{0f,.27f,.65f,1f},Shader.TileMode.CLAMP));
   c.drawCircle(cx,cy,R,paint);paint.setShader(null);
   stroke(c,0x6659f6f0,Math.max(2,w*.005f));c.drawCircle(cx,cy,R*.98f,paint);
-  for(int j=0;j<3;j++){
+  for(int j=0;j<(lowPowerGraphics?2:3);j++){
    c.save();float rotation=(j*60f)+(animating?t*(j%2==0?12f:-9f):0);
    c.rotate(rotation,cx,cy);
    stroke(c,j==0?0xb66af9ec:j==1?0x9f9b8bff:0x99d89efc,Math.max(2,w*.006f));
@@ -172,7 +176,7 @@ public final class AuroraVisualEngineView extends View {
   c.restore();
   if(running&&isShown()){
    removeCallbacks(nextFrame);
-   postDelayed(nextFrame,animating?45L:1000L);
+   postDelayed(nextFrame,animating?(lowPowerGraphics?65L:40L):1200L);
   }
  }
 }
