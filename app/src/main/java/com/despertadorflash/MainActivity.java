@@ -197,83 +197,35 @@ public class MainActivity extends Activity {
   if(timerPage){stopHomeSpeech();renderTimerPage();return;}
   if(communicationPage){stopHomeSpeech();renderCommunicationPage();return;}
   if(settingsPage){stopHomeSpeech();renderSettingsPage();return;}
-  setupPage();
-  root.setPadding(dp(17),dp(10),dp(17),dp(32));
-  LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);root.addView(heading);
-  TextView title=txt("AURORA",34);title.setTextColor(0xfff0ffff);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
-  title.setLetterSpacing(.18f);heading.addView(title,new LinearLayout.LayoutParams(0,dp(64),1f));
-  Button profile=btn("◉");profile.setContentDescription("Mi perfil");
-  accent(profile,0xff17435b,0xff243b61,0xff7bdcec);
-  LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(dp(50),dp(50));pp.rightMargin=dp(7);heading.addView(profile,pp);
-  profile.setOnClickListener(v->{stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));});
-  Button settings=btn("⚙");settings.setContentDescription("Configuración");
-  accent(settings,0xff1e2748,0xff2b2950,0xff8b87cd);heading.addView(settings,new LinearLayout.LayoutParams(dp(50),dp(50)));
-  settings.setOnClickListener(v->{settingsPage=true;render();});
-
-  TextView subtitle=txt("TU ENTORNO, EN UNA NUEVA DIMENSIÓN",12);
-  subtitle.setTextColor(0xff93d9e5);subtitle.setLetterSpacing(.12f);subtitle.setPadding(dp(2),0,0,dp(10));root.addView(subtitle);
-  root.addView(AuroraDesign.overline(this,"TOCÁ UNA FUNCIÓN  /  EL PERSONAJE TE ACOMPAÑA"));
-  AuroraCharacterStage character=new AuroraCharacterStage(this,feature->{
+  // The home is intentionally full-bleed black, with NO card grid or scroll.
+  android.widget.FrameLayout stage=new android.widget.FrameLayout(this);
+  stage.setBackgroundColor(Color.BLACK);
+  getWindow().setStatusBarColor(Color.BLACK);
+  getWindow().setNavigationBarColor(Color.BLACK);
+  AuroraCharacterStage actor=new AuroraCharacterStage(this,feature->{
    if(feature==AuroraCharacterStage.SOUNDS){openSense(SenseActivity.MODE_SOUND);}
    else if(feature==AuroraCharacterStage.VOICE){openSense(SenseActivity.MODE_SPEECH);}
    else if(feature==AuroraCharacterStage.ALARMS){alarmsPage=true;render();}
    else if(feature==AuroraCharacterStage.MESSAGES){stopHomeSpeech();communicationPage=true;render();}
    else if(feature==AuroraCharacterStage.PROFILE){stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));}
    else if(feature==AuroraCharacterStage.RECORDS){stopHomeSpeech();startActivity(new Intent(this,RecordsActivity.class));}
+   else if(feature==AuroraCharacterStage.TIMER){timerPage=true;render();}
+   else if(feature==AuroraCharacterStage.SETTINGS){settingsPage=true;render();}
   });
-  root.addView(character,new LinearLayout.LayoutParams(-1,-2));
-  root.addView(AuroraDesign.overline(this,"ACCESOS RÁPIDOS  /  TAMBIÉN PODÉS TOCARLOS"));
-
-  LinearLayout shortcuts=new LinearLayout(this);shortcuts.setOrientation(LinearLayout.HORIZONTAL);root.addView(shortcuts);
-  LinearLayout soundTile=homeTile("◖))","SONIDOS","Detección del entorno",0xff102c42,0xff192b51);
-  LinearLayout speechTile=homeTile("◉","CONVERSACIÓN","Voz en texto",0xff282044,0xff183750);
-  LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(158),1f);
-  left.rightMargin=dp(8);shortcuts.addView(soundTile,left);shortcuts.addView(speechTile,new LinearLayout.LayoutParams(0,dp(158),1f));
-  soundTile.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
-  speechTile.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
-  soundTile.setContentDescription("Reconocer sonidos del entorno");
-  speechTile.setContentDescription("Transcribir una conversación");
-
-  LinearLayout services=new LinearLayout(this);services.setOrientation(LinearLayout.HORIZONTAL);
-  LinearLayout.LayoutParams serviceParams=new LinearLayout.LayoutParams(-1,-2);serviceParams.topMargin=dp(9);root.addView(services,serviceParams);
-  Button alarms=btn("◷  ALARMAS");accent(alarms,0xff534120,0xff564021,0xffd6ad5f);
-  LinearLayout.LayoutParams halfA=new LinearLayout.LayoutParams(0,dp(66),1f);halfA.rightMargin=dp(8);services.addView(alarms,halfA);
-  alarms.setOnClickListener(v->{alarmsPage=true;render();});
-  Button messages=btn("▣  COMUNICAR");accent(messages,0xff432a69,0xff2a3466,0xffb28af1);
-  services.addView(messages,new LinearLayout.LayoutParams(0,dp(66),1f));
-  messages.setOnClickListener(v->{stopHomeSpeech();communicationPage=true;render();});
-
-  root.addView(AuroraDesign.overline(this,"TRANSCRIPCIÓN INMEDIATA"));
-  LinearLayout transcriptCard=auroraCard(0xff172b43,0xff201e42);
-  transcriptCard.setPadding(dp(17),dp(14),dp(17),dp(15));
-  TextView speechHeading=txt("PALABRAS EN VIVO",16);speechHeading.setTypeface(null,Typeface.BOLD);
-  speechHeading.setTextColor(0xffa8ecff);transcriptCard.addView(speechHeading);
-  String previous=prefs.getString("sense_last_transcript","");
-  homeTranscript=txt(previous.isEmpty()?"Acá aparece lo que se está diciendo…":previous,21);
-  homeTranscript.setMinHeight(dp(66));homeTranscript.setMaxLines(3);
-  homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
-  homeSpeechStatus=txt("Micrófono apagado · escuchá desde acá o ampliá",13);
-  homeSpeechStatus.setTextColor(0xffb5cce7);transcriptCard.addView(homeSpeechStatus);
-  LinearLayout speechControls=new LinearLayout(this);speechControls.setOrientation(LinearLayout.HORIZONTAL);transcriptCard.addView(speechControls);
-  homeSpeechToggle=btn("🎙  ESCUCHAR");accent(homeSpeechToggle,0xff4b388b,0xff275177,0xffac97f1);
-  LinearLayout.LayoutParams speechHalf=new LinearLayout.LayoutParams(0,dp(62),1f);speechHalf.rightMargin=dp(8);
-  speechControls.addView(homeSpeechToggle,speechHalf);
-  Button expand=btn("AMPLIAR  ↗");accent(expand,0xff1a455d,0xff273452,0xff62bdda);
-  speechControls.addView(expand,new LinearLayout.LayoutParams(0,dp(62),1f));
-  homeSpeechToggle.setOnClickListener(v->{if(homeListening)stopHomeSpeech();else startHomeSpeech();});
-  expand.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
-  root.addView(transcriptCard);
-
-  LinearLayout lower=new LinearLayout(this);lower.setOrientation(LinearLayout.HORIZONTAL);
-  LinearLayout.LayoutParams lowerParams=new LinearLayout.LayoutParams(-1,-2);lowerParams.topMargin=dp(8);root.addView(lower,lowerParams);
-  Button records=btn("📁  REGISTROS");accent(records,0xff193f53,0xff223557,0xff60baca);
-  LinearLayout.LayoutParams recordParam=new LinearLayout.LayoutParams(0,dp(60),1f);recordParam.rightMargin=dp(8);lower.addView(records,recordParam);
-  records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
-  Button timerButton=btn("◷  TEMPORIZADOR");accent(timerButton,0xff33344f,0xff243757,0xff8e9dd5);
-  lower.addView(timerButton,new LinearLayout.LayoutParams(0,dp(60),1f));
-  timerButton.setOnClickListener(v->{timerPage=true;render();});
-  TextView foot=txt("AURORA  /  ACCESIBILIDAD CON IDENTIDAD",12);
-  foot.setGravity(Gravity.CENTER);foot.setTextColor(0xff719bb9);root.addView(foot);
+  stage.addView(actor,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  TextView brand=new TextView(this);brand.setText("A U R O R A");
+  brand.setTextColor(0xfff2f3f1);brand.setTextSize(29);
+  brand.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
+  brand.setLetterSpacing(.18f);brand.setGravity(Gravity.CENTER);
+  brand.setPadding(0,dp(7),0,0);
+  android.widget.FrameLayout.LayoutParams head=new android.widget.FrameLayout.LayoutParams(-1,dp(68),Gravity.TOP);
+  stage.addView(brand,head);
+  TextView hint=new TextView(this);hint.setText("TOCÁ UNA FUNCIÓN");
+  hint.setTextColor(0xff879797);hint.setTextSize(11);
+  hint.setLetterSpacing(.16f);hint.setGravity(Gravity.CENTER);
+  android.widget.FrameLayout.LayoutParams foot=new android.widget.FrameLayout.LayoutParams(-1,dp(45),Gravity.BOTTOM);
+  stage.addView(hint,foot);
+  setContentView(stage);
  }
  LinearLayout homeTile(String symbol,String name,String subtitle,int top,int bottom){
   LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);
