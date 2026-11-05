@@ -18,8 +18,8 @@ public class MainActivity extends Activity {
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  GradientDrawable auroraBackground(int a,int z,int stroke){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{a,z});d.setCornerRadius(dp(20));d.setStroke(dp(1),stroke);return d;}
- void accent(Button b,int a,int z,int line){b.setBackground(auroraBackground(a,z,line));}
- Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(-1);b.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));b.setTextSize(16);b.setMinHeight(dp(60));accent(b,0xff18294d,0xff192047,0xff466eac);return b;}
+ void accent(Button b,int a,int z,int line){AuroraDesign.action(b,a,z,line);}
+ Button btn(String s){Button b=new Button(this);b.setText(s);accent(b,0xff192b45,0xff222b50,0xff4d728e);return b;}
  TextView section(String s){TextView v=txt(s,21);v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
  boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
  SpeechRecognizer homeRecognizer; boolean homeListening=false; TextView homeTranscript,homeSpeechStatus; Button homeSpeechToggle;
@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
  LinearLayout auroraCard(int first,int second){
   LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(12),dp(16),dp(12));
-  card.setBackground(auroraBackground(first,second,0xff5f82b1));
+  AuroraDesign.panel(card,first,second);
   LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,dp(9),0,dp(8));card.setLayoutParams(p);return card;
  }
  void openSense(int requested){
@@ -208,17 +208,18 @@ public class MainActivity extends Activity {
   profile.setOnClickListener(v->{stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));});
   Button settings=btn("⚙");settings.setContentDescription("Configuración y permisos");settings.setTextSize(24);accent(settings,0xff17203e,0xff22284c,0xff3e5981);
   heading.addView(settings,new LinearLayout.LayoutParams(dp(54),dp(54)));settings.setOnClickListener(v->{settingsPage=true;render();});
-  TextView subtitle=txt("ALARMA VISUAL Y SENSORIAL ACCESIBLE",12);subtitle.setGravity(Gravity.CENTER);subtitle.setTextColor(0xffa2edfd);root.addView(subtitle);
+  TextView subtitle=txt("EXPERIENCIA SENSORIAL · ACCESIBILIDAD",12);subtitle.setGravity(Gravity.CENTER);subtitle.setTextColor(0xffa2edfd);root.addView(subtitle);
   AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
+  root.addView(AuroraDesign.overline(this,"TU ESPACIO  /  FUNCIONES PRINCIPALES"));
   Button alarms=btn("◷    MIS ALARMAS       ›");accent(alarms,0xff60431e,0xff6b4d26,0xffffd775);root.addView(alarms);alarms.setOnClickListener(v->{alarmsPage=true;render();});
-  LinearLayout soundsCard=auroraCard(0xff123b59,0xff241d58);
+  LinearLayout soundsCard=auroraCard(0xff102b3e,0xff1b254b);
   TextView soundsHeading=txt("◖))  RECONOCER SONIDOS",20);soundsHeading.setTypeface(null,Typeface.BOLD);soundsHeading.setTextColor(0xffbcecff);soundsCard.addView(soundsHeading);
   TextView soundsHint=txt("Detectar sonidos del entorno con IA",14);soundsHint.setTextColor(0xffc5d8f0);soundsCard.addView(soundsHint);
   Button listenSounds=btn("◖))  ESCUCHAR");accent(listenSounds,0xff145b8a,0xff2c3877,0xff5bdbff);soundsCard.addView(listenSounds);
   soundsCard.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   listenSounds.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   root.addView(soundsCard);
-  LinearLayout transcriptCard=auroraCard(0xff22183e,0xff15385c);
+  LinearLayout transcriptCard=auroraCard(0xff201b3d,0xff14334c);
   TextView speechHeading=txt("◉  TRANSCRIPCIÓN EN VIVO",20);speechHeading.setTypeface(null,Typeface.BOLD);speechHeading.setTextColor(0xffe7ccff);transcriptCard.addView(speechHeading);
   homeTranscript=txt(prefs.getString("sense_last_transcript","").isEmpty()?"Acá aparecerá lo que se está diciendo…":prefs.getString("sense_last_transcript",""),21);
   homeTranscript.setMinHeight(dp(80));homeTranscript.setMaxLines(3);homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
