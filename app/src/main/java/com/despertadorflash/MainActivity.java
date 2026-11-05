@@ -5,6 +5,9 @@ import android.content.*;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.speech.SpeechRecognizer;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
 import android.provider.Settings;
 import android.view.*;
 import android.widget.*;
@@ -19,6 +22,8 @@ public class MainActivity extends Activity {
  Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(-1);b.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));b.setTextSize(16);b.setMinHeight(dp(60));accent(b,0xff18294d,0xff192047,0xff466eac);return b;}
  TextView section(String s){TextView v=txt(s,21);v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
  boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
+ SpeechRecognizer homeRecognizer; boolean homeListening=false; TextView homeTranscript,homeSpeechStatus; Button homeSpeechToggle;
+ final Handler speechHandler=new Handler(Looper.getMainLooper());
  public void onCreate(Bundle b){
   super.onCreate(b);
   prefs=getSharedPreferences(PREF,0);torch=new TorchFlasher(this);
@@ -99,7 +104,67 @@ public class MainActivity extends Activity {
   }
  }
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
- @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
+ @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
+ LinearLayout auroraCard(int first,int second){
+  LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(12),dp(16),dp(12));
+  card.setBackground(auroraBackground(first,second,0xff5f82b1));
+  LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,dp(9),0,dp(8));card.setLayoutParams(p);return card;
+ }
+ void openSense(int requested){
+  stopHomeSpeech();Intent i=new Intent(this,SenseActivity.class);i.putExtra(SenseActivity.EXTRA_MODE,requested);startActivity(i);
+ }
+ void startHomeSpeech(){
+  if(checkSelfPermission("android.permission.RECORD_AUDIO")!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+   requestPermissions(new String[]{"android.permission.RECORD_AUDIO"},44);return;
+  }
+  if(!SpeechRecognizer.isRecognitionAvailable(this)){
+   homeSpeechStatus.setText("No hay un servicio de reconocimiento de voz disponible en Android.");return;
+  }
+  homeListening=true;
+  homeSpeechToggle.setText("■  DETENER ESCUCHA");
+  homeSpeechStatus.setText("MICRÓFONO ACTIVO · escuchando conversación");
+  try{
+   if(Build.VERSION.SDK_INT>=31&&SpeechRecognizer.isOnDeviceRecognitionAvailable(this))homeRecognizer=SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
+   else homeRecognizer=SpeechRecognizer.createSpeechRecognizer(this);
+   homeRecognizer.setRecognitionListener(new RecognitionListener(){
+    public void onReadyForSpeech(Bundle b){if(homeListening)homeSpeechStatus.setText("ESCUCHANDO · hablá cerca del teléfono");}
+    public void onBeginningOfSpeech(){if(homeListening)homeSpeechStatus.setText("DETECTANDO VOZ…");}
+    public void onRmsChanged(float r){}
+    public void onBufferReceived(byte[] data){}
+    public void onEndOfSpeech(){if(homeListening)homeSpeechStatus.setText("Procesando conversación…");}
+    public void onError(int code){if(!homeListening)return;
+     if(code==SpeechRecognizer.ERROR_NO_MATCH||code==SpeechRecognizer.ERROR_SPEECH_TIMEOUT){
+      speechHandler.postDelayed(()->{if(homeListening)listenHomeSpeech();},650);
+     }else {stopHomeSpeech();homeSpeechStatus.setText("Reconocimiento detenido · código de Android: "+code);}
+    }
+    public void onResults(Bundle data){if(!homeListening)return;
+     java.util.ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+     if(matches!=null&&!matches.isEmpty()){String phrase=matches.get(0);homeTranscript.setText(phrase);prefs.edit().putString("sense_last_transcript",phrase).apply();}
+     speechHandler.postDelayed(()->{if(homeListening)listenHomeSpeech();},650);
+    }
+    public void onPartialResults(Bundle data){if(!homeListening)return;
+     java.util.ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+     if(matches!=null&&!matches.isEmpty())homeTranscript.setText(matches.get(0));
+    }
+    public void onEvent(int event,Bundle args){}
+   });
+   listenHomeSpeech();
+  }catch(Exception e){stopHomeSpeech();homeSpeechStatus.setText("No se pudo abrir el micrófono: "+e.getMessage());}
+ }
+ void listenHomeSpeech(){
+  if(!homeListening||homeRecognizer==null)return;
+  Intent i=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+  i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+  i.putExtra(RecognizerIntent.EXTRA_LANGUAGE,"es-AR");
+  i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);
+  try{homeRecognizer.startListening(i);}catch(Exception e){stopHomeSpeech();homeSpeechStatus.setText("Escucha interrumpida: "+e.getMessage());}
+ }
+ void stopHomeSpeech(){
+  homeListening=false;speechHandler.removeCallbacksAndMessages(null);
+  if(homeRecognizer!=null){SpeechRecognizer old=homeRecognizer;homeRecognizer=null;old.destroy();}
+  if(homeSpeechToggle!=null)homeSpeechToggle.setText("🎙  ESCUCHAR CONVERSACIÓN");
+  if(homeSpeechStatus!=null)homeSpeechStatus.setText("Micrófono apagado · tocá para escuchar");
+ }
  void setupPage(){
   if(timer!=null){timer.cancel();timer=null;}
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
@@ -113,10 +178,10 @@ public class MainActivity extends Activity {
   TextView title=txt(heading,27);title.setGravity(Gravity.CENTER);title.setTextColor(0xffb3eeff);title.setTypeface(null,Typeface.BOLD);root.addView(title);
  }
  void render(){
-  if(alarmsPage){renderAlarmsPage();return;}
-  if(timerPage){renderTimerPage();return;}
-  if(communicationPage){renderCommunicationPage();return;}
-  if(settingsPage){renderSettingsPage();return;}
+  if(alarmsPage){stopHomeSpeech();renderAlarmsPage();return;}
+  if(timerPage){stopHomeSpeech();renderTimerPage();return;}
+  if(communicationPage){stopHomeSpeech();renderCommunicationPage();return;}
+  if(settingsPage){stopHomeSpeech();renderSettingsPage();return;}
   setupPage();
   LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);root.addView(heading);
   TextView title=txt("A U R O R A",28);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
@@ -132,9 +197,23 @@ public class MainActivity extends Activity {
   Toast.makeText(this,"El flash debe parpadear durante 5 segundos",Toast.LENGTH_LONG).show();
   new Handler(Looper.getMainLooper()).postDelayed(()->{if(torch!=null)torch.stop();},5000);
  });
-  Button timerButton=btn("⌛    TEMPORIZADOR       ›");accent(timerButton,0xff105a78,0xff192963,0xff68ceff);root.addView(timerButton);timerButton.setOnClickListener(v->{timerPage=true;render();});
-  Button messages=btn("▣    COMUNICACIÓN       ›");accent(messages,0xff5d287e,0xff35205e,0xffc889ff);root.addView(messages);messages.setOnClickListener(v->{communicationPage=true;render();});
-
+  LinearLayout soundsCard=auroraCard(0xff123b59,0xff241d58);
+  TextView soundsHeading=txt("◖))  RECONOCER SONIDOS",20);soundsHeading.setTypeface(null,Typeface.BOLD);soundsHeading.setTextColor(0xffbcecff);soundsCard.addView(soundsHeading);
+  TextView soundsHint=txt("Detectar sonidos del entorno con IA",14);soundsHint.setTextColor(0xffc5d8f0);soundsCard.addView(soundsHint);
+  Button listenSounds=btn("◖))  ESCUCHAR");accent(listenSounds,0xff145b8a,0xff2c3877,0xff5bdbff);soundsCard.addView(listenSounds);
+  soundsCard.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
+  listenSounds.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
+  root.addView(soundsCard);
+  LinearLayout transcriptCard=auroraCard(0xff22183e,0xff15385c);
+  TextView speechHeading=txt("◉  TRANSCRIPCIÓN EN VIVO",20);speechHeading.setTypeface(null,Typeface.BOLD);speechHeading.setTextColor(0xffe7ccff);transcriptCard.addView(speechHeading);
+  homeTranscript=txt(prefs.getString("sense_last_transcript","").isEmpty()?"Acá aparecerá lo que se está diciendo…":prefs.getString("sense_last_transcript",""),21);
+  homeTranscript.setMinHeight(dp(80));homeTranscript.setMaxLines(3);homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
+  homeSpeechStatus=txt("Tocá el micrófono para escuchar · tocá el cuadro para ampliar",13);homeSpeechStatus.setTextColor(0xffbad3ec);transcriptCard.addView(homeSpeechStatus);
+  homeSpeechToggle=btn("🎙  ESCUCHAR CONVERSACIÓN");accent(homeSpeechToggle,0xff6540a0,0xff234c78,0xffbd8ef4);transcriptCard.addView(homeSpeechToggle);
+  transcriptCard.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  homeSpeechToggle.setOnClickListener(v->{if(homeListening)stopHomeSpeech();else startHomeSpeech();});
+  root.addView(transcriptCard);
+  Button messages=btn("▣    COMUNICACIÓN       ›");accent(messages,0xff5d287e,0xff35205e,0xffc889ff);root.addView(messages);messages.setOnClickListener(v->{stopHomeSpeech();communicationPage=true;render();});
  }
  void renderTimerPage(){
   setupPage();pageTitle("TEMPORIZADOR");
@@ -164,6 +243,13 @@ public class MainActivity extends Activity {
  }
  void renderSettingsPage(){
   setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
+ Button testFlash=btn("⚡  PROBAR FLASH LED · 5 SEGUNDOS");accent(testFlash,0xff752c97,0xff116a92,0xff64e8f5);root.addView(testFlash);testFlash.setOnClickListener(v->{
+  if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);Toast.makeText(this,"Autorizá Cámara y volvé a tocar Probar flash",Toast.LENGTH_LONG).show();return;}
+  if(torch==null||!torch.start()){new AlertDialog.Builder(this).setTitle("Flash no disponible").setMessage("AURORA no pudo encender la linterna: "+(torch==null?"Control no inicializado":torch.getLastError())+". Comprobá que la cámara esté cerrada y que AURORA tenga permiso de Cámara.").setPositiveButton("Entendido",null).show();return;}
+  Toast.makeText(this,"El flash debe parpadear durante 5 segundos",Toast.LENGTH_LONG).show();
+  new Handler(Looper.getMainLooper()).postDelayed(()->{if(torch!=null)torch.stop();},5000);
+ });
+
  AlarmManager alarmManager=(AlarmManager)getSystemService(ALARM_SERVICE);
  if(Build.VERSION.SDK_INT>=31&&!alarmManager.canScheduleExactAlarms()){TextView warning=txt("ATENCIÓN: las alarmas exactas no están habilitadas. Activá el permiso para que el despertador funcione a la hora elegida.",17);warning.setTextColor(0xffffcf70);root.addView(warning);}
  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){TextView warning=txt("ATENCIÓN: faltan permisos de notificaciones. Los avisos pueden no aparecer.",17);warning.setTextColor(0xffffcf70);root.addView(warning);}
@@ -202,6 +288,7 @@ public class MainActivity extends Activity {
   Button back=btn("← Volver al inicio");root.addView(back);back.setOnClickListener(v->{alarmsPage=false;render();});
   TextView heading=txt("MIS ALARMAS",32);heading.setTextColor(0xffffd633);heading.setTypeface(null,Typeface.BOLD);root.addView(heading);
   root.addView(txt("Creá una alarma y elegí la hora que quieras. No hay horarios predefinidos.",16));
+  Button timerTool=btn("⌛  TEMPORIZADOR Y PRUEBAS");root.addView(timerTool);timerTool.setOnClickListener(v->{alarmsPage=false;timerPage=true;render();});
   int count=0;
   for(int id=0;id<5;id++)if(prefs.getBoolean("created"+id,false)){alarmRow(id);count++;}
   if(count==0)root.addView(txt("Todavía no creaste ninguna alarma.",18));
@@ -244,5 +331,6 @@ public class MainActivity extends Activity {
   timer=new CountDownTimer(minutes*60000L,1000){public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){output.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").apply();showTimerFinished();}}.start();
  }
  void vibrate(){Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null&&v.hasVibrator()){long[] pat={0,800,200,800,200,800};if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(pat,-1));else v.vibrate(pat,-1);}}
- @Override protected void onDestroy(){if(timer!=null)timer.cancel();if(alarmActive)stopAlarmEffects();if(torch!=null)torch.stop();super.onDestroy();}
+ @Override protected void onPause(){stopHomeSpeech();super.onPause();}
+ @Override protected void onDestroy(){stopHomeSpeech();if(timer!=null)timer.cancel();if(alarmActive)stopAlarmEffects();if(torch!=null)torch.stop();super.onDestroy();}
 }
