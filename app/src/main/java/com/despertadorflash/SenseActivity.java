@@ -74,43 +74,42 @@ public final class SenseActivity extends Activity {
   main.post(()->toggle(screenMode));
  }
  private void draw(){
-  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(20),dp(18),dp(25));root.setBackground(new AuroraSkyDrawable());scroll.addView(root);setContentView(scroll);
-  Button back=button("← VOLVER");root.addView(back);back.setOnClickListener(v->finish());
-  TextView heading=text(screenMode==MODE_SOUND?"ESCUCHAR SONIDOS":"TRANSCRIBIR CONVERSACIÓN",26,0xffa5f6ff);heading.setGravity(Gravity.CENTER);heading.setTypeface(null,Typeface.BOLD);root.addView(heading);
-  root.addView(AuroraDesign.overline(this,"AURORA / INTELIGENCIA SENSORIAL"));
-  TextView intro=text(screenMode==MODE_SOUND?"Reconocé sonidos del ambiente y consultá los eventos anteriores.":"Las palabras escuchadas aparecen como texto. Traducí solo cuando quieras.",16,0xffe0edff);intro.setGravity(Gravity.CENTER);root.addView(intro);
+  ScrollView scroll=new ScrollView(this);
+  root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
+  root.setPadding(dp(17),dp(14),dp(17),dp(25));
+  root.setBackground(new AuroraSkyDrawable());scroll.addView(root);setContentView(scroll);
+  LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);root.addView(top);
+  Button back=button("‹");back.setContentDescription("Volver a AURORA");
+  top.addView(back,new LinearLayout.LayoutParams(dp(56),dp(54)));back.setOnClickListener(v->finish());
+  TextView heading=text(screenMode==MODE_SOUND?"SONIDOS":"CONVERSACIÓN",23,Color.WHITE);
+  heading.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));heading.setGravity(Gravity.CENTER);
+  top.addView(heading,new LinearLayout.LayoutParams(0,dp(62),1f));
+  Button other=button(screenMode==MODE_SOUND?"◉  VOZ":"◖))  SONIDOS");
+  top.addView(other,new LinearLayout.LayoutParams(dp(112),dp(54)));
+  other.setOnClickListener(v->{
+   stopAll(true);
+   Intent destination=new Intent(this,SenseActivity.class);
+   destination.putExtra(EXTRA_MODE,screenMode==MODE_SOUND?MODE_SPEECH:MODE_SOUND);
+   startActivity(destination);finish();
+  });
+  root.addView(AuroraDesign.overline(this,"AURORA  /  INTELIGENCIA SENSORIAL"));
+  TextView intro=text(screenMode==MODE_SOUND?"Escuchá lo que sucede a tu alrededor.":"Convertí conversaciones en texto claro.",15,0xffcbddee);
+  intro.setGravity(Gravity.CENTER);root.addView(intro);
   visual=new AuroraVisualEngineView(this,screenMode==MODE_SOUND?AuroraVisualEngineView.SOUND:AuroraVisualEngineView.SPEECH);
-  root.addView(visual,new LinearLayout.LayoutParams(-1,-2));
-  state=text("MICRÓFONO APAGADO",17,0xff8fe8df);state.setGravity(Gravity.CENTER);state.setBackground(bg(0xff0f293c,0xff14204b));root.addView(state);
+  LinearLayout.LayoutParams vis=new LinearLayout.LayoutParams(-1,-2);vis.bottomMargin=dp(6);root.addView(visual,vis);
+  state=text("MICRÓFONO APAGADO",16,0xff8fe8df);state.setGravity(Gravity.CENTER);
+  state.setBackground(bg(0xff0c303f,0xff14264b));root.addView(state);
   String initial=getSharedPreferences("aurora",0).getString("sense_last_transcript","");
   lastTranscript=initial;
-  result=text(screenMode==MODE_SOUND?"Aún no se detectaron sonidos":initial.isEmpty()?"Sin transcripciones todavía":initial,26,Color.WHITE);result.setGravity(Gravity.CENTER);result.setTypeface(null,Typeface.BOLD);result.setMinHeight(dp(160));result.setBackground(bg(0xff142c44,0xff19193b));root.addView(result);
-  detail=text("El audio se analiza solamente mientras mantenés activa una función.",14,0xffced9ef);root.addView(detail);
-  root.addView(AuroraDesign.overline(this,"REGISTRO EN TIEMPO REAL"));
-  TextView timelineTitle=text(screenMode==MODE_SOUND?"SONIDOS DETECTADOS":"CONVERSACIÓN TRANSCRITA",18,0xffa6f0ff);root.addView(timelineTitle);
-  eventsScroll=new ScrollView(this);eventsScroll.setFillViewport(false);eventsScroll.setBackground(bg(0xff122539,0xff111a33));
-  eventsView=new LinearLayout(this);eventsView.setOrientation(LinearLayout.VERTICAL);eventsView.setPadding(dp(8),dp(6),dp(8),dp(8));
-  eventsScroll.addView(eventsView);root.addView(eventsScroll,new LinearLayout.LayoutParams(-1,dp(240)));
-  TextView empty=text("Los resultados aparecerán acá en orden, sin borrar los anteriores.",15,0xffa3b8d2);eventsView.addView(empty);
-  openSaved=button("ABRIR ÚLTIMO ARCHIVO GUARDADO");root.addView(openSaved);openSaved.setOnClickListener(v->showFile(lastSaved));
-  Button historyButton=button("📁  ABRIR CARPETA DE REGISTROS");root.addView(historyButton);historyButton.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
-  File[] files=history.list();lastSaved=files.length>0?files[0]:null;openSaved.setVisibility(lastSaved!=null?View.VISIBLE:View.GONE);
-  if(screenMode==MODE_SPEECH){
-   TextView speechHeading=text("IDIOMA DE LA CONVERSACIÓN",15,0xffa6ecf9);root.addView(speechHeading);
-   languagePicker=new Spinner(this);String[] languages={"Español","Inglés","Portugués"};
-   ArrayAdapter<String> langAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,languages);languagePicker.setAdapter(langAdapter);root.addView(languagePicker);
-   speechButton=button("🎙  INICIAR / REANUDAR TRANSCRIPCIÓN");root.addView(speechButton);
-   speechButton.setOnClickListener(v->toggle(MODE_SPEECH));
-   translateButton=button("🌐  TRADUCIR TEXTO");root.addView(translateButton);
-   translateButton.setOnClickListener(v->translateLast());
-  }else{
-   TextView sensitivityLabel=text("SENSIBILIDAD DE RECONOCIMIENTO",15,0xffb9eeff);root.addView(sensitivityLabel);
+  if(screenMode==MODE_SOUND){
+   root.addView(AuroraDesign.overline(this,"SENSIBILIDAD DE ESCUCHA"));
    Spinner sensitivity=new Spinner(this);
    String[] levels={"Alta · más detecciones","Equilibrada · recomendada","Precisa · menos falsos positivos"};
    ArrayAdapter<String> sensitivityAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,levels);
-   sensitivity.setAdapter(sensitivityAdapter);root.addView(sensitivity);
+   sensitivity.setAdapter(sensitivityAdapter);sensitivity.setBackground(bg(0xff182a43,0xff222653));
    int chosen=getPreferences(MODE_PRIVATE).getInt("sense_sensitivity",1);
-   sensitivity.setSelection(Math.max(0,Math.min(2,chosen)));minConfidence=chosen==0?22:chosen==2?45:30;
+   sensitivity.setSelection(Math.max(0,Math.min(2,chosen)));
+   minConfidence=chosen==0?22:chosen==2?45:30;
    sensitivity.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
     public void onNothingSelected(android.widget.AdapterView<?> parent){}
     public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
@@ -118,12 +117,57 @@ public final class SenseActivity extends Activity {
      getPreferences(MODE_PRIVATE).edit().putInt("sense_sensitivity",position).apply();
     }
    });
-   soundsButton=button("◖))  INICIAR / REANUDAR ESCUCHA");root.addView(soundsButton);
+   root.addView(sensitivity,new LinearLayout.LayoutParams(-1,dp(58)));
+  }else{
+   root.addView(AuroraDesign.overline(this,"IDIOMA DE LA CONVERSACIÓN"));
+   languagePicker=new Spinner(this);
+   ArrayAdapter<String> languages=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"Español","Inglés","Portugués"});
+   languagePicker.setAdapter(languages);languagePicker.setBackground(bg(0xff182a43,0xff222653));
+   root.addView(languagePicker,new LinearLayout.LayoutParams(-1,dp(58)));
+  }
+  LinearLayout controls=new LinearLayout(this);controls.setOrientation(LinearLayout.HORIZONTAL);
+  LinearLayout.LayoutParams controlsParams=new LinearLayout.LayoutParams(-1,-2);controlsParams.topMargin=dp(12);
+  root.addView(controls,controlsParams);
+  if(screenMode==MODE_SPEECH){
+   speechButton=button("🎙  ESCUCHAR");controls.addView(speechButton,new LinearLayout.LayoutParams(0,dp(68),1f));
+   speechButton.setOnClickListener(v->toggle(MODE_SPEECH));
+  }else{
+   soundsButton=button("◖))  ESCUCHAR");controls.addView(soundsButton,new LinearLayout.LayoutParams(0,dp(68),1f));
    soundsButton.setOnClickListener(v->toggle(MODE_SOUND));
   }
-  Button stop=button("DETENER ESCUCHA");root.addView(stop);stop.setOnClickListener(v->stopAll(true));
+  Button stop=button("■  DETENER");AuroraDesign.action(stop,0xff66334d,0xff4a253c,0xffa76e89);
+  LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(0,dp(68),1f);stopParams.leftMargin=dp(9);
+  controls.addView(stop,stopParams);stop.setOnClickListener(v->stopAll(true));
+  root.addView(AuroraDesign.overline(this,"RESULTADO ACTUAL"));
+  result=text(screenMode==MODE_SOUND?"Buscando sonidos…":initial.isEmpty()?"Esperando conversación…":initial,25,Color.WHITE);
+  result.setGravity(Gravity.CENTER);result.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
+  result.setMinHeight(dp(126));result.setBackground(bg(0xff143447,0xff201e45));
+  root.addView(result);
+  detail=text("El micrófono funciona únicamente mientras la escucha está activa.",14,0xffcad9f0);
+  root.addView(detail);
+  if(screenMode==MODE_SPEECH){
+   translateButton=button("🌐  TRADUCIR ÚLTIMA FRASE");
+   root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(58)));
+   translateButton.setOnClickListener(v->translateLast());
+  }
+  root.addView(AuroraDesign.overline(this,"HISTORIAL DE ESTA SESIÓN"));
+  eventsScroll=new ScrollView(this);eventsScroll.setFillViewport(false);
+  eventsScroll.setBackground(bg(0xff122b3c,0xff171b35));
+  eventsView=new LinearLayout(this);eventsView.setOrientation(LinearLayout.VERTICAL);
+  eventsView.setPadding(dp(8),dp(7),dp(8),dp(8));
+  eventsScroll.addView(eventsView);
+  root.addView(eventsScroll,new LinearLayout.LayoutParams(-1,dp(205)));
+  TextView empty=text("Las detecciones y frases aparecen acá, sin borrar las anteriores.",15,0xffa3b8d2);
+  eventsView.addView(empty);
+  File[] files=history.list();lastSaved=files.length>0?files[0]:null;
+  openSaved=button("ABRIR ÚLTIMO ARCHIVO");
+  root.addView(openSaved);openSaved.setOnClickListener(v->showFile(lastSaved));
+  openSaved.setVisibility(lastSaved!=null?View.VISIBLE:View.GONE);
+  Button folder=button("📁  CARPETA DE REGISTROS");
+  root.addView(folder);folder.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
+  TextView safety=text("Las detecciones son aproximadas. AURORA no sustituye las alarmas certificadas ni los dispositivos de emergencia.",13,0xffc3d6eb);
+  root.addView(safety);
   updateModeVisibility();
-  TextView safety=text("Los resultados son aproximados. Las detecciones no sustituyen alarmas de incendios ni equipos de emergencia. No uses SENSE como único medio para detectar peligros.",13,0xffb4c9dc);root.addView(safety);
  }
  private void addTimeline(String content){
   if(eventsView==null)return;
