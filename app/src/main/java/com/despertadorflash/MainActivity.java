@@ -4,6 +4,7 @@ import android.os.*;
 import android.content.*;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.provider.Settings;
 import android.view.*;
 import android.widget.*;
@@ -13,7 +14,10 @@ public class MainActivity extends Activity {
  LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch; boolean alarmsPage=false;
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
- Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextSize(17);b.setMinHeight(dp(58));return b;}
+ GradientDrawable auroraBackground(int a,int z,int stroke){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{a,z});d.setCornerRadius(dp(20));d.setStroke(dp(1),stroke);return d;}
+ void accent(Button b,int a,int z,int line){b.setBackground(auroraBackground(a,z,line));}
+ Button btn(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(-1);b.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));b.setTextSize(16);b.setMinHeight(dp(60));accent(b,0xff18294d,0xff192047,0xff466eac);return b;}
+ TextView section(String s){TextView v=txt(s,21);v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
  boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
  public void onCreate(Bundle b){
   super.onCreate(b);
@@ -99,9 +103,9 @@ public class MainActivity extends Activity {
  void render(){
  if(alarmsPage){renderAlarmsPage();return;}
  if(timer!=null){timer.cancel();timer=null;}
- ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff090b11);scroll.addView(root);setContentView(scroll);
- TextView title=txt("✦ AURORA",34);title.setTextColor(0xffffd633);title.setTypeface(null,Typeface.BOLD);root.addView(title);
- root.addView(txt("ALERTAS QUE TE ACOMPAÑAN",17));root.addView(txt("Despertador accesible con vibración y avisos visuales.",15));
+ ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff080d21,0xff0e1735,0xff071122}));getWindow().setStatusBarColor(0xff080d21);getWindow().setNavigationBarColor(0xff071122);scroll.addView(root);setContentView(scroll);
+ TextView title=txt("A U R O R A",32);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));root.addView(title);
+ TextView subtitle=txt("ALARMA VISUAL Y SENSORIAL ACCESIBLE",13);subtitle.setTextColor(0xff83e5fa);subtitle.setGravity(Gravity.CENTER);root.addView(subtitle);
  AuroraClockView clock=new AuroraClockView(this);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
  AlarmManager alarmManager=(AlarmManager)getSystemService(ALARM_SERVICE);
  if(Build.VERSION.SDK_INT>=31&&!alarmManager.canScheduleExactAlarms()){TextView warning=txt("ATENCIÓN: las alarmas exactas no están habilitadas. Activá el permiso para que el despertador funcione a la hora elegida.",17);warning.setTextColor(0xffffcf70);root.addView(warning);}
@@ -114,17 +118,17 @@ public class MainActivity extends Activity {
  if(Build.VERSION.SDK_INT>=23&&prefs.getBoolean("torch_alert",true)&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){Button torchPermission=btn("Autorizar flash LED (Cámara)");root.addView(torchPermission);torchPermission.setOnClickListener(v->requestPermissions(new String[]{android.Manifest.permission.CAMERA},2));}
  root.addView(txt("Aviso: el flash LED intermitente puede afectar a personas fotosensibles. Podés desactivarlo con el interruptor anterior.",13));
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
- Button openAlarms=btn("⏰  MIS ALARMAS  ›");root.addView(openAlarms);openAlarms.setOnClickListener(v->{alarmsPage=true;render();});
- TextView timersHeading=txt("◷  TEMPORIZADORES",22);
- Button goTimers=btn("Ir a temporizadores ↓");root.addView(goTimers);goTimers.setOnClickListener(v->scroll.post(()->scroll.smoothScrollTo(0,timersHeading.getTop())));
+ Button openAlarms=btn("◷   MIS ALARMAS   ›");accent(openAlarms,0xff672e9b,0xff271c68,0xffb66aff);root.addView(openAlarms);openAlarms.setOnClickListener(v->{alarmsPage=true;render();});
+ TextView timersHeading=section("◷  TEMPORIZADORES");
+ Button goTimers=btn("⌛   IR A TEMPORIZADORES   ›");accent(goTimers,0xff11578a,0xff182e62,0xff439dff);root.addView(goTimers);goTimers.setOnClickListener(v->scroll.post(()->scroll.smoothScrollTo(0,timersHeading.getTop())));
  root.addView(timersHeading);
  long savedEnd=prefs.getLong("timer_end",0);long remaining=Math.max(0,savedEnd-System.currentTimeMillis());TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",32);root.addView(counter);if(remaining>0){timer=new CountDownTimer(remaining,1000){public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){counter.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").apply();showTimerFinished();}}.start();}
  Button one=btn("Prueba rápida · 1 minuto");root.addView(one);one.setOnClickListener(v->countdown(1,counter));
  Button five=btn("Iniciar 5 minutos");root.addView(five);five.setOnClickListener(v->countdown(5,counter));
  Button ten=btn("Iniciar 10 minutos");root.addView(ten);ten.setOnClickListener(v->countdown(10,counter));
  Button stop=btn("Detener temporizador");root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("Detenido");});
- TextView communicationHeading=txt("▣  COMUNICACIÓN VISUAL",22);
- Button goCommunication=btn("Ir a comunicación ↓");root.addView(goCommunication);goCommunication.setOnClickListener(v->scroll.post(()->scroll.smoothScrollTo(0,communicationHeading.getTop())));
+ TextView communicationHeading=section("▣  COMUNICACIÓN VISUAL");
+ Button goCommunication=btn("▣   COMUNICACIÓN VISUAL   ›");accent(goCommunication,0xff115d70,0xff143e61,0xff43c8cc);root.addView(goCommunication);goCommunication.setOnClickListener(v->scroll.post(()->scroll.smoothScrollTo(0,communicationHeading.getTop())));
  root.addView(communicationHeading);
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
  Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
@@ -135,7 +139,7 @@ public class MainActivity extends Activity {
  Button write=btn("Pedir que escriban");root.addView(write);write.setOnClickListener(v->showFullMessage("POR FAVOR, ESCRIBÍ LO QUE DECÍS"));
  Button urgent=btn("Mostrar LLAMÁ A EMERGENCIAS");root.addView(urgent);urgent.setOnClickListener(v->showFullMessage("LLAMÁ A EMERGENCIAS"));
  Button repeat=btn("Pedir que repitan despacio");root.addView(repeat);repeat.setOnClickListener(v->showFullMessage("POR FAVOR, REPETÍ MÁS DESPACIO"));
- Button testFlash=btn("PROBAR FLASH LED · 5 SEGUNDOS");root.addView(testFlash);testFlash.setOnClickListener(v->{
+ Button testFlash=btn("⚡  PROBAR FLASH LED · 5 SEGUNDOS");accent(testFlash,0xff752c97,0xff116a92,0xff64e8f5);root.addView(testFlash);testFlash.setOnClickListener(v->{
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);Toast.makeText(this,"Autorizá Cámara y volvé a tocar Probar flash",Toast.LENGTH_LONG).show();return;}
   if(torch==null||!torch.start()){new AlertDialog.Builder(this).setTitle("Flash no disponible").setMessage("AURORA no pudo encender la linterna: "+(torch==null?"Control no inicializado":torch.getLastError())+". Comprobá que la cámara esté cerrada y que AURORA tenga permiso de Cámara.").setPositiveButton("Entendido",null).show();return;}
   Toast.makeText(this,"El flash debe parpadear durante 5 segundos",Toast.LENGTH_LONG).show();
@@ -156,7 +160,7 @@ public class MainActivity extends Activity {
  }
  void renderAlarmsPage(){
   if(timer!=null){timer.cancel();timer=null;}
-  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackgroundColor(0xff090b11);scroll.addView(root);setContentView(scroll);
+  ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(20),dp(20),dp(20),dp(30));root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff080d21,0xff0e1735,0xff071122}));getWindow().setStatusBarColor(0xff080d21);getWindow().setNavigationBarColor(0xff071122);scroll.addView(root);setContentView(scroll);
   Button back=btn("← Volver al inicio");root.addView(back);back.setOnClickListener(v->{alarmsPage=false;render();});
   TextView heading=txt("MIS ALARMAS",32);heading.setTextColor(0xffffd633);heading.setTypeface(null,Typeface.BOLD);root.addView(heading);
   root.addView(txt("Creá una alarma y elegí la hora que quieras. No hay horarios predefinidos.",16));
