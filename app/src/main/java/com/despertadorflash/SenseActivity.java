@@ -88,7 +88,7 @@ public final class SenseActivity extends Activity {
   eventsScroll.addView(eventsView);root.addView(eventsScroll,new LinearLayout.LayoutParams(-1,dp(240)));
   TextView empty=text("Los resultados aparecerán acá en orden, sin borrar los anteriores.",15,0xffa3b8d2);eventsView.addView(empty);
   openSaved=button("ABRIR ÚLTIMO ARCHIVO GUARDADO");root.addView(openSaved);openSaved.setOnClickListener(v->showFile(lastSaved));
-  Button historyButton=button("◷  VER HISTORIAL DE ESCUCHAS");root.addView(historyButton);historyButton.setOnClickListener(v->showHistory());
+  Button historyButton=button("📁  ABRIR CARPETA DE REGISTROS");root.addView(historyButton);historyButton.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
   File[] files=history.list();lastSaved=files.length>0?files[0]:null;openSaved.setVisibility(lastSaved!=null?View.VISIBLE:View.GONE);
   if(screenMode==MODE_SPEECH){
    TextView speechHeading=text("IDIOMA DE LA CONVERSACIÓN",15,0xffa6ecf9);root.addView(speechHeading);
@@ -146,6 +146,8 @@ public final class SenseActivity extends Activity {
    File saved=history.finish();
    if(saved!=null){
     lastSaved=saved;
+    try{new SavedFolderManager(this).copyOne(saved);}
+    catch(IOException copyError){if(detail!=null)detail.setText("Archivo guardado en AURORA, pero la copia a la carpeta elegida falló: "+copyError.getMessage());}
     if(openSaved!=null){openSaved.setVisibility(View.VISIBLE);openSaved.setText("ABRIR ARCHIVO GUARDADO · "+SenseHistory.readableName(saved));}
    }
   }catch(IOException e){if(detail!=null)detail.setText("No se pudo guardar el archivo: "+e.getMessage());}
