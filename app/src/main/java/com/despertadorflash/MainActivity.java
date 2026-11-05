@@ -148,6 +148,8 @@ public class MainActivity extends Activity {
  }
  void renderCommunicationPage(){
   setupPage();pageTitle("COMUNICACIÓN");
+  Button sense=btn("◉  AURORA SENSE · ESCUCHAR EL ENTORNO");accent(sense,0xff285b93,0xff4e216b,0xff6af7ef);root.addView(sense);sense.setOnClickListener(v->startActivity(new Intent(this,SenseActivity.class)));
+  root.addView(txt("Transcribí conversaciones y reconocé posibles sonidos con IA.",15));
   root.addView(txt("Elegí una frase o escribí un mensaje para mostrarlo en pantalla completa.",16));
  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
  Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
