@@ -177,7 +177,7 @@ public class MainActivity extends Activity {
    }
   }
   if(homeRecognizer!=null){SpeechRecognizer old=homeRecognizer;homeRecognizer=null;old.destroy();}
-  if(homeSpeechToggle!=null)homeSpeechToggle.setText("🎙  ESCUCHAR CONVERSACIÓN");
+  if(homeSpeechToggle!=null)homeSpeechToggle.setText("🎙  ESCUCHAR");
   if(homeSpeechStatus!=null&&homeSpeechStatus.getText().toString().startsWith("MICRÓFONO"))homeSpeechStatus.setText("Micrófono apagado · tocá para escuchar");
  }
  void setupPage(){
@@ -382,6 +382,17 @@ public class MainActivity extends Activity {
    Toast.makeText(this,enabled?"Animaciones habilitadas":"Animaciones reducidas",Toast.LENGTH_SHORT).show();
   });
   root.addView(txt("Los efectos se reducen automáticamente si Android tiene activada la opción de reducir animaciones o el modo ahorro de batería.",13));
+  android.widget.Switch liteGraphics=new android.widget.Switch(this);
+  liteGraphics.setText("Modo fluido para teléfonos anteriores");
+  liteGraphics.setTextColor(Color.WHITE);liteGraphics.setTextSize(17);
+  liteGraphics.setPadding(dp(12),dp(12),dp(12),dp(12));
+  liteGraphics.setChecked(prefs.getBoolean("aurora_smooth_mode",true));
+  root.addView(liteGraphics);
+  liteGraphics.setOnCheckedChangeListener((v,enabled)->{
+   prefs.edit().putBoolean("aurora_smooth_mode",enabled).apply();
+   Toast.makeText(this,"La preferencia se aplicará al volver a abrir la pantalla",Toast.LENGTH_SHORT).show();
+  });
+  root.addView(txt("Recomendado para Galaxy S9+: menos partículas y menos cuadros por segundo, manteniendo las auroras y la respuesta a sonidos.",13));
 
  Button testFlash=btn("⚡  PROBAR FLASH LED · 5 SEGUNDOS");accent(testFlash,0xff752c97,0xff116a92,0xff64e8f5);root.addView(testFlash);testFlash.setOnClickListener(v->{
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);Toast.makeText(this,"Autorizá Cámara y volvé a tocar Probar flash",Toast.LENGTH_LONG).show();return;}
