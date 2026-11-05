@@ -288,21 +288,56 @@ public class MainActivity extends Activity {
  }
  void renderCommunicationPage(){
   setupPage();pageTitle("COMUNICACIÓN");
-  Button recognize=btn("◖))  ESCUCHAR SONIDOS");accent(recognize,0xff285b93,0xff19415b,0xff6af7ef);root.addView(recognize);recognize.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
-  Button transcribe=btn("🎙  TRANSCRIBIR CONVERSACIÓN");accent(transcribe,0xff632e8e,0xff28285a,0xffbb8fff);root.addView(transcribe);transcribe.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
-  Button myProfile=btn("◉  MI PERFIL AURORA");accent(myProfile,0xff22506d,0xff362a62,0xff83d6ed);root.addView(myProfile);myProfile.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class)));
-  Button records=btn("📁  CARPETA DE REGISTROS");accent(records,0xff1a3f62,0xff23305a,0xff62cbe8);root.addView(records);records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
-  root.addView(txt("Elegí una frase o escribí un mensaje para mostrarlo en pantalla completa.",16));
- EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);msg.setHintTextColor(0xffaebdd1);msg.setHint("Escribí un mensaje");root.addView(msg);
- Button show=btn("Mostrar mensaje grande");root.addView(show);show.setOnClickListener(v->{String message=msg.getText().toString().trim();if(!message.isEmpty())showFullMessage(message);});
- Button yes=btn("Mostrar SÍ");root.addView(yes);yes.setOnClickListener(v->showFullMessage("SÍ"));
- Button no=btn("Mostrar NO");root.addView(no);no.setOnClickListener(v->showFullMessage("NO"));
- Button help=btn("Mostrar NECESITO AYUDA");root.addView(help);help.setOnClickListener(v->showFullMessage("NECESITO AYUDA"));
- Button okay=btn("Mostrar ESTOY BIEN");root.addView(okay);okay.setOnClickListener(v->showFullMessage("ESTOY BIEN"));
- Button write=btn("Pedir que escriban");root.addView(write);write.setOnClickListener(v->showFullMessage("POR FAVOR, ESCRIBÍ LO QUE DECÍS"));
- Button urgent=btn("Mostrar LLAMÁ A EMERGENCIAS");root.addView(urgent);urgent.setOnClickListener(v->showFullMessage("LLAMÁ A EMERGENCIAS"));
- Button repeat=btn("Pedir que repitan despacio");root.addView(repeat);repeat.setOnClickListener(v->showFullMessage("POR FAVOR, REPETÍ MÁS DESPACIO"));
-
+  root.addView(AuroraDesign.overline(this,"EXPRESATE DE LA FORMA QUE PREFIERAS"));
+  TextView intro=txt("Mensajes claros, con un solo toque y sin depender del audio.",17);
+  intro.setTextColor(0xffc6def0);root.addView(intro);
+  LinearLayout quick=new LinearLayout(this);quick.setOrientation(LinearLayout.HORIZONTAL);root.addView(quick);
+  LinearLayout sound=homeTile("◖))","SONIDOS","Detectar ambiente",0xff102f43,0xff1a3551);
+  LinearLayout speech=homeTile("◉","CONVERSAR","Voz a texto",0xff272041,0xff17374e);
+  LinearLayout.LayoutParams half1=new LinearLayout.LayoutParams(0,dp(155),1f);half1.rightMargin=dp(9);
+  quick.addView(sound,half1);quick.addView(speech,new LinearLayout.LayoutParams(0,dp(155),1f));
+  sound.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
+  speech.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  root.addView(AuroraDesign.overline(this,"MENSAJE PERSONALIZADO"));
+  EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);
+  msg.setTextSize(20);msg.setMinLines(2);msg.setHintTextColor(0xffabc5d8);
+  msg.setHint("Escribí lo que quieras comunicar");
+  AuroraDesign.entry(msg);root.addView(msg);
+  Button show=btn("MOSTRAR EN PANTALLA COMPLETA  ↗");
+  accent(show,0xff19576b,0xff294768,0xff77e1e9);
+  root.addView(show);show.setOnClickListener(v->{
+   String message=msg.getText().toString().trim();
+   if(!message.isEmpty())showFullMessage(message);
+   else Toast.makeText(this,"Escribí un mensaje primero",Toast.LENGTH_SHORT).show();
+  });
+  root.addView(AuroraDesign.overline(this,"FRASES RÁPIDAS"));
+  LinearLayout phrases=new LinearLayout(this);phrases.setOrientation(LinearLayout.VERTICAL);
+  root.addView(phrases);
+  phrasePair(phrases,"SÍ","NO","SÍ","NO");
+  phrasePair(phrases,"NECESITO AYUDA","ESTOY BIEN","NECESITO AYUDA","ESTOY BIEN");
+  phrasePair(phrases,"POR FAVOR, ESCRIBÍ","REPETÍ DESPACIO","POR FAVOR, ESCRIBÍ LO QUE DECÍS","POR FAVOR, REPETÍ MÁS DESPACIO");
+  Button urgent=btn("¡LLAMÁ A EMERGENCIAS!");
+  accent(urgent,0xff82373f,0xff5b263d,0xffdf848c);
+  root.addView(urgent);urgent.setOnClickListener(v->showFullMessage("LLAMÁ A EMERGENCIAS"));
+  root.addView(AuroraDesign.overline(this,"TU ESPACIO"));
+  LinearLayout myTools=new LinearLayout(this);myTools.setOrientation(LinearLayout.HORIZONTAL);root.addView(myTools);
+  Button profile=btn("◉  MI PERFIL");
+  Button records=btn("📁  REGISTROS");
+  LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(62),1f);lp.rightMargin=dp(9);myTools.addView(profile,lp);
+  myTools.addView(records,new LinearLayout.LayoutParams(0,dp(62),1f));
+  profile.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class)));
+  records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
+ }
+ void phrasePair(LinearLayout parent,String left,String right,String first,String second){
+  LinearLayout pair=new LinearLayout(this);pair.setOrientation(LinearLayout.HORIZONTAL);
+  LinearLayout.LayoutParams margin=new LinearLayout.LayoutParams(-1,-2);margin.topMargin=dp(7);parent.addView(pair,margin);
+  Button a=btn(left),b=btn(right);
+  accent(a,0xff1c4656,0xff263859,0xff7ac8d6);
+  accent(b,0xff2e3156,0xff27324e,0xff8c9cd3);
+  LinearLayout.LayoutParams leftSize=new LinearLayout.LayoutParams(0,dp(77),1f);leftSize.rightMargin=dp(8);
+  pair.addView(a,leftSize);pair.addView(b,new LinearLayout.LayoutParams(0,dp(77),1f));
+  a.setOnClickListener(v->showFullMessage(first));
+  b.setOnClickListener(v->showFullMessage(second));
  }
  void renderSettingsPage(){
   setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
