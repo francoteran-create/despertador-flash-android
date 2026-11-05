@@ -25,6 +25,7 @@ public final class AuroraVisualEngineView extends View {
  private final SharedPreferences prefs;
  private int mode;
  private boolean listening=false, hasEvent=false, running=false;
+ private long eventPulseAt=0L;
  private float energy=0.1f;
  private long epoch=System.currentTimeMillis();
  private int widthPx=0, heightPx=0;
@@ -47,7 +48,7 @@ public final class AuroraVisualEngineView extends View {
   invalidate();
  }
  public void setListening(boolean active){listening=active;invalidate();}
- public void setDetected(boolean detected){hasEvent=detected;invalidate();}
+ public void setDetected(boolean detected){hasEvent=detected;eventPulseAt=detected?System.currentTimeMillis():0L;invalidate();}
  public void setEnergy(float level){
   float bounded=Math.max(0f,Math.min(1f,level));
   energy=energy*.76f+bounded*.24f;
@@ -147,9 +148,26 @@ public final class AuroraVisualEngineView extends View {
    paint.setTextSize(w*.029f);paint.setColor(0xff9ddff2);
    c.drawText(mode==SOUND?"ENTORNO":"CONVERSACIÓN",cx,cy+w*.081f,paint);
   }
+  if(listening){
+   // The bars represent microphone/recognition activity, not a raw waveform recording.
+   int bars=17;float spacing=w*.022f,center=(bars-1)*spacing*.5f;
+   for(int i=0;i<bars;i++){
+    float wave=(float)Math.abs(Math.sin(t*3.4f+i*.71f));
+    float amplitude=(.13f+.87f*energy)*(.45f+.55f*wave);
+    float barHeight=h*.045f+amplitude*h*.105f;
+    float x=cx+i*spacing-center;
+    paint.setStyle(Paint.Style.FILL);paint.setColor(i%3==0?0xffb6e9ff:0xff7bf1e9);
+    c.drawRoundRect(x-w*.006f,h*.84f-barHeight,x+w*.006f,h*.84f,w*.006f,w*.006f,paint);
+   }
+  }
   if(hasEvent){
-   stroke(c,0x99f8c4ff,Math.max(4,w*.009f));
-   c.drawCircle(cx,cy,R*1.35f,paint);
+   long age=System.currentTimeMillis()-eventPulseAt;
+   if(age<2600L){
+    float progress=age/2600f;
+    int opacity=(int)(190*(1-progress));
+    stroke(c,Color.argb(opacity,253,194,255),Math.max(3,w*.009f)*(1-progress*.5f));
+    c.drawCircle(cx,cy,R*(1.30f+progress*.35f),paint);
+   }else hasEvent=false;
   }
   c.restore();
   if(running&&isShown()){
