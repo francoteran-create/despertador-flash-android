@@ -58,6 +58,8 @@ public final class SenseActivity extends Activity {
  private File lastSaved;
  private String lastSoundLabel="";
  private long lastSoundTime=0;
+ private String candidateSound=""; private int candidateHits=0; private long candidateSince=0;
+ private int minConfidence=30;
  private int eventCount=0;
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private GradientDrawable bg(int a,int b){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{a,b});d.setCornerRadius(dp(20));d.setStroke(dp(1),0xff427997);return d;}
@@ -96,6 +98,20 @@ public final class SenseActivity extends Activity {
    translateButton=button("🌐  TRADUCIR TEXTO");root.addView(translateButton);
    translateButton.setOnClickListener(v->translateLast());
   }else{
+   TextView sensitivityLabel=text("SENSIBILIDAD DE RECONOCIMIENTO",15,0xffb9eeff);root.addView(sensitivityLabel);
+   Spinner sensitivity=new Spinner(this);
+   String[] levels={"Alta · más detecciones","Equilibrada · recomendada","Precisa · menos falsos positivos"};
+   ArrayAdapter<String> sensitivityAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,levels);
+   sensitivity.setAdapter(sensitivityAdapter);root.addView(sensitivity);
+   int chosen=getPreferences(MODE_PRIVATE).getInt("sense_sensitivity",1);
+   sensitivity.setSelection(Math.max(0,Math.min(2,chosen)));minConfidence=chosen==0?22:chosen==2?45:30;
+   sensitivity.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+    public void onNothingSelected(android.widget.AdapterView<?> parent){}
+    public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+     minConfidence=position==0?22:position==2?45:30;
+     getPreferences(MODE_PRIVATE).edit().putInt("sense_sensitivity",position).apply();
+    }
+   });
    soundsButton=button("◖))  INICIAR / REANUDAR ESCUCHA");root.addView(soundsButton);
    soundsButton.setOnClickListener(v->toggle(MODE_SOUND));
   }
@@ -114,6 +130,7 @@ public final class SenseActivity extends Activity {
  }
  private void beginHistory(String type){
   eventCount=0;eventsView.removeAllViews();lastSoundLabel="";lastSoundTime=0;
+  candidateSound="";candidateHits=0;candidateSince=0;
   history.begin(type);
   TextView placeholder=text("Escuchando… Las detecciones se agregarán aquí.",15,0xffa3b8d2);
   eventsView.addView(placeholder);
@@ -245,17 +262,30 @@ public final class SenseActivity extends Activity {
      .setResultListener(r->{
       if(!soundRunning||r.classificationResults().isEmpty()||r.classificationResults().get(0).classifications().isEmpty())return;
       java.util.List<Category> cats=r.classificationResults().get(0).classifications().get(0).categories();
-      if(cats.isEmpty())return;
-      Category best=cats.get(0);String label=toSpanish(best.categoryName());
-      int percent=Math.round(best.score()*100f);
-      main.post(()->{if(mode==MODE_SOUND){
-       state.setText("ESCUCHANDO EL ENTORNO");result.setText(label);
-       detail.setText("Detección aproximada · confianza "+percent+"%");
+      String label=null;float score=0f;
+      for(Category cat:cats){
+       String possible=SoundLabelsEs.name(cat.categoryName());
+       if(possible!=null&&cat.score()>score){label=possible;score=cat.score();}
+      }
+      if(label==null)return;
+      final String found=label;
+      final int percent=Math.round(score*100f);
+      main.post(()->{
+       if(mode!=MODE_SOUND||percent<minConfidence)return;
        long now=System.currentTimeMillis();
-       if(!label.equals("Sonido sin identificar")&&(!label.equals(lastSoundLabel)||now-lastSoundTime>=10000L)){
-        lastSoundLabel=label;lastSoundTime=now;recordEvent(label+" (confianza "+percent+"%)");
+       if(!found.equals(candidateSound)||now-candidateSince>4500L){
+        candidateSound=found;candidateHits=1;candidateSince=now;
+       }else candidateHits++;
+       boolean confirmed=candidateHits>=2||percent>=72;
+       if(!confirmed)return;
+       state.setText("ESCUCHANDO EL ENTORNO");
+       result.setText(found);
+       detail.setText("Reconocimiento aproximado · confianza "+percent+"% · sensibilidad ajustable");
+       if(!found.equals(lastSoundLabel)||now-lastSoundTime>=12000L){
+        lastSoundLabel=found;lastSoundTime=now;
+        recordEvent(found+" · confianza "+percent+"%");
        }
-      }});
+      });
      })
      .setErrorListener(e->main.post(()->{if(mode==MODE_SOUND)detail.setText("Error del clasificador: "+e.getMessage());})).build();
     localClassifier=AudioClassifier.createFromOptions(this,settings);classifier=localClassifier;
@@ -275,42 +305,6 @@ public final class SenseActivity extends Activity {
     if(classifier==localClassifier)classifier=null;
    }
   });
- }
- private static String toSpanish(String label){
-  String l=label.toLowerCase(Locale.ROOT);
-  if(l.contains("doorbell")||l.contains("ding-dong"))return "POSIBLE TIMBRE DE PUERTA";
-  if(l.contains("knock")||l.contains("tap")||l.contains("thump")||l.contains("slam")||l.contains("bang"))return "POSIBLES GOLPES EN UNA PUERTA";
-  if(l.contains("door"))return "POSIBLE PUERTA ABRIÉNDOSE O CERRÁNDOSE";
-  if(l.contains("speech")||l.contains("conversation")||l.contains("whisper")||l.contains("narration")||l.contains("babbling"))return "POSIBLE CONVERSACIÓN";
-  if(l.contains("shout")||l.contains("scream")||l.contains("yell"))return "POSIBLES GRITOS";
-  if(l.contains("laughter")||l.contains("giggle"))return "POSIBLES RISAS";
-  if(l.contains("baby")||l.contains("cry")||l.contains("sob"))return "POSIBLE LLANTO";
-  if(l.contains("dog")||l.contains("bark")||l.contains("howl"))return "POSIBLE LADRIDO DE PERRO";
-  if(l.contains("cat")||l.contains("meow")||l.contains("purr"))return "POSIBLE GATO";
-  if(l.contains("bird")||l.contains("chirp")||l.contains("tweet"))return "POSIBLES PÁJAROS";
-  if(l.contains("siren"))return "POSIBLE SIRENA";
-  if(l.contains("smoke detector")||l.contains("fire alarm"))return "POSIBLE ALARMA DE INCENDIO";
-  if(l.contains("alarm")||l.contains("buzzer")||l.contains("beep"))return "POSIBLE ALARMA O PITIDO";
-  if(l.contains("telephone")||l.contains("ringtone")||l.contains("phone"))return "POSIBLE TELÉFONO SONANDO";
-  if(l.contains("bell"))return "POSIBLE CAMPANA";
-  if(l.contains("footstep")||l.contains("walk")||l.contains("stomp"))return "POSIBLES PASOS";
-  if(l.contains("glass")||l.contains("shatter"))return "POSIBLE VIDRIO O ROTURA";
-  if(l.contains("explosion")||l.contains("firecracker"))return "POSIBLE EXPLOSIÓN";
-  if(l.contains("thunder"))return "POSIBLE TRUENO";
-  if(l.contains("rain")||l.contains("water")||l.contains("splash"))return "POSIBLE AGUA";
-  if(l.contains("wind"))return "POSIBLE VIENTO";
-  if(l.contains("traffic")||l.contains("engine")||l.contains("vehicle")||l.contains("car")||l.contains("truck"))return "POSIBLE VEHÍCULO";
-  if(l.contains("horn")||l.contains("honk"))return "POSIBLE BOCINA";
-  if(l.contains("motorcycle"))return "POSIBLE MOTO";
-  if(l.contains("train"))return "POSIBLE TREN";
-  if(l.contains("aircraft")||l.contains("airplane")||l.contains("helicopter"))return "POSIBLE AERONAVE";
-  if(l.contains("music")||l.contains("singing")||l.contains("guitar")||l.contains("piano"))return "POSIBLE MÚSICA";
-  if(l.contains("applause")||l.contains("clap"))return "POSIBLES APLAUSOS";
-  if(l.contains("vacuum")||l.contains("blender")||l.contains("drill")||l.contains("machine"))return "POSIBLE ELECTRODOMÉSTICO O MÁQUINA";
-  if(l.contains("typing")||l.contains("keyboard"))return "POSIBLE TECLADO";
-  if(l.contains("clock")||l.contains("tick"))return "POSIBLE RELOJ";
-  if(l.contains("silence")||l.contains("noise")||l.contains("static")||l.contains("inside, small room"))return "Sonido sin identificar";
-  return "Sonido sin identificar";
  }
  private void stopAll(boolean show){
   mode=MODE_NONE;soundRunning=false;
