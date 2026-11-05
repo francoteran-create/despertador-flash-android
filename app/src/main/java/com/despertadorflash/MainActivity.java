@@ -118,8 +118,11 @@ public class MainActivity extends Activity {
   if(communicationPage){renderCommunicationPage();return;}
   if(settingsPage){renderSettingsPage();return;}
   setupPage();
-  Button settings=btn("⚙  CONFIGURACIÓN");accent(settings,0xff17203e,0xff22284c,0xff3e5981);
-  TextView title=txt("A U R O R A",32);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));root.addView(title);
+  LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);root.addView(heading);
+  TextView title=txt("A U R O R A",28);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
+  heading.addView(title,new LinearLayout.LayoutParams(0,dp(68),1f));
+  Button settings=btn("⚙");settings.setContentDescription("Configuración y permisos");settings.setTextSize(24);accent(settings,0xff17203e,0xff22284c,0xff3e5981);
+  heading.addView(settings,new LinearLayout.LayoutParams(dp(54),dp(54)));settings.setOnClickListener(v->{settingsPage=true;render();});
   TextView subtitle=txt("ALARMA VISUAL Y SENSORIAL ACCESIBLE",12);subtitle.setGravity(Gravity.CENTER);subtitle.setTextColor(0xffa2edfd);root.addView(subtitle);
   AuroraClockView clock=new AuroraClockView(this);root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
   Button alarms=btn("◷    MIS ALARMAS       ›");accent(alarms,0xff60431e,0xff6b4d26,0xffffd775);root.addView(alarms);alarms.setOnClickListener(v->{alarmsPage=true;render();});
@@ -131,7 +134,7 @@ public class MainActivity extends Activity {
  });
   Button timerButton=btn("⌛    TEMPORIZADOR       ›");accent(timerButton,0xff105a78,0xff192963,0xff68ceff);root.addView(timerButton);timerButton.setOnClickListener(v->{timerPage=true;render();});
   Button messages=btn("▣    COMUNICACIÓN       ›");accent(messages,0xff5d287e,0xff35205e,0xffc889ff);root.addView(messages);messages.setOnClickListener(v->{communicationPage=true;render();});
-  root.addView(settings);settings.setOnClickListener(v->{settingsPage=true;render();});
+
  }
  void renderTimerPage(){
   setupPage();pageTitle("TEMPORIZADOR");
