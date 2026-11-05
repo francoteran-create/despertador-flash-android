@@ -46,6 +46,7 @@ public final class SenseActivity extends Activity {
  private int mode=MODE_NONE, requestedMode=MODE_NONE, screenMode=MODE_SPEECH;
  private LinearLayout root;
  private TextView state, result, detail;
+ private AuroraVisualEngineView visual;
  private Button speechButton, soundsButton, translateButton;
  private Spinner languagePicker;
  private Translator translator;
@@ -77,6 +78,8 @@ public final class SenseActivity extends Activity {
   Button back=button("← VOLVER");root.addView(back);back.setOnClickListener(v->finish());
   TextView heading=text(screenMode==MODE_SOUND?"ESCUCHAR SONIDOS":"TRANSCRIBIR CONVERSACIÓN",26,0xffa5f6ff);heading.setGravity(Gravity.CENTER);heading.setTypeface(null,Typeface.BOLD);root.addView(heading);
   TextView intro=text(screenMode==MODE_SOUND?"Reconocé sonidos del ambiente y consultá los eventos anteriores.":"Las palabras escuchadas aparecen como texto. Traducí solo cuando quieras.",16,0xffe0edff);intro.setGravity(Gravity.CENTER);root.addView(intro);
+  visual=new AuroraVisualEngineView(this,screenMode==MODE_SOUND?AuroraVisualEngineView.SOUND:AuroraVisualEngineView.SPEECH);
+  root.addView(visual,new LinearLayout.LayoutParams(-1,-2));
   state=text("MICRÓFONO APAGADO",17,0xff8fe8df);state.setGravity(Gravity.CENTER);state.setBackground(bg(0xff0f293c,0xff14204b));root.addView(state);
   String initial=getSharedPreferences("aurora",0).getString("sense_last_transcript","");
   lastTranscript=initial;
@@ -194,7 +197,7 @@ public final class SenseActivity extends Activity {
   if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
    requestedMode=next;requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},MIC_REQUEST);return;
   }
-  stopAll(false);mode=next;beginHistory(next==MODE_SOUND?"sonidos":"conversacion");updateModeVisibility();
+  stopAll(false);mode=next;if(visual!=null){visual.setListening(true);visual.setDetected(false);}beginHistory(next==MODE_SOUND?"sonidos":"conversacion");updateModeVisibility();
   if(next==MODE_SPEECH)startSpeech();else startSounds();
  }
  @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){
@@ -239,7 +242,7 @@ public final class SenseActivity extends Activity {
    recognizer.setRecognitionListener(new RecognitionListener(){
     public void onReadyForSpeech(Bundle params){state.setText("ESCUCHANDO · HABLÁ AHORA");}
     public void onBeginningOfSpeech(){state.setText("DETECTANDO VOZ");}
-    public void onRmsChanged(float rms){}
+    public void onRmsChanged(float rms){if(mode==MODE_SPEECH&&visual!=null)visual.setEnergy(Math.max(0f,Math.min(1f,rms/12f)));}
     public void onBufferReceived(byte[] buffer){}
     public void onEndOfSpeech(){state.setText("PROCESANDO PALABRAS…");}
     public void onError(int error){
@@ -257,7 +260,7 @@ public final class SenseActivity extends Activity {
     public void onResults(Bundle data){ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
      if(mode==MODE_SPEECH){
       String phrase=matches!=null&&!matches.isEmpty()?matches.get(0):"";
-      if(!phrase.isEmpty()){result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);}
+      if(!phrase.isEmpty()){result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}}
       state.setText("ESCUCHANDO · NUEVA FRASE");
       releaseSpeech();
       main.postDelayed(()->{if(mode==MODE_SPEECH)startSpeech();},650);
@@ -305,6 +308,7 @@ public final class SenseActivity extends Activity {
        if(!confirmed)return;
        state.setText("ESCUCHANDO EL ENTORNO");
        result.setText(found);
+       if(visual!=null){visual.setEnergy(percent/100f);visual.setDetected(true);}
        detail.setText("Reconocimiento aproximado · confianza "+percent+"% · sensibilidad ajustable");
        if(!found.equals(lastSoundLabel)||now-lastSoundTime>=12000L){
         lastSoundLabel=found;lastSoundTime=now;
@@ -333,6 +337,7 @@ public final class SenseActivity extends Activity {
  }
  private void stopAll(boolean show){
   mode=MODE_NONE;soundRunning=false;
+  if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
   finishHistory();
   releaseSpeech();
   AudioRecord record=audioRecord;if(record!=null){try{record.stop();}catch(Exception ignored){}}
