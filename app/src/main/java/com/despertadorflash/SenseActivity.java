@@ -64,9 +64,9 @@ public final class SenseActivity extends Activity {
  private int minConfidence=30;
  private int eventCount=0;
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
- private GradientDrawable bg(int a,int b){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{a,b});d.setCornerRadius(dp(20));d.setStroke(dp(1),0xff427997);return d;}
+ private GradientDrawable bg(int a,int b){return AuroraDesign.surface(this,a,b,0xff427997,24);}
  private TextView text(String content,int size,int color){TextView t=new TextView(this);t.setText(content);t.setTextSize(size);t.setTextColor(color);t.setPadding(dp(12),dp(12),dp(12),dp(12));return t;}
- private Button button(String content){Button b=new Button(this);b.setText(content);b.setAllCaps(false);b.setTextColor(Color.WHITE);b.setTextSize(17);b.setMinHeight(dp(62));b.setBackground(bg(0xff334477,0xff25194c));return b;}
+ private Button button(String content){Button b=new Button(this);b.setText(content);AuroraDesign.action(b,0xff1a4264,0xff292656,0xff4b7898);return b;}
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);history=new SenseHistory(this);
   screenMode=getIntent().getIntExtra(EXTRA_MODE,MODE_SPEECH)==MODE_SOUND?MODE_SOUND:MODE_SPEECH;
@@ -77,6 +77,7 @@ public final class SenseActivity extends Activity {
   ScrollView scroll=new ScrollView(this);root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(20),dp(18),dp(25));root.setBackground(new AuroraSkyDrawable());scroll.addView(root);setContentView(scroll);
   Button back=button("← VOLVER");root.addView(back);back.setOnClickListener(v->finish());
   TextView heading=text(screenMode==MODE_SOUND?"ESCUCHAR SONIDOS":"TRANSCRIBIR CONVERSACIÓN",26,0xffa5f6ff);heading.setGravity(Gravity.CENTER);heading.setTypeface(null,Typeface.BOLD);root.addView(heading);
+  root.addView(AuroraDesign.overline(this,"AURORA / INTELIGENCIA SENSORIAL"));
   TextView intro=text(screenMode==MODE_SOUND?"Reconocé sonidos del ambiente y consultá los eventos anteriores.":"Las palabras escuchadas aparecen como texto. Traducí solo cuando quieras.",16,0xffe0edff);intro.setGravity(Gravity.CENTER);root.addView(intro);
   visual=new AuroraVisualEngineView(this,screenMode==MODE_SOUND?AuroraVisualEngineView.SOUND:AuroraVisualEngineView.SPEECH);
   root.addView(visual,new LinearLayout.LayoutParams(-1,-2));
@@ -85,6 +86,7 @@ public final class SenseActivity extends Activity {
   lastTranscript=initial;
   result=text(screenMode==MODE_SOUND?"Aún no se detectaron sonidos":initial.isEmpty()?"Sin transcripciones todavía":initial,26,Color.WHITE);result.setGravity(Gravity.CENTER);result.setTypeface(null,Typeface.BOLD);result.setMinHeight(dp(160));result.setBackground(bg(0xff142c44,0xff19193b));root.addView(result);
   detail=text("El audio se analiza solamente mientras mantenés activa una función.",14,0xffced9ef);root.addView(detail);
+  root.addView(AuroraDesign.overline(this,"REGISTRO EN TIEMPO REAL"));
   TextView timelineTitle=text(screenMode==MODE_SOUND?"SONIDOS DETECTADOS":"CONVERSACIÓN TRANSCRITA",18,0xffa6f0ff);root.addView(timelineTitle);
   eventsScroll=new ScrollView(this);eventsScroll.setFillViewport(false);eventsScroll.setBackground(bg(0xff122539,0xff111a33));
   eventsView=new LinearLayout(this);eventsView.setOrientation(LinearLayout.VERTICAL);eventsView.setPadding(dp(8),dp(6),dp(8),dp(8));
