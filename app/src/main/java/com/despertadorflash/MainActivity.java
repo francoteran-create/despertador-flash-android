@@ -278,13 +278,45 @@ public class MainActivity extends Activity {
  }
  void renderTimerPage(){
   setupPage();pageTitle("TEMPORIZADOR");
-  TextView timersHeading=section("◷  TEMPORIZADORES");root.addView(timersHeading);
- long savedEnd=prefs.getLong("timer_end",0);long remaining=Math.max(0,savedEnd-System.currentTimeMillis());TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",32);root.addView(counter);if(remaining>0){timer=new CountDownTimer(remaining,1000){public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){counter.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").apply();showTimerFinished();}}.start();}
- Button one=btn("Prueba rápida · 1 minuto");root.addView(one);one.setOnClickListener(v->countdown(1,counter));
- Button five=btn("Iniciar 5 minutos");root.addView(five);five.setOnClickListener(v->countdown(5,counter));
- Button ten=btn("Iniciar 10 minutos");root.addView(ten);ten.setOnClickListener(v->countdown(10,counter));
- Button stop=btn("Detener temporizador");root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("Detenido");});
-
+  root.addView(AuroraDesign.overline(this,"CONTROL DE TIEMPO  /  AURORA"));
+  LinearLayout timerCard=auroraCard(0xff132e41,0xff1c1f40);
+  timerCard.setGravity(Gravity.CENTER_HORIZONTAL);
+  TextView caption=txt("CUENTA REGRESIVA",14);caption.setTextColor(0xff94e9e9);
+  caption.setGravity(Gravity.CENTER);timerCard.addView(caption);
+  long savedEnd=prefs.getLong("timer_end",0);
+  long remaining=Math.max(0,savedEnd-System.currentTimeMillis());
+  TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",64);
+  counter.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
+  counter.setTextColor(0xfff4faff);counter.setGravity(Gravity.CENTER);counter.setLetterSpacing(.08f);
+  timerCard.addView(counter);
+  TextView counterInfo=txt(remaining>0?"CUENTA REGRESIVA ACTIVA":"LISTO PARA COMENZAR",14);
+  counterInfo.setGravity(Gravity.CENTER);counterInfo.setTextColor(0xffa3d1eb);timerCard.addView(counterInfo);
+  root.addView(timerCard);
+  if(remaining>0){
+   timer=new CountDownTimer(remaining,1000){
+    public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}
+    public void onFinish(){counter.setText("00:00");counterInfo.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").apply();showTimerFinished();}
+   }.start();
+  }
+  root.addView(AuroraDesign.overline(this,"INICIAR TEMPORIZADOR"));
+  LinearLayout presets=new LinearLayout(this);presets.setOrientation(LinearLayout.HORIZONTAL);
+  root.addView(presets);
+  Button one=btn("01 MIN"),five=btn("05 MIN"),ten=btn("10 MIN");
+  Button[] buttons={one,five,ten};
+  for(int i=0;i<buttons.length;i++){
+   accent(buttons[i],i==0?0xff204b63:0xff34305f,0xff252d4e,0xff77b5df);
+   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(70),1f);
+   if(i>0)lp.leftMargin=dp(6);
+   presets.addView(buttons[i],lp);
+  }
+  one.setOnClickListener(v->{countdown(1,counter);counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
+  five.setOnClickListener(v->{countdown(5,counter);counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
+  ten.setOnClickListener(v->{countdown(10,counter);counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
+  Button stop=btn("■  DETENER TEMPORIZADOR");
+  accent(stop,0xff66364d,0xff42283f,0xffaa6f91);
+  root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("00:00");counterInfo.setText("TEMPORIZADOR DETENIDO");});
+  TextView foot=txt("Al terminar, AURORA te avisará mediante las alertas que tengas configuradas.",14);
+  foot.setTextColor(0xffbed4e4);root.addView(foot);
  }
  void renderCommunicationPage(){
   setupPage();pageTitle("COMUNICACIÓN");
