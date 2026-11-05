@@ -24,6 +24,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
+      - name: Preparar modelo local YAMNet
+        run: |
+          mkdir -p app/src/main/assets
+          curl --fail --location --retry 3 --silent --show-error \
+            https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite \
+            --output app/src/main/assets/yamnet.tflite
+          test "$(wc -c < app/src/main/assets/yamnet.tflite)" -gt 1000000
       - name: Compilar APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
       - name: Inspeccionar manifiesto y paquete instalable
