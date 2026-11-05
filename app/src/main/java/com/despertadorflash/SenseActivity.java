@@ -56,6 +56,7 @@ public final class SenseActivity extends Activity {
  private ScrollView eventsScroll;
  private Button openSaved;
  private File lastSaved;
+ private File pendingExport;
  private String lastSoundLabel="";
  private long lastSoundTime=0;
  private String candidateSound=""; private int candidateHits=0; private long candidateSince=0;
@@ -155,8 +156,30 @@ public final class SenseActivity extends Activity {
    ScrollView scroll=new ScrollView(this);
    TextView content=text(SenseHistory.read(selected),16,0xffeaf7ff);content.setTextIsSelectable(true);
    content.setBackgroundColor(0xff101b30);scroll.addView(content);
-   new android.app.AlertDialog.Builder(this).setTitle(SenseHistory.readableName(selected)).setView(scroll).setPositiveButton("CERRAR",null).show();
+   new android.app.AlertDialog.Builder(this).setTitle(SenseHistory.readableName(selected)).setView(scroll).setNeutralButton("EXPORTAR", (d,w)->exportFile(selected)).setPositiveButton("CERRAR",null).show();
   }catch(IOException e){new android.app.AlertDialog.Builder(this).setMessage("No se pudo abrir el archivo: "+e.getMessage()).setPositiveButton("OK",null).show();}
+ }
+ private void exportFile(File selected){
+  if(selected==null)return;
+  pendingExport=selected;
+  Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+  intent.addCategory(Intent.CATEGORY_OPENABLE);
+  intent.setType("text/plain");
+  intent.putExtra(Intent.EXTRA_TITLE,selected.getName());
+  try{startActivityForResult(intent,71);}
+  catch(Exception e){Toast.makeText(this,"No se puede abrir el selector de archivos",Toast.LENGTH_LONG).show();}
+ }
+ @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+  super.onActivityResult(requestCode,resultCode,data);
+  if(requestCode!=71)return;
+  if(resultCode!=RESULT_OK||data==null||data.getData()==null||pendingExport==null){pendingExport=null;return;}
+  try(java.io.OutputStream out=getContentResolver().openOutputStream(data.getData())){
+   if(out==null)throw new IOException("No se pudo abrir el destino");
+   out.write(SenseHistory.read(pendingExport).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+   out.flush();
+   Toast.makeText(this,"Historial exportado correctamente",Toast.LENGTH_LONG).show();
+  }catch(Exception e){Toast.makeText(this,"Error al exportar: "+e.getMessage(),Toast.LENGTH_LONG).show();}
+  pendingExport=null;
  }
  private void showHistory(){
   File[] files=history.list();if(files.length==0){Toast.makeText(this,"No hay escuchas guardadas todavía",Toast.LENGTH_SHORT).show();return;}
