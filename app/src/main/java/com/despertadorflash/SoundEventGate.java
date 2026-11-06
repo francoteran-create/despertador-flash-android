@@ -36,7 +36,13 @@ public final class SoundEventGate {
   candidate.lastSeen=elapsedMs;
   if(candidate.hits<2&&confidence<75)return false;
   if(candidate.lastAlertAt>=0&&elapsedMs>=candidate.lastAlertAt&&
-     elapsedMs-candidate.lastAlertAt<COOLDOWN_MS)return false;
+     elapsedMs-candidate.lastAlertAt<COOLDOWN_MS){
+   // Observations suppressed inside the cooldown are not evidence for
+   // a new alert once that cooldown expires.
+   candidate.hits=0;
+   candidate.firstAt=-1L;
+   return false;
+  }
   candidate.lastAlertAt=elapsedMs;
   // Each emitted event consumes its confirmation. A single later observation
   // must never inherit the two hits of an earlier sound from 15 seconds ago.
