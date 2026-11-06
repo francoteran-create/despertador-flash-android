@@ -25,15 +25,17 @@ public final class AuroraSoundMonitorService extends Service {
  private static final String CHANNEL="aurora_monitor", EVENTS="aurora_monitor_events";
  private static final int FOREGROUND_ID=5400;
  private final ExecutorService worker=Executors.newSingleThreadExecutor();
+ private final ExecutorService eventWorker=Executors.newSingleThreadExecutor();
  private final Handler ui=new Handler(Looper.getMainLooper());
  private volatile boolean listening=false;
+ private volatile long sessionId=0L;
  private volatile AudioRecord recorder;
  private volatile AudioClassifier classifier;
  private final SoundEventGate gate=new SoundEventGate();
  private volatile long lastClassifierCallbackElapsed=0L;
  private volatile long lastHeartbeatAt=0L;
  private long lastAlertsCheckAt=0L;
- private SenseHistory history;
+ private volatile SenseHistory history;
  @Override public void onCreate(){super.onCreate();history=new SenseHistory(this);createChannels();
   // Reset any stale status from a previous process termination; no automatic restart.
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
@@ -57,17 +59,22 @@ public final class AuroraSoundMonitorService extends Service {
    stopSelf();return START_NOT_STICKY;
   }
   try{
-   Notification notice=status("Escucha activa · tocá para abrir AURORA");
+   Notification notice=status("Iniciando micrófono y reconocimiento…");
    if(Build.VERSION.SDK_INT>=29)startForeground(FOREGROUND_ID,notice,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
    else startForeground(FOREGROUND_ID,notice);
   }catch(Exception ex){
    getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"Android no permitió activar el micrófono en segundo plano").apply();
    Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;
   }
-  listening=true;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
+  listening=true;sessionId++;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
+  final long run=sessionId;
+  final SenseHistory currentHistory=new SenseHistory(this);
+  history=currentHistory;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
    .putLong(KEY_STARTED,System.currentTimeMillis()).putLong(KEY_HEARTBEAT,0L).apply();
-  history.begin("sonidos");worker.execute(this::classifyLoop);
+  // Histories and notifications are serialized on a different thread from audio.
+  eventWorker.execute(()->currentHistory.begin("sonidos"));
+  worker.execute(()->classifyLoop(run));
   return START_NOT_STICKY; // Do not restart microphone capture without user interaction.
  }
  private void createChannels(){
@@ -100,16 +107,23 @@ public final class AuroraSoundMonitorService extends Service {
    .setContentText(message).setOngoing(true).setCategory(Notification.CATEGORY_SERVICE)
    .setContentIntent(tap).addAction(android.R.drawable.ic_media_pause,"DETENER ESCUCHA",off).build();
  }
- private void classifyLoop(){
-  if(!listening)return;
+ private void classifyLoop(final long run){
+  if(!listening||sessionId!=run)return;
   AudioRecord localRecord=null;AudioClassifier localClassifier=null;
   try{
    AudioClassifierOptions options=AudioClassifierOptions.builder().setBaseOptions(BaseOptions.builder().setModelAssetPath("yamnet.tflite").build())
     .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(6).setScoreThreshold(.15f)
     .setResultListener(result->{
-     if(!listening)return;
+     if(!listening||sessionId!=run)return;
      long now=SystemClock.elapsedRealtime();
+     boolean firstResult=lastClassifierCallbackElapsed==0L;
      lastClassifierCallbackElapsed=now;
+     if(firstResult)ui.post(()->{
+      if(listening&&sessionId==run){
+       NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+       if(nm!=null)nm.notify(FOREGROUND_ID,status("Detector respondiendo · tocá para abrir AURORA"));
+      }
+     });
      // Heartbeat means the model actually responded, not merely that AudioRecord exists.
      if(now-lastHeartbeatAt>=15000L||lastHeartbeatAt==0L){
       lastHeartbeatAt=now;
@@ -126,21 +140,21 @@ public final class AuroraSoundMonitorService extends Service {
      }
      // Two simultaneous sound types can both be confirmed and reported.
      for(java.util.Map.Entry<String,Float> detected:strongestByLabel.entrySet()){
-      consider(detected.getKey(),Math.round(detected.getValue()*100f));
+      consider(detected.getKey(),Math.round(detected.getValue()*100f),run);
      }
     }).setErrorListener(err->{
      Log.e("AURORA","Clasificador de fondo: "+err.getMessage());
-     reportFailure("Error interno del detector de sonidos");
+     reportFailure("Error interno del detector de sonidos",run);
     }).build();
    localClassifier=AudioClassifier.createFromOptions(this,options);classifier=localClassifier;
    localRecord=localClassifier.createAudioRecord(1,16000,16000);recorder=localRecord;
    AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
-   if(!listening)return;
+   if(!listening||sessionId!=run)return;
    localRecord.startRecording();
    final long monitoringStarted=SystemClock.elapsedRealtime();
    if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)throw new IllegalStateException("El micrófono no comenzó a grabar");
    int emptyReads=0;
-   while(listening){
+   while(listening&&sessionId==run){
     int count=samples.load(localRecord);
     if(count>0){localClassifier.classifyAsync(samples,SystemClock.uptimeMillis());emptyReads=0;}
     else {SystemClock.sleep(120);if(++emptyReads>=6)throw new IllegalStateException("Micrófono sin muestras");}
@@ -157,21 +171,22 @@ public final class AuroraSoundMonitorService extends Service {
     }
    }
   }catch(Exception error){
-   if(listening){Log.e("AURORA","No se pudo mantener la escucha",error);
+   if(listening&&sessionId==run){Log.e("AURORA","No se pudo mantener la escucha",error);
     reportFailure(error.getMessage()!=null&&error.getMessage().contains("notificaciones")?
-     "Android bloqueó las notificaciones; escucha detenida":"El micrófono o el detector se interrumpió");}
+     "Android bloqueó las notificaciones; escucha detenida":"El micrófono o el detector se interrumpió",run);}
   }
   finally{
    if(localRecord!=null){try{localRecord.stop();}catch(Exception ignored){}localRecord.release();}
    if(localClassifier!=null)localClassifier.close();
-   recorder=null;classifier=null;
+   if(recorder==localRecord)recorder=null;
+   if(classifier==localClassifier)classifier=null;
   }
  }
- private void reportFailure(String message){
-  if(!listening)return;
+ private void reportFailure(String message,long run){
+  if(!listening||sessionId!=run)return;
   getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,message).apply();
   ui.post(()->{
-   if(!listening)return;
+   if(!listening||sessionId!=run)return;
    shutdown();
    stopSelf();
    // Explicit warning: a stopped detector must not appear to protect the user.
@@ -186,39 +201,50 @@ public final class AuroraSoundMonitorService extends Service {
    try{notifications.notify(5699,b.build());}catch(SecurityException ignored){}
   });
  }
- private synchronized void consider(String found,int percent){
-  if(!listening)return;
+ private synchronized void consider(String found,int percent,long run){
+  if(!listening||sessionId!=run)return;
   int sensitivity=getSharedPreferences("aurora",0).getInt("monitor_sensitivity",1);
   if(!gate.accept(found,percent,sensitivity,SystemClock.elapsedRealtime()))return;
-  getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · "+percent+"%").apply();
-  history.event(found+" · confianza estimada "+percent+"%");
-  if(!SoundAlertPreferences.isEnabled(this,found))return;
-  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
-  NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-  String group=SoundAlertPreferences.category(found);
-  Intent open=new Intent(this,SenseActivity.class).putExtra(SenseActivity.EXTRA_MODE,SenseActivity.MODE_SOUND);
-  PendingIntent tap=PendingIntent.getActivity(this,5600,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-  Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,SoundAlertPreferences.channel(group)):new Notification.Builder(this);
-  b.setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("AURORA · Sonido detectado")
-   .setContentText(found+" · estimación "+percent+"%").setContentIntent(tap)
-   .setCategory(Notification.CATEGORY_STATUS).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PUBLIC)
-   .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
-  try{nm.notify(SoundAlertPreferences.notificationId(group),b.build());}catch(SecurityException ignored){}
+  final SenseHistory savedHistory=history;
+  // No synchronous file writes, SharedPreferences writes, or NotificationManager
+  // calls on MediaPipe's classifier callback thread.
+  eventWorker.execute(()->{
+   savedHistory.event(found+" · confianza estimada "+percent+"%");
+   getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · "+percent+"%").apply();
+   if(!listening||sessionId!=run)return;
+   if(!SoundAlertPreferences.isEnabled(this,found))return;
+   if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
+   NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+   if(nm==null)return;
+   String group=SoundAlertPreferences.category(found);
+   Intent open=new Intent(this,SenseActivity.class).putExtra(SenseActivity.EXTRA_MODE,SenseActivity.MODE_SOUND);
+   PendingIntent tap=PendingIntent.getActivity(this,5600,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+   Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,SoundAlertPreferences.channel(group)):new Notification.Builder(this);
+   b.setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("AURORA · Sonido detectado")
+    .setContentText(found+" · estimación "+percent+"%").setContentIntent(tap)
+    .setCategory(Notification.CATEGORY_STATUS).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PUBLIC)
+    .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
+   try{nm.notify(SoundAlertPreferences.notificationId(group),b.build());}
+   catch(SecurityException ignored){}
+  });
  }
  private synchronized void shutdown(){
   if(!listening){getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();return;}
-  listening=false;
+  listening=false;sessionId++;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
   // Release a blocking audio read on the capture worker before it disposes native objects.
   AudioRecord active=recorder;
   if(active!=null){try{if(active.getRecordingState()==AudioRecord.RECORDSTATE_RECORDING)active.stop();}catch(Exception ignored){}}
-  try{
-   java.io.File saved=history.finish();
-   if(saved!=null)new SavedFolderManager(this).copyOne(saved);
-  }catch(Exception e){Log.w("AURORA","No se pudo guardar o copiar el registro",e);}
+  final SenseHistory closingHistory=history;
+  eventWorker.execute(()->{
+   try{
+    java.io.File saved=closingHistory.finish();
+    if(saved!=null)new SavedFolderManager(this).copyOne(saved);
+   }catch(Exception e){Log.w("AURORA","No se pudo guardar o copiar el registro",e);}
+  });
  }
  @Override public void onDestroy(){
-  shutdown();worker.shutdownNow();ui.removeCallbacksAndMessages(null);super.onDestroy();
+  shutdown();worker.shutdownNow();eventWorker.shutdown();ui.removeCallbacksAndMessages(null);super.onDestroy();
  }
  @Override public IBinder onBind(Intent intent){return null;}
 }
