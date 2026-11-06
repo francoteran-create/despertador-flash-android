@@ -28,10 +28,12 @@ public class MainActivity extends Activity {
  public void onCreate(Bundle b){
   super.onCreate(b);
   prefs=getSharedPreferences(PREF,0);torch=new TorchFlasher(this);
-  if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true);}
-  render();
   pendingAlarmLaunch=getIntent().getBooleanExtra("ring",false);
   pendingTimerLaunch=getIntent().getBooleanExtra("timer_finished",false);
+  if(Build.VERSION.SDK_INT>=27&&(pendingAlarmLaunch||pendingTimerLaunch)){
+   setShowWhenLocked(true);setTurnScreenOn(true);
+  }
+  render();
  }
  @Override protected void onPostResume(){
   super.onPostResume();
@@ -92,6 +94,7 @@ public class MainActivity extends Activity {
   super.onNewIntent(i);setIntent(i);
   pendingAlarmLaunch=i.getBooleanExtra("ring",false);
   pendingTimerLaunch=i.getBooleanExtra("timer_finished",false);
+  if(Build.VERSION.SDK_INT>=27&&(pendingAlarmLaunch||pendingTimerLaunch)){setShowWhenLocked(true);setTurnScreenOn(true);}
   if(hasWindowFocus()){
    if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm();}
    else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
