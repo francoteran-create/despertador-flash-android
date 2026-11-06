@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
   super.onPostResume();
   if(pendingAlarmLaunch){
    pendingAlarmLaunch=false;
-   showAlarm();
+   showAlarm(getIntent().getIntExtra("alarm_id",-1));
   }else if(pendingTimerLaunch){
    pendingTimerLaunch=false;
    showTimerFinished();
@@ -53,11 +53,13 @@ public class MainActivity extends Activity {
  }
  void stopAlarmEffects(){
   if(torch!=null)torch.stop();
+  int finishedAlarm=activeAlarmId;
   alarmActive=false; activeAlarmId=-1;
   if(flashTask!=null){flashHandler.removeCallbacks(flashTask);flashTask=null;}
   Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null)v.cancel();
   releaseAlertWindow();
-  NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);if(nm!=null)for(int id=0;id<5;id++)nm.cancel(2000+id);
+  NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+  if(nm!=null&&finishedAlarm>=0&&finishedAlarm<5)nm.cancel(2000+finishedAlarm);
  }
  boolean snoozeAlarm(){
   AlarmManager manager=(AlarmManager)getSystemService(ALARM_SERVICE);
@@ -77,9 +79,11 @@ public class MainActivity extends Activity {
   TextView message=txt("¡TIEMPO CUMPLIDO!",32);message.setGravity(Gravity.CENTER);message.setTypeface(null,Typeface.BOLD);message.setBackgroundColor(0xffffd633);message.setTextColor(Color.BLACK);
   new AlertDialog.Builder(this).setTitle("AURORA · TEMPORIZADOR").setView(message).setPositiveButton("DETENER ALERTA",(d,w)->{if(vib!=null)vib.cancel();if(torch!=null)torch.stop();timerAlertActive=false;releaseAlertWindow();}).setOnDismissListener(d->{if(vib!=null)vib.cancel();if(torch!=null)torch.stop();timerAlertActive=false;releaseAlertWindow();}).setCancelable(false).show();
  }
- void showAlarm(){
+ void showAlarm(){showAlarm(-1);} // A manual preview never snoozes a real alarm.
+ void showAlarm(int notificationAlarmId){
   if(alarmActive)return;
-  alarmActive=true; startTorchAlert(); activeAlarmId=getIntent().getBooleanExtra("ring",false)?getIntent().getIntExtra("alarm_id",-1):-1;
+  alarmActive=true; startTorchAlert();
+  activeAlarmId=(notificationAlarmId>=0&&notificationAlarmId<5)?notificationAlarmId:-1;
   getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED|WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON|WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
   LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(22),dp(24),dp(22),dp(24));
   TextView big=txt("¡DESPERTÁ!",38);big.setGravity(Gravity.CENTER);big.setTypeface(null,Typeface.BOLD);panel.addView(big);
@@ -101,14 +105,14 @@ public class MainActivity extends Activity {
   pendingTimerLaunch=i.getBooleanExtra("timer_finished",false);
   if(Build.VERSION.SDK_INT>=27&&(pendingAlarmLaunch||pendingTimerLaunch)){setShowWhenLocked(true);setTurnScreenOn(true);}
   if(hasWindowFocus()){
-   if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm();}
+   if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm(i.getIntExtra("alarm_id",-1));}
    else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
   }
  }
  @Override public void onWindowFocusChanged(boolean hasFocus){
   super.onWindowFocusChanged(hasFocus);
   if(hasFocus&&!alarmActive&&!timerAlertActive){
-   if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm();}
+   if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm(getIntent().getIntExtra("alarm_id",-1));}
    else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
   }
  }
