@@ -32,7 +32,7 @@ public final class SenseHistory {
  public synchronized void event(String observation){
   if(!active)return;
   String clean=observation.replace('\r',' ').replace('\n',' ').trim();
-  if(!clean.isEmpty()&&events.size()<2000)events.add(clean);
+  if(!clean.isEmpty()&&events.size()<2000)events.add("["+stamp(System.currentTimeMillis(),"HH:mm:ss")+"] "+clean);
  }
  public synchronized File finish() throws IOException{
   if(!active)return null;
@@ -60,6 +60,12 @@ public final class SenseHistory {
   if(files==null)return new File[0];
   Arrays.sort(files,(a,b)->Long.compare(b.lastModified(),a.lastModified()));
   return files;
+ }
+ /** Only a TXT file belonging to this private history directory may be deleted. */
+ public synchronized void delete(File file) throws IOException {
+  if(file==null||!file.getName().endsWith(".txt")||!file.getCanonicalFile().getParentFile().equals(folder.getCanonicalFile()))
+   throw new IOException("Registro no válido para borrar");
+  if(!file.isFile()||!file.delete())throw new IOException("No se pudo borrar este registro");
  }
  public static String read(File file) throws IOException{
   if(file==null||!file.isFile()||file.length()>4_000_000)throw new IOException("Archivo no disponible o demasiado grande");
