@@ -81,6 +81,20 @@ public final class AuroraAssistActivity extends Activity {
   output.setTextIsSelectable(true);output.setMinHeight(dp(180));
   output.setBackground(AuroraDesign.surface(this,0xff0e2f42,0xff242641,0xff4c8399,20));
   layout.addView(output);
+  Button soundSummary=button("RESUMIR MIS DETECCIONES DE SONIDOS");layout.addView(soundSummary);
+  soundSummary.setOnClickListener(v->{
+   StringBuilder observations=new StringBuilder();
+   int sessions=0;
+   for(java.io.File file:new SenseHistory(this).list()){
+    if(!file.getName().contains("SONIDOS"))continue;
+    try{
+     observations.append(SenseHistory.read(file)).append("\n");
+     if(++sessions>=3)break;
+    }catch(java.io.IOException ignored){}
+   }
+   output.setText(SoundDigest.summarize(observations.toString()));
+   status.setText("Resumen local de hasta tres registros de sonidos; sin enviar información a internet.");
+  });
   Button copy=button("COPIAR RESULTADO");layout.addView(copy);
   copy.setOnClickListener(v->{
    android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
