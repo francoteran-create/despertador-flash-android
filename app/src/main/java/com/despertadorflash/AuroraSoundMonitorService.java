@@ -77,6 +77,7 @@ public final class AuroraSoundMonitorService extends Service {
    .setContentIntent(tap).addAction(android.R.drawable.ic_media_pause,"DETENER ESCUCHA",off).build();
  }
  private void classifyLoop(){
+  if(!listening)return;
   AudioRecord localRecord=null;AudioClassifier localClassifier=null;
   try{
    AudioClassifierOptions options=AudioClassifierOptions.builder().setBaseOptions(BaseOptions.builder().setModelAssetPath("yamnet.tflite").build())
@@ -97,13 +98,14 @@ public final class AuroraSoundMonitorService extends Service {
    localClassifier=AudioClassifier.createFromOptions(this,options);classifier=localClassifier;
    localRecord=localClassifier.createAudioRecord(1,16000,16000);recorder=localRecord;
    AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
+   if(!listening)return;
    localRecord.startRecording();
    if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)throw new IllegalStateException("El micrófono no comenzó a grabar");
    int emptyReads=0;
    while(listening){
     int count=samples.load(localRecord);
     if(count>0){localClassifier.classifyAsync(samples,SystemClock.uptimeMillis());emptyReads=0;}
-    else if(++emptyReads>=6)throw new IllegalStateException("Micrófono sin muestras");
+    else {SystemClock.sleep(120);if(++emptyReads>=6)throw new IllegalStateException("Micrófono sin muestras");}
     long now=SystemClock.elapsedRealtime();
     if(now-lastHeartbeatAt>=15000){
      lastHeartbeatAt=now;
@@ -122,7 +124,21 @@ public final class AuroraSoundMonitorService extends Service {
  private void reportFailure(String message){
   if(!listening)return;
   getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,message).apply();
-  ui.post(()->{if(listening){shutdown();stopSelf();}});
+  ui.post(()->{
+   if(!listening)return;
+   shutdown();
+   stopSelf();
+   // Explicit warning: a stopped detector must not appear to protect the user.
+   if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
+   NotificationManager notifications=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+   Intent open=new Intent(this,MainActivity.class);
+   PendingIntent tap=PendingIntent.getActivity(this,5699,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+   Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,EVENTS):new Notification.Builder(this);
+   b.setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("AURORA · Escucha detenida")
+    .setContentText("No se están detectando sonidos. Tocá para revisar.")
+    .setPriority(Notification.PRIORITY_HIGH).setCategory(Notification.CATEGORY_ERROR).setAutoCancel(true).setContentIntent(tap);
+   try{notifications.notify(5699,b.build());}catch(SecurityException ignored){}
+  });
  }
  private synchronized void consider(String found,int percent){
   if(!listening)return;
