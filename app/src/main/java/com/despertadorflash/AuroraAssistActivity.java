@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.provider.MediaStore;
 import androidx.core.content.FileProvider;
+import androidx.exifinterface.media.ExifInterface;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -129,6 +130,7 @@ public final class AuroraAssistActivity extends Activity {
    pendingPhotoUri=FileProvider.getUriForFile(this,getPackageName()+".photos",pendingPhoto);
    Intent intent=new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
    intent.putExtra(MediaStore.EXTRA_OUTPUT,pendingPhotoUri);
+   intent.setClipData(android.content.ClipData.newUri(getContentResolver(),"Foto AURORA",pendingPhotoUri));
    intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
    startActivityForResult(intent,CAMERA);
   }catch(Exception error){
@@ -157,6 +159,7 @@ public final class AuroraAssistActivity extends Activity {
   output.setText("Preparando la foto para analizar…");
   imageWorker.execute(()->{
    Bitmap bitmap=null;String failure=null;
+   int imageRotation=0;
    try{
     BitmapFactory.Options bounds=new BitmapFactory.Options();
     bounds.inJustDecodeBounds=true;
@@ -174,9 +177,19 @@ public final class AuroraAssistActivity extends Activity {
      bitmap=BitmapFactory.decodeStream(in,null,options);
     }
     if(bitmap==null)throw new IOException("No se pudo decodificar la imagen");
+    // The JPEG pixels can be landscape even when the phone was held upright.
+    // Pass EXIF rotation to ML Kit instead of allocating another rotated bitmap.
+    try(InputStream metadata=getContentResolver().openInputStream(uri)){
+     if(metadata!=null){
+      ExifInterface exif=new ExifInterface(metadata);
+      imageRotation=ImageOrientation.degrees(
+       exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL));
+     }
+    }catch(Exception ignored){imageRotation=0;}
    }catch(Exception err){failure="No pude leer esta foto. Probá con otra imagen."; }
    catch(OutOfMemoryError oom){failure="La foto es demasiado grande para este teléfono."; }
    final Bitmap ready=bitmap;
+   final int rotation=imageRotation;
    final String error=failure;
    main.post(()->{
     if(cameraFile)clearPhoto();
@@ -185,7 +198,7 @@ public final class AuroraAssistActivity extends Activity {
      return;
     }
     if(error!=null){processing=false;status.setText(error);return;}
-    analyze(ready);
+    analyze(ready,rotation);
    });
   });
  }
@@ -214,11 +227,11 @@ public final class AuroraAssistActivity extends Activity {
   super.onSaveInstanceState(out);
   if(pendingPhoto!=null)out.putString("temporary_photo",pendingPhoto.getAbsolutePath());
  }
- private void analyze(Bitmap bitmap){
+ private void analyze(Bitmap bitmap,int rotation){
   processing=true;
   output.setText("Analizando objetos y texto de la imagen…");
   status.setText("Procesamiento local activo. No se está grabando video.");
-  InputImage input=InputImage.fromBitmap(bitmap,0);
+  InputImage input=InputImage.fromBitmap(bitmap,rotation);
   final ImageLabeler labels=ImageLabeling.getClient(new ImageLabelerOptions.Builder().setConfidenceThreshold(.55f).build());
   final TextRecognizer ocr=TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
   final String[] parts={"",""};final int[] complete={0};
