@@ -176,7 +176,10 @@ public final class AuroraSoundMonitorService extends Service {
   // Release a blocking audio read on the capture worker before it disposes native objects.
   AudioRecord active=recorder;
   if(active!=null){try{if(active.getRecordingState()==AudioRecord.RECORDSTATE_RECORDING)active.stop();}catch(Exception ignored){}}
-  try{history.finish();}catch(Exception e){Log.w("AURORA","Error guardando registro de escucha",e);}
+  try{
+   java.io.File saved=history.finish();
+   if(saved!=null)new SavedFolderManager(this).copyOne(saved);
+  }catch(Exception e){Log.w("AURORA","No se pudo guardar o copiar el registro",e);}
  }
  @Override public void onDestroy(){
   shutdown();worker.shutdownNow();ui.removeCallbacksAndMessages(null);super.onDestroy();
