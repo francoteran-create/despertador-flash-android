@@ -53,8 +53,11 @@ jobs:
             sha256sum "$apk"
             du -h "$apk"
           done
+      # En cada avance compilamos y probamos, sin publicar instalables.
+      # Sólo una ejecución manual produce un artefacto cuando el usuario lo pida.
       - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
         with:
-          name: AURORA-MASTER-2.8-LITE-ARM
+          name: AURORA-MASTER-ARM
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
