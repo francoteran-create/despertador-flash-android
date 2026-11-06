@@ -29,6 +29,21 @@ public class SoundEventGateTest {
   assertFalse(gate.accept("B",40,1,9000));
   assertTrue(gate.accept("B",40,1,9500));
  }
+ @Test public void alternatingSimultaneousSoundsConfirmIndependently(){
+  SoundEventGate gate=new SoundEventGate();
+  assertFalse(gate.accept("TIMBRE",50,1,1000));
+  assertFalse(gate.accept("SIRENA",55,1,1200));
+  assertTrue(gate.accept("TIMBRE",54,1,1500));
+  assertTrue(gate.accept("SIRENA",51,1,1700));
+  assertFalse(gate.accept("TIMBRE",85,1,2100));
+  assertTrue(gate.accept("TIMBRE",80,1,18000));
+ }
+ @Test public void expiredCandidateNeedsTwoFreshObservations(){
+  SoundEventGate gate=new SoundEventGate();
+  assertFalse(gate.accept("PUERTA",35,1,1000));
+  assertFalse(gate.accept("PUERTA",35,1,7000));
+  assertTrue(gate.accept("PUERTA",35,1,7600));
+ }
  @Test public void clockRollbackAndResetDontLockOutAlerts(){
   SoundEventGate gate=new SoundEventGate();
   assertTrue(gate.accept("A",95,1,100_000));
