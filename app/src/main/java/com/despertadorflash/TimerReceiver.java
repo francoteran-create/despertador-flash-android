@@ -4,7 +4,11 @@ import android.content.*;
 import android.os.*;
 public class TimerReceiver extends BroadcastReceiver {
  @Override public void onReceive(Context context,Intent intent){
-  context.getSharedPreferences("aurora",0).edit().remove("timer_end").apply();
+  android.content.SharedPreferences prefs=context.getSharedPreferences("aurora",0);
+  long expected=prefs.getLong("timer_end",0L);
+  // Ignore an obsolete or canceled PendingIntent and premature deliveries.
+  if(expected<=0||expected-System.currentTimeMillis()>2000L)return;
+  prefs.edit().remove("timer_end").apply();
   Intent open=new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("timer_finished",true);
   PendingIntent pending=PendingIntent.getActivity(context,3100,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   NotificationManager manager=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
