@@ -76,7 +76,14 @@ public final class RecordsActivity extends Activity {
      if(destination.selectedFolder()==null){chooseFolder();return;}
      try{destination.copyOne(file);Toast.makeText(this,"Archivo copiado a tu carpeta",Toast.LENGTH_LONG).show();}
      catch(IOException e){showError(e.getMessage());}
-    }).setPositiveButton("CERRAR",null).show();
+    }).setNegativeButton("ELIMINAR REGISTRO",(d,w)->new AlertDialog.Builder(this)
+     .setTitle("Eliminar este registro")
+     .setMessage("¿Borrar este archivo del almacenamiento interno de AURORA? Si lo copiaste a otra carpeta, esa copia no se eliminará.")
+     .setNegativeButton("CANCELAR",null)
+     .setPositiveButton("ELIMINAR",(confirm,which)->{
+      try{history.delete(file);refresh();Toast.makeText(this,"Registro local eliminado",Toast.LENGTH_SHORT).show();}
+      catch(IOException error){showError(error.getMessage());}
+     }).show()).setPositiveButton("CERRAR",null).show();
   }catch(IOException e){showError(e.getMessage());}
  }
  private void chooseFolder(){
