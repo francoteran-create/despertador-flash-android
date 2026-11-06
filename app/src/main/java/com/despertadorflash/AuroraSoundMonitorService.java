@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 /** Explicitly started foreground microphone monitor. Never auto-start on boot. */
 public final class AuroraSoundMonitorService extends Service {
  public static final String START="com.despertadorflash.START_MONITOR",STOP="com.despertadorflash.STOP_MONITOR";
- public static final String KEY_ACTIVE="monitor_active", KEY_LAST="monitor_last_sound";
+ public static final String KEY_ACTIVE="monitor_active", KEY_LAST="monitor_last_sound", KEY_ERROR="monitor_last_error", KEY_HEARTBEAT="monitor_heartbeat";
  private static final String CHANNEL="aurora_monitor", EVENTS="aurora_monitor_events";
  private static final int FOREGROUND_ID=5400;
  private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -29,23 +29,30 @@ public final class AuroraSoundMonitorService extends Service {
  private volatile boolean listening=false;
  private volatile AudioRecord recorder;
  private volatile AudioClassifier classifier;
- private String candidate="";private int hits=0;
- private long candidateAt=0,lastAlertAt=0;
- private String lastLabel="";
+ private final SoundEventGate gate=new SoundEventGate();
+ private long lastHeartbeatAt=0L;
  private SenseHistory history;
- @Override public void onCreate(){super.onCreate();history=new SenseHistory(this);createChannels();}
+ @Override public void onCreate(){super.onCreate();history=new SenseHistory(this);createChannels();
+  // Reset any stale status from a previous process termination; no automatic restart.
+  getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
+ }
  @Override public int onStartCommand(Intent intent,int flags,int startId){
   if(intent!=null&&STOP.equals(intent.getAction())){shutdown();stopSelf();return START_NOT_STICKY;}
+  if(intent==null||!START.equals(intent.getAction())){stopSelf();return START_NOT_STICKY;}
   if(listening)return START_NOT_STICKY;
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
    Log.w("AURORA","No se inicia escucha sin permiso de micrófono");stopSelf();return START_NOT_STICKY;
+  }
+  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+   Log.w("AURORA","Sin permiso de notificaciones no se inicia el monitoreo");stopSelf();return START_NOT_STICKY;
   }
   try{
    Notification notice=status("Escucha activa · tocá para abrir AURORA");
    if(Build.VERSION.SDK_INT>=29)startForeground(FOREGROUND_ID,notice,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
    else startForeground(FOREGROUND_ID,notice);
   }catch(Exception ex){Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;}
-  listening=true;getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).apply();
+  listening=true;gate.reset();lastHeartbeatAt=0L;
+  getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR).putLong(KEY_HEARTBEAT,System.currentTimeMillis()).apply();
   history.begin("sonidos");worker.execute(this::classifyLoop);
   return START_NOT_STICKY; // Do not restart microphone capture without user interaction.
  }
@@ -83,31 +90,44 @@ public final class AuroraSoundMonitorService extends Service {
       if(name!=null&&item.score()>confidence){best=name;confidence=item.score();}
      }
      if(best!=null)consider(best,Math.round(confidence*100));
-    }).setErrorListener(err->Log.e("AURORA","Clasificador de fondo: "+err.getMessage())).build();
+    }).setErrorListener(err->{
+     Log.e("AURORA","Clasificador de fondo: "+err.getMessage());
+     reportFailure("Error interno del detector de sonidos");
+    }).build();
    localClassifier=AudioClassifier.createFromOptions(this,options);classifier=localClassifier;
    localRecord=localClassifier.createAudioRecord(1,16000,16000);recorder=localRecord;
    AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
    localRecord.startRecording();
+   if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)throw new IllegalStateException("El micrófono no comenzó a grabar");
+   int emptyReads=0;
    while(listening){
-    if(samples.load(localRecord)>0)localClassifier.classifyAsync(samples,SystemClock.uptimeMillis());
+    int count=samples.load(localRecord);
+    if(count>0){localClassifier.classifyAsync(samples,SystemClock.uptimeMillis());emptyReads=0;}
+    else if(++emptyReads>=6)throw new IllegalStateException("Micrófono sin muestras");
+    long now=SystemClock.elapsedRealtime();
+    if(now-lastHeartbeatAt>=15000){
+     lastHeartbeatAt=now;
+     getSharedPreferences("aurora",0).edit().putLong(KEY_HEARTBEAT,System.currentTimeMillis()).apply();
+    }
    }
-  }catch(Exception error){Log.e("AURORA","No se pudo mantener la escucha",error);shutdown();stopSelf();}
+  }catch(Exception error){
+   if(listening){Log.e("AURORA","No se pudo mantener la escucha",error);reportFailure("El micrófono o el detector se interrumpió");}
+  }
   finally{
    if(localRecord!=null){try{localRecord.stop();}catch(Exception ignored){}localRecord.release();}
    if(localClassifier!=null)localClassifier.close();
    recorder=null;classifier=null;
   }
  }
+ private void reportFailure(String message){
+  if(!listening)return;
+  getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,message).apply();
+  ui.post(()->{if(listening){shutdown();stopSelf();}});
+ }
  private synchronized void consider(String found,int percent){
   if(!listening)return;
   int sensitivity=getSharedPreferences("aurora",0).getInt("monitor_sensitivity",1);
-  int threshold=sensitivity==0?22:sensitivity==2?45:30;
-  if(percent<threshold)return;
-  long now=SystemClock.elapsedRealtime();
-  if(!found.equals(candidate)||now-candidateAt>5000){candidate=found;hits=1;candidateAt=now;}else hits++;
-  if(hits<2&&percent<75)return;
-  if(found.equals(lastLabel)&&now-lastAlertAt<15000)return;
-  lastLabel=found;lastAlertAt=now;
+  if(!gate.accept(found,percent,sensitivity,SystemClock.elapsedRealtime()))return;
   getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · "+percent+"%").apply();
   history.event(found+" · confianza estimada "+percent+"%");
   if(!SoundAlertPreferences.isEnabled(this,found))return;
@@ -123,8 +143,12 @@ public final class AuroraSoundMonitorService extends Service {
   try{nm.notify(5601,b.build());}catch(SecurityException ignored){}
  }
  private synchronized void shutdown(){
-  if(!listening)return;listening=false;
+  if(!listening){getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();return;}
+  listening=false;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
+  // Release a blocking audio read on the capture worker before it disposes native objects.
+  AudioRecord active=recorder;
+  if(active!=null){try{if(active.getRecordingState()==AudioRecord.RECORDSTATE_RECORDING)active.stop();}catch(Exception ignored){}}
   try{history.finish();}catch(Exception e){Log.w("AURORA","Error guardando registro de escucha",e);}
  }
  @Override public void onDestroy(){
