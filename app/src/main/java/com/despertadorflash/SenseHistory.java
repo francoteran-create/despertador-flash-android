@@ -17,6 +17,8 @@ public final class SenseHistory {
  private boolean active=false;
  private long started;
  private String kind;
+ private SessionJournal journal;
+ private boolean diskHealthy=true;
  public SenseHistory(Context context){
   folder=new File(context.getFilesDir(),FOLDER);
   if(!folder.exists())folder.mkdirs();
@@ -27,20 +29,47 @@ public final class SenseHistory {
  public synchronized void begin(String type){
   started=System.currentTimeMillis();
   kind=type.equals("sonidos")?"sonidos":"conversacion";
-  events.clear();active=true;
+  events.clear();journal=null;diskHealthy=true;active=true;
  }
  public synchronized void event(String observation){
-  if(!active)return;
+  if(!active||observation==null||events.size()>=2000)return;
   String clean=observation.replace('\r',' ').replace('\n',' ').trim();
-  if(!clean.isEmpty()&&events.size()<2000)events.add("["+stamp(System.currentTimeMillis(),"HH:mm:ss")+"] "+clean);
+  if(clean.isEmpty())return;
+  String dated="["+stamp(System.currentTimeMillis(),"HH:mm:ss")+"] "+clean;
+  events.add(dated);
+  if(!diskHealthy)return;
+  try{
+   if(journal==null){
+    String suffix=kind.equals("sonidos")?"SONIDOS":"CONVERSACION";
+    String name=stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS")+"_"+suffix+".txt";
+    String header="AURORA SENSE | "+(kind.equals("sonidos")?"Reconocimiento de sonidos":"Transcripción de conversación")+
+      "\nFecha: "+stamp(started,"dd/MM/yyyy")+"\nInicio: "+stamp(started,"HH:mm")+
+      "\nResultados estimados por IA. No se guardó audio.";
+    journal=new SessionJournal(folder,name,header);
+   }
+   journal.append(dated);
+  }catch(IOException error){
+   diskHealthy=false;
+   android.util.Log.w("Aurora","No se pudo registrar un evento inmediatamente",error);
+  }
  }
  public synchronized File finish() throws IOException{
   if(!active)return null;
   active=false;
   if(events.isEmpty()){events.clear();return null;}
+  if(diskHealthy&&journal!=null){
+   try{
+    File completed=journal.finish("Finalización: "+stamp(System.currentTimeMillis(),"HH:mm"));
+    events.clear();journal=null;return completed;
+   }catch(IOException error){
+    diskHealthy=false;
+    android.util.Log.w("Aurora","Error cerrando el historial incremental",error);
+   }
+  }
+  // Fallback to original full write if the incremental writer could not persist.
   if(!folder.exists()&&!folder.mkdirs())throw new IOException("No se pudo crear carpeta de registros");
   String suffix=kind.equals("sonidos")?"SONIDOS":"CONVERSACION";
-  File output=new File(folder,stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS")+"_"+suffix+".txt");
+  File output=journal!=null?journal.file():new File(folder,stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS")+"_"+suffix+".txt");
   try(FileOutputStream stream=new FileOutputStream(output,false)){
    StringBuilder text=new StringBuilder();
    text.append("AURORA SENSE | ").append(kind.equals("sonidos")?"Reconocimiento de sonidos":"Transcripción de conversación").append("\n");
@@ -49,9 +78,9 @@ public final class SenseHistory {
    text.append("Finalización: ").append(stamp(System.currentTimeMillis(),"HH:mm")).append("\n");
    text.append("Resultados estimados por IA. No se guardó audio.\n\n");
    for(int i=0;i<events.size();i++)text.append(i+1).append(". ").append(events.get(i)).append("\n");
-   text.append("\nTotal de eventos: ").append(events.size()).append("\n");
-   stream.write(text.toString().getBytes(StandardCharsets.UTF_8));stream.flush();stream.getFD().sync();
-  }finally{events.clear();}
+   text.append("\nTotal de eventos: ").append(events.size()).append("\nESTADO: SESIÓN FINALIZADA\n");
+   stream.write(text.toString().getBytes(StandardCharsets.UTF_8));stream.getFD().sync();
+  }finally{events.clear();journal=null;}
   return output;
  }
  public synchronized boolean hasActive(){return active;}
