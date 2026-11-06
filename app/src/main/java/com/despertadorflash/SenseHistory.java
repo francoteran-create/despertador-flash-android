@@ -7,8 +7,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * A single listening session lives in RAM until the user stops listening or
- * leaves SenseActivity. Only recognized text is persisted, never raw audio.
+ * Detected labels / transcribed phrases are written incrementally to private
+ * text files, so an interrupted session is still readable. Raw audio is never saved.
  */
 public final class SenseHistory {
  private static final String FOLDER="aurora_sense";
@@ -26,6 +26,14 @@ public final class SenseHistory {
  private static String stamp(long time,String format){
   return new SimpleDateFormat(format,new Locale("es","AR")).format(new Date(time));
  }
+ private String uniqueName(String suffix){
+  String prefix=stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS");
+  String filename=prefix+"_"+suffix+".txt";
+  for(int i=1;new File(folder,filename).exists();i++){
+   filename=prefix+"_"+i+"_"+suffix+".txt";
+  }
+  return filename;
+ }
  public synchronized void begin(String type){
   started=System.currentTimeMillis();
   kind=type.equals("sonidos")?"sonidos":"conversacion";
@@ -41,7 +49,7 @@ public final class SenseHistory {
   try{
    if(journal==null){
     String suffix=kind.equals("sonidos")?"SONIDOS":"CONVERSACION";
-    String name=stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS")+"_"+suffix+".txt";
+    String name=uniqueName(suffix);
     String header="AURORA SENSE | "+(kind.equals("sonidos")?"Reconocimiento de sonidos":"Transcripción de conversación")+
       "\nFecha: "+stamp(started,"dd/MM/yyyy")+"\nInicio: "+stamp(started,"HH:mm")+
       "\nResultados estimados por IA. No se guardó audio.";
@@ -69,7 +77,7 @@ public final class SenseHistory {
   // Fallback to original full write if the incremental writer could not persist.
   if(!folder.exists()&&!folder.mkdirs())throw new IOException("No se pudo crear carpeta de registros");
   String suffix=kind.equals("sonidos")?"SONIDOS":"CONVERSACION";
-  File output=journal!=null?journal.file():new File(folder,stamp(started,"yyyy-MM-dd_HH-mm-ss-SSS")+"_"+suffix+".txt");
+  File output=journal!=null?journal.file():new File(folder,uniqueName(suffix));
   try(FileOutputStream stream=new FileOutputStream(output,false)){
    StringBuilder text=new StringBuilder();
    text.append("AURORA SENSE | ").append(kind.equals("sonidos")?"Reconocimiento de sonidos":"Transcripción de conversación").append("\n");
