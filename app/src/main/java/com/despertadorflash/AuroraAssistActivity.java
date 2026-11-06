@@ -227,7 +227,7 @@ public final class AuroraAssistActivity extends Activity {
    StringBuilder b=new StringBuilder("OBJETOS POSIBLES (etiquetas automáticas):\n");
    for(ImageLabel label:found){
     if(b.length()>800)break;
-    b.append("• ").append(label.getText()).append(" (").append(Math.round(label.getConfidence()*100)).append("%)\n");
+    b.append("• ").append(ImageLabelEs.name(label.getText())).append(" (").append(Math.round(label.getConfidence()*100)).append("%)\n");
    }
    if(!found.isEmpty())parts[0]=b.toString();
    finish.run();
