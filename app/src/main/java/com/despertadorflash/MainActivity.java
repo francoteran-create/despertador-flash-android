@@ -263,7 +263,7 @@ public class MainActivity extends Activity {
   if(remaining>0){
    timer=new CountDownTimer(remaining,1000){
     public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}
-    public void onFinish(){counter.setText("00:00");counterInfo.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").remove("timer_end_elapsed").apply();showTimerFinished();}
+    public void onFinish(){counter.setText("00:00");counterInfo.setText("AVISO A CARGO DE ANDROID");}
    }.start();
   }
   root.addView(AuroraDesign.overline(this,"INICIAR TEMPORIZADOR"));
@@ -630,8 +630,7 @@ public class MainActivity extends Activity {
    public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}
    public void onFinish(){
     output.setText("¡TIEMPO CUMPLIDO!");
-    prefs.edit().remove("timer_end").remove("timer_end_elapsed").apply();
-    showTimerFinished();
+    // Android entrega el aviso mediante TimerReceiver.
    }
   }.start();
   return true;
