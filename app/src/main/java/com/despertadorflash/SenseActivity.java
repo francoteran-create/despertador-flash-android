@@ -39,6 +39,10 @@ public final class SenseActivity extends Activity {
  public static final int MODE_NONE=0, MODE_SPEECH=1, MODE_SOUND=2;
  private final Handler main=new Handler(Looper.getMainLooper());
  private final ExecutorService work=Executors.newSingleThreadExecutor();
+ private final ExecutorService historyWorker=Executors.newSingleThreadExecutor();
+ private final SoundEventGate foregroundSoundGate=new SoundEventGate();
+ private volatile int soundSession=0;
+ private int historyGeneration=0;
  private SpeechRecognizer recognizer;
  private final SpeechRetryController speechRetries=new SpeechRetryController();
  private int speechSession=0;
@@ -242,6 +246,8 @@ public final class SenseActivity extends Activity {
  private void beginHistory(String type){
   eventCount=0;eventsView.removeAllViews();lastSoundLabel="";lastSoundTime=0;
   candidateSound="";candidateHits=0;candidateSince=0;
+  historyGeneration++;
+  history=new SenseHistory(this);
   history.begin(type);
   TextView placeholder=text("Escuchando… Las detecciones se agregarán aquí.",15,0xffa3b8d2);
   eventsView.addView(placeholder);
@@ -249,18 +255,35 @@ public final class SenseActivity extends Activity {
  }
  private void recordEvent(String observation){
   addTimeline(observation);
-  history.event(observation);
+  final SenseHistory captured=history;
+  if(captured!=null&&captured.hasActive())historyWorker.execute(()->captured.event(observation));
  }
  private void finishHistory(){
-  try{
-   File saved=history.finish();
-   if(saved!=null){
-    lastSaved=saved;
+  final SenseHistory closing=history;
+  if(closing==null)return;
+  history=null;
+  final int generation=historyGeneration;
+  historyWorker.execute(()->{
+   try{
+    File saved=closing.finish();
+    if(saved==null)return;
+    String copyError=null;
     try{new SavedFolderManager(this).copyOne(saved);}
-    catch(IOException copyError){if(detail!=null)detail.setText("Archivo guardado en AURORA, pero la copia a la carpeta elegida falló: "+copyError.getMessage());}
-    if(openSaved!=null){openSaved.setVisibility(View.VISIBLE);openSaved.setText("ABRIR ARCHIVO GUARDADO · "+SenseHistory.readableName(saved));}
+    catch(IOException error){copyError=error.getMessage();}
+    final String warning=copyError;
+    main.post(()->{
+     if(isFinishing()||isDestroyed()||generation!=historyGeneration)return;
+     lastSaved=saved;
+     if(warning!=null&&detail!=null)detail.setText("Registro guardado, pero no se copió a la carpeta elegida: "+warning);
+     if(openSaved!=null){openSaved.setVisibility(View.VISIBLE);openSaved.setText("ABRIR ARCHIVO GUARDADO · "+SenseHistory.readableName(saved));}
+    });
+   }catch(IOException error){
+    main.post(()->{
+     if(!isFinishing()&&!isDestroyed()&&generation==historyGeneration&&detail!=null)
+      detail.setText("No se pudo guardar el registro: "+error.getMessage());
+    });
    }
-  }catch(IOException e){if(detail!=null)detail.setText("No se pudo guardar el archivo: "+e.getMessage());}
+  });
  }
  private void showFile(File selected){
   if(selected==null){Toast.makeText(this,"Todavía no hay archivos guardados",Toast.LENGTH_SHORT).show();return;}
@@ -487,6 +510,7 @@ public final class SenseActivity extends Activity {
  }
  private void stopAll(boolean show){
   cancelSpeechRetry();speechRetries.reset();
+  soundSession++;
   mode=MODE_NONE;soundRunning=false;
   if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
   finishHistory();
@@ -495,5 +519,5 @@ public final class SenseActivity extends Activity {
   if(show){state.setText("MICRÓFONO APAGADO");detail.setText("Escucha detenida. Ninguna función está capturando audio.");}updateModeVisibility();
  }
  @Override protected void onStop(){stopAll(true);super.onStop();}
- @Override protected void onDestroy(){stopAll(false);if(translator!=null)translator.close();work.shutdownNow();super.onDestroy();}
+ @Override protected void onDestroy(){stopAll(false);if(translator!=null)translator.close();work.shutdownNow();historyWorker.shutdown();super.onDestroy();}
 }
