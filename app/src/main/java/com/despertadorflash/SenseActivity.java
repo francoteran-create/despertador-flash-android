@@ -221,6 +221,9 @@ public final class SenseActivity extends Activity {
   openSaved=button("ABRIR ÚLTIMO ARCHIVO");
   root.addView(openSaved);openSaved.setOnClickListener(v->showFile(lastSaved));
   openSaved.setVisibility(lastSaved!=null?View.VISIBLE:View.GONE);
+  Button assistant=button("ASISTENTE AURORA · FOTO Y SONIDOS");
+  root.addView(assistant);
+  assistant.setOnClickListener(v->startActivity(new Intent(this,AuroraAssistActivity.class)));
   Button folder=button("📁  CARPETA DE REGISTROS");
   root.addView(folder);folder.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
   TextView safety=text("Las detecciones son aproximadas. AURORA no sustituye las alarmas certificadas ni los dispositivos de emergencia.",13,0xffc3d6eb);
