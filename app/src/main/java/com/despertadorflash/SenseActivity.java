@@ -70,6 +70,7 @@ public final class SenseActivity extends Activity {
  private Button button(String content){Button b=new Button(this);b.setText(content);AuroraDesign.action(b,0xff1a4264,0xff292656,0xff4b7898);return b;}
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);history=new SenseHistory(this);
+  boolean backgroundWasActive=getSharedPreferences("aurora",0).getBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false);
   // One microphone owner at a time. Entering live Sense stops the background monitor.
   if(getSharedPreferences("aurora",0).getBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false)){
    try{startService(new Intent(this,AuroraSoundMonitorService.class).setAction(AuroraSoundMonitorService.STOP));}
@@ -78,7 +79,8 @@ public final class SenseActivity extends Activity {
   }
   screenMode=getIntent().getIntExtra(EXTRA_MODE,MODE_SPEECH)==MODE_SOUND?MODE_SOUND:MODE_SPEECH;
   draw();
-  main.post(()->toggle(screenMode));
+  // Let Android release the previous microphone owner before acquiring it here.
+  main.postDelayed(()->toggle(screenMode),backgroundWasActive?550L:0L);
  }
  private void draw(){
   ScrollView scroll=new ScrollView(this);
