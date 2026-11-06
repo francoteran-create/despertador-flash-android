@@ -438,7 +438,13 @@ public class MainActivity extends Activity {
    check.setPadding(dp(10),dp(10),dp(10),dp(10));
    check.setChecked(prefs.getBoolean("monitor_alert_"+key,!"other".equals(key)));
    root.addView(check);
-   check.setOnCheckedChangeListener((v,on)->prefs.edit().putBoolean("monitor_alert_"+key,on).apply());
+   check.setOnCheckedChangeListener((v,on)->{
+    prefs.edit().putBoolean("monitor_alert_"+key,on).apply();
+    if(!on){
+     NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+     if(manager!=null)manager.cancel(SoundAlertPreferences.notificationId(key));
+    }
+   });
   }
   root.addView(txt("Las categorías que no marques pueden seguir siendo detectadas, pero no generarán un aviso emergente. La clasificación es aproximada.",13));
   root.addView(section("SENSIBILIDAD DE ALERTAS"));
@@ -500,6 +506,16 @@ public class MainActivity extends Activity {
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
 
 
+ root.addView(section("DIAGNÓSTICO TÉCNICO PARA PRUEBAS"));
+ root.addView(txt("Podés copiar un resumen de permisos, batería y estado de alertas para revisar problemas en el teléfono. No incluye conversaciones, sonidos grabados ni datos personales.",14));
+ Button diagnostic=btn("COPIAR REPORTE TÉCNICO");root.addView(diagnostic);
+ diagnostic.setOnClickListener(v->{
+  android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+  if(clipboard!=null){
+   clipboard.setPrimaryClip(android.content.ClipData.newPlainText("AURORA · Diagnóstico",AuroraDiagnostics.report(this)));
+   Toast.makeText(this,"Reporte copiado. Podés pegarlo para revisar la configuración.",Toast.LENGTH_LONG).show();
+  }
+ });
  Button test=btn("Probar vibración");root.addView(test);test.setOnClickListener(v->vibrate());
  Button preview=btn("Probar pantalla de alarma");root.addView(preview);preview.setOnClickListener(v->showAlarm());
  Button stopVibration=btn("Detener vibración");root.addView(stopVibration);stopVibration.setOnClickListener(v->stopAlarmEffects());
