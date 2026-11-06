@@ -32,6 +32,7 @@ public final class AuroraSoundMonitorService extends Service {
  private final SoundEventGate gate=new SoundEventGate();
  private volatile long lastClassifierCallbackElapsed=0L;
  private volatile long lastHeartbeatAt=0L;
+ private long lastAlertsCheckAt=0L;
  private SenseHistory history;
  @Override public void onCreate(){super.onCreate();history=new SenseHistory(this);createChannels();
   // Reset any stale status from a previous process termination; no automatic restart.
@@ -49,6 +50,12 @@ public final class AuroraSoundMonitorService extends Service {
    getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"El permiso de notificaciones está desactivado").apply();
    Log.w("AURORA","Sin permiso de notificaciones no se inicia el monitoreo");stopSelf();return START_NOT_STICKY;
   }
+  NotificationManager availableAlerts=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+  if(Build.VERSION.SDK_INT>=24&&availableAlerts!=null&&!availableAlerts.areNotificationsEnabled()){
+   getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,
+    "Las notificaciones están bloqueadas; no se activó la escucha sin posibilidad de aviso").apply();
+   stopSelf();return START_NOT_STICKY;
+  }
   try{
    Notification notice=status("Escucha activa · tocá para abrir AURORA");
    if(Build.VERSION.SDK_INT>=29)startForeground(FOREGROUND_ID,notice,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
@@ -57,7 +64,7 @@ public final class AuroraSoundMonitorService extends Service {
    getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"Android no permitió activar el micrófono en segundo plano").apply();
    Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;
   }
-  listening=true;gate.reset();lastHeartbeatAt=0L;lastClassifierCallbackElapsed=0L;
+  listening=true;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
    .putLong(KEY_STARTED,System.currentTimeMillis()).putLong(KEY_HEARTBEAT,0L).apply();
   history.begin("sonidos");worker.execute(this::classifyLoop);
@@ -140,9 +147,19 @@ public final class AuroraSoundMonitorService extends Service {
     long now=SystemClock.elapsedRealtime();
     long lastInference=lastClassifierCallbackElapsed>0L?lastClassifierCallbackElapsed:monitoringStarted;
     if(now-lastInference>90000L)throw new IllegalStateException("El detector no envía resultados");
+    // Recheck user notification permission: a monitor with every alert blocked is misleading.
+    if(Build.VERSION.SDK_INT>=24&&now-lastAlertsCheckAt>15000L){
+     lastAlertsCheckAt=now;
+     NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+     if(nm!=null&&!nm.areNotificationsEnabled()){
+      throw new IllegalStateException("Android bloqueó las notificaciones mientras AURORA escuchaba");
+     }
+    }
    }
   }catch(Exception error){
-   if(listening){Log.e("AURORA","No se pudo mantener la escucha",error);reportFailure("El micrófono o el detector se interrumpió");}
+   if(listening){Log.e("AURORA","No se pudo mantener la escucha",error);
+    reportFailure(error.getMessage()!=null&&error.getMessage().contains("notificaciones")?
+     "Android bloqueó las notificaciones; escucha detenida":"El micrófono o el detector se interrumpió");}
   }
   finally{
    if(localRecord!=null){try{localRecord.stop();}catch(Exception ignored){}localRecord.release();}
