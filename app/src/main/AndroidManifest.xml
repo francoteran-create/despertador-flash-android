@@ -12,6 +12,11 @@
 <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>
 <application android:theme="@android:style/Theme.Material.NoActionBar" android:label="Aurora" android:allowBackup="false">
 <service android:name=".AuroraSoundMonitorService" android:exported="false" android:foregroundServiceType="microphone"/>
+<provider android:name="androidx.core.content.FileProvider"
+ android:authorities="com.despertadorflash.photos"
+ android:exported="false" android:grantUriPermissions="true">
+ <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/aurora_photo_paths"/>
+</provider>
 <activity android:name=".AuroraAssistActivity" android:exported="false"/>
 <activity android:name=".ProfileActivity" android:exported="false"/>
 <activity android:name=".RecordsActivity" android:exported="false"/>
