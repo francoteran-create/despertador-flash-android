@@ -351,6 +351,17 @@ public class MainActivity extends Activity {
    Toast.makeText(this,"Concedé notificaciones y volvé a activar la escucha",Toast.LENGTH_LONG).show();
    return;
   }
+  NotificationManager alerts=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+  if(Build.VERSION.SDK_INT>=24&&alerts!=null&&!alerts.areNotificationsEnabled()){
+   new AlertDialog.Builder(this).setTitle("Avisos de AURORA bloqueados")
+    .setMessage("Android tiene desactivadas las notificaciones para AURORA. Aunque el micrófono funcione, no recibirías los avisos. Activá las notificaciones antes de comenzar.")
+    .setPositiveButton("CONFIGURAR",(d,w)->{
+     Intent settings=Build.VERSION.SDK_INT>=26?
+      new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra("android.provider.extra.APP_PACKAGE",getPackageName()):
+      new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName()));
+     startActivity(settings);
+    }).setNegativeButton("Cancelar",null).show();return;
+  }
   new AlertDialog.Builder(this).setTitle("Activar escucha del entorno")
    .setMessage("Mientras esté activa, AURORA usa el micrófono y consume batería. Solo registra las categorías detectadas, no guarda audio. No sustituye equipos de seguridad certificados.")
    .setPositiveButton("ACTIVAR",(d,w)->{
@@ -375,12 +386,48 @@ public class MainActivity extends Activity {
   Button bgStop=btn("■  DETENER ESCUCHA CONTINUA");root.addView(bgStop);
   bgStop.setOnClickListener(v->{stopBackgroundMonitor();Toast.makeText(this,"Deteniendo escucha",Toast.LENGTH_SHORT).show();});
   root.addView(txt("Última detección: "+prefs.getString(AuroraSoundMonitorService.KEY_LAST,"Sin eventos"),14));
-  long beat=prefs.getLong(AuroraSoundMonitorService.KEY_HEARTBEAT,0L);
-  boolean marked=prefs.getBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false);
-  boolean recent=beat>0&&Math.abs(System.currentTimeMillis()-beat)<45000L;
-  root.addView(txt("Estado del detector: "+(marked&&recent?"ACTIVO (confirmación reciente)":marked?"SIN CONFIRMACIÓN RECIENTE":"DETENIDO"),15));
+  long now=System.currentTimeMillis();
   String monitorFailure=prefs.getString(AuroraSoundMonitorService.KEY_ERROR,"");
-  if(!monitorFailure.isEmpty()){TextView failed=txt("Última interrupción: "+monitorFailure,15);failed.setTextColor(0xffffc47a);root.addView(failed);}
+  MonitorHealth.State monitorStatus=MonitorHealth.evaluate(
+    prefs.getBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false),
+    prefs.getLong(AuroraSoundMonitorService.KEY_STARTED,0L),
+    prefs.getLong(AuroraSoundMonitorService.KEY_HEARTBEAT,0L),
+    now,monitorFailure);
+  TextView monitorState=txt("Estado del detector: "+MonitorHealth.label(monitorStatus),15);
+  monitorState.setTextColor(monitorStatus==MonitorHealth.State.LISTENING?0xffa5f2df:
+    monitorStatus==MonitorHealth.State.OFF?0xffc9d5e1:0xffffc47a);
+  root.addView(monitorState);
+  if(!monitorFailure.isEmpty())root.addView(txt("Última interrupción: "+monitorFailure,14));
+  if(monitorStatus==MonitorHealth.State.LISTENING)root.addView(txt(
+    "El modelo responde; eso no garantiza que todas las detecciones sean correctas.",13));
+  if(monitorStatus==MonitorHealth.State.STALE)root.addView(txt(
+    "Android podría haber interrumpido la captura. Detené la escucha y volvé a iniciarla desde AURORA.",14));
+  Button monitorRefresh=btn("ACTUALIZAR DIAGNÓSTICO");root.addView(monitorRefresh);
+  monitorRefresh.setOnClickListener(v->renderSettingsPage());
+  NotificationManager notifications=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+  if(Build.VERSION.SDK_INT>=24&&notifications!=null&&!notifications.areNotificationsEnabled()){
+   TextView warning=txt("IMPORTANTE: Android bloquea las notificaciones de AURORA.",16);
+   warning.setTextColor(0xffffc47a);root.addView(warning);
+  }
+  if(Build.VERSION.SDK_INT>=26&&notifications!=null){
+   int disabledChannels=0;
+   for(String key:SoundAlertPreferences.KEYS){
+    android.app.NotificationChannel channel=notifications.getNotificationChannel(SoundAlertPreferences.channel(key));
+    if(channel!=null&&channel.getImportance()==NotificationManager.IMPORTANCE_NONE)disabledChannels++;
+   }
+   if(disabledChannels>0)root.addView(txt("Hay "+disabledChannels+" categoría(s) de avisos bloqueadas desde los ajustes de Android.",14));
+  }
+  if(Build.VERSION.SDK_INT>=23){
+   PowerManager power=(PowerManager)getSystemService(POWER_SERVICE);
+   if(power!=null&&!power.isIgnoringBatteryOptimizations(getPackageName())){
+    root.addView(txt("Batería: Android podría limitar la escucha cuando el teléfono está bloqueado. La configuración depende del fabricante.",14));
+    Button battery=btn("VER CONFIGURACIÓN DE BATERÍA");
+    root.addView(battery);battery.setOnClickListener(v->{
+     try{startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));}
+     catch(Exception e){Toast.makeText(this,"Abrí Batería desde los ajustes del teléfono.",Toast.LENGTH_LONG).show();}
+    });
+   }
+  }
 
   root.addView(section("AVISOS POR TIPO DE SONIDO"));
   for(int cat=0;cat<SoundAlertPreferences.KEYS.length;cat++){
