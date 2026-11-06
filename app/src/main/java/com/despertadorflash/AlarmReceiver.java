@@ -5,7 +5,10 @@ import android.app.*;
 import android.graphics.Color;
 public class AlarmReceiver extends BroadcastReceiver {
  public void onReceive(Context c,Intent i){
-  int id=i.getIntExtra("id",0);
+  int id=i.getIntExtra("id",-1);
+  if(id<0||id>=5)return;
+  // A PendingIntent that slipped through after disabling/deleting an alarm must not ring.
+  if(!c.getSharedPreferences("aurora",0).getBoolean("on"+id,false))return;
   boolean snooze=i.getBooleanExtra("snooze",false);
   if(!snooze)MainActivity.schedule(c,id);
   Intent open=new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("ring",true).putExtra("alarm_id",id);
