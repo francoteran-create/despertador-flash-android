@@ -100,27 +100,44 @@ public final class AuroraAssistActivity extends Activity {
   output.setTextIsSelectable(true);output.setMinHeight(dp(180));
   output.setBackground(AuroraDesign.surface(this,0xff0e2f42,0xff242641,0xff4c8399,20));
   layout.addView(output);
-  Button soundSummary=button("RESUMIR MIS DETECCIONES DE SONIDOS");layout.addView(soundSummary);
-  soundSummary.setOnClickListener(v->{
-   if(processing){status.setText("Finalizá el análisis de imagen antes de consultar el historial.");return;}
-   StringBuilder observations=new StringBuilder();
-   int sessions=0;
-   for(java.io.File file:new SenseHistory(this).list()){
-    if(!file.getName().contains("SONIDOS"))continue;
-    try{
-     observations.append(SenseHistory.read(file)).append("\n");
-     if(++sessions>=3)break;
-    }catch(java.io.IOException ignored){}
-   }
-   output.setText(SoundDigest.summarize(observations.toString()));
-   status.setText("Resumen local de hasta tres registros de sonidos; sin enviar información a internet.");
-  });
+  Button soundSummary=button("CONSULTAR MIS ÚLTIMAS DETECCIONES");layout.addView(soundSummary);
+  soundSummary.setOnClickListener(v->reviewHistory(true));
+  Button speechRecall=button("¿QUÉ DIJERON? · ÚLTIMA CONVERSACIÓN");layout.addView(speechRecall);
+  speechRecall.setOnClickListener(v->reviewHistory(false));
   Button copy=button("COPIAR RESULTADO");layout.addView(copy);
   copy.setOnClickListener(v->{
    android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
    if(cm!=null)cm.setPrimaryClip(android.content.ClipData.newPlainText("AURORA · Imagen",output.getText()));
   });
   layout.addView(text("PRIVACIDAD: la foto se procesa en el dispositivo y no se guarda en el historial de AURORA. Si usás la cámara, solo analizamos la foto que tomaste. Esto no identifica personas ni garantiza la detección de peligros.",13));
+ }
+ private void reviewHistory(boolean sounds){
+  if(processing){status.setText("Finalizá la operación actual antes de consultar el historial.");return;}
+  processing=true;
+  status.setText("Leyendo registros guardados en este teléfono…");
+  final int max=sounds?3:1;
+  imageWorker.execute(()->{
+   StringBuilder observations=new StringBuilder();
+   int sessions=0;
+   boolean readError=false;
+   for(File file:new SenseHistory(this).list()){
+    if(!file.getName().contains(sounds?"SONIDOS":"CONVERSACION"))continue;
+    try{
+     observations.append(SenseHistory.read(file)).append("\n");
+     if(++sessions>=max)break;
+    }catch(IOException ignored){readError=true;}
+   }
+   final String review=sounds?SoundDigest.summarize(observations.toString()):
+     ConversationRecall.lastPhrases(observations.toString());
+   final boolean error=readError;
+   main.post(()->{
+    if(destroyed)return;
+    processing=false;
+    output.setText(review);
+    status.setText(error?"Algún registro no se pudo leer. Se muestran los registros disponibles.":
+     sounds?"Detecciones registradas localmente; son aproximaciones.":"Palabras transcritas por Android; pueden tener errores.");
+   });
+  });
  }
  private void launchCamera(){
   try{
