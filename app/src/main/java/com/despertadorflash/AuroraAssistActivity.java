@@ -69,6 +69,7 @@ public final class AuroraAssistActivity extends Activity {
    pendingPhoto=new File(state.getString("temporary_photo"));
    pendingPhotoUri=FileProvider.getUriForFile(this,getPackageName()+".photos",pendingPhoto);
   }
+  deleteAbandonedPhotos();
   ScrollView scroll=new ScrollView(this);
   LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);
   layout.setBackground(new AuroraSkyDrawable());layout.setPadding(dp(16),dp(14),dp(16),dp(24));
@@ -100,6 +101,7 @@ public final class AuroraAssistActivity extends Activity {
   layout.addView(output);
   Button soundSummary=button("RESUMIR MIS DETECCIONES DE SONIDOS");layout.addView(soundSummary);
   soundSummary.setOnClickListener(v->{
+   if(processing){status.setText("Finalizá el análisis de imagen antes de consultar el historial.");return;}
    StringBuilder observations=new StringBuilder();
    int sessions=0;
    for(java.io.File file:new SenseHistory(this).list()){
@@ -131,6 +133,16 @@ public final class AuroraAssistActivity extends Activity {
    startActivityForResult(intent,CAMERA);
   }catch(Exception error){
    clearPhoto();status.setText("No se pudo abrir la cámara: revisá los permisos del teléfono.");
+  }
+ }
+ private void deleteAbandonedPhotos(){
+  File directory=new File(getCacheDir(),"aurora_camera");
+  File[] photos=directory.listFiles();
+  if(photos==null)return;
+  for(File file:photos){
+   if(!file.isFile()||!file.getName().startsWith("aurora_photo_")||!file.getName().endsWith(".jpg"))continue;
+   if(pendingPhoto!=null&&file.equals(pendingPhoto))continue;
+   if(!file.delete())android.util.Log.w("Aurora","No se pudo borrar foto temporal anterior");
   }
  }
  private void clearPhoto(){
