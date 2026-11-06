@@ -38,6 +38,10 @@ public final class SoundEventGate {
   if(candidate.lastAlertAt>=0&&elapsedMs>=candidate.lastAlertAt&&
      elapsedMs-candidate.lastAlertAt<COOLDOWN_MS)return false;
   candidate.lastAlertAt=elapsedMs;
+  // Each emitted event consumes its confirmation. A single later observation
+  // must never inherit the two hits of an earlier sound from 15 seconds ago.
+  candidate.hits=0;
+  candidate.firstAt=-1L;
   if(candidates.size()>MAX_TRACKED)trim(elapsedMs);
   return true;
  }
