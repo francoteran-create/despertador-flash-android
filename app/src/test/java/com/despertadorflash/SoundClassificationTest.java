@@ -16,6 +16,15 @@ public class SoundClassificationTest {
   assertNull(SoundLabelsEs.name(null));
   assertNull(SoundLabelsEs.name("Unknown audio class"));
  }
+ @Test public void alertVibrationIsDifferentPerCategory(){
+  long[] door=SoundAlertPreferences.vibrationPattern("doors");
+  long[] alarm=SoundAlertPreferences.vibrationPattern("alarms");
+  assertEquals(0L,door[0]);
+  assertEquals(0L,alarm[0]);
+  assertFalse(java.util.Arrays.equals(door,alarm));
+  assertNotEquals(SoundAlertPreferences.channel("doors"),SoundAlertPreferences.channel("alarms"));
+  assertNotEquals(SoundAlertPreferences.notificationId("doors"),SoundAlertPreferences.notificationId("alarms"));
+ }
  @Test public void soundCategoriesAreStable(){
   assertEquals("doors",SoundAlertPreferences.category("POSIBLE TIMBRE DE PUERTA"));
   assertEquals("alarms",SoundAlertPreferences.category("POSIBLE SIRENA"));
