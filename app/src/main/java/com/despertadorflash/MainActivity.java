@@ -247,7 +247,7 @@ public class MainActivity extends Activity {
   TextView caption=txt("CUENTA REGRESIVA",14);caption.setTextColor(0xff94e9e9);
   caption.setGravity(Gravity.CENTER);timerCard.addView(caption);
   long savedEnd=prefs.getLong("timer_end",0);
-  long remaining=Math.max(0,savedEnd-System.currentTimeMillis());
+  long remaining=TimerDeadline.remaining(savedEnd,prefs.getLong("timer_end_elapsed",0L),System.currentTimeMillis(),SystemClock.elapsedRealtime());
   TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",64);
   counter.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
   counter.setTextColor(0xfff4faff);counter.setGravity(Gravity.CENTER);counter.setLetterSpacing(.08f);
@@ -258,7 +258,7 @@ public class MainActivity extends Activity {
   if(remaining>0){
    timer=new CountDownTimer(remaining,1000){
     public void onTick(long ms){counter.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}
-    public void onFinish(){counter.setText("00:00");counterInfo.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").apply();showTimerFinished();}
+    public void onFinish(){counter.setText("00:00");counterInfo.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").remove("timer_end_elapsed").apply();showTimerFinished();}
    }.start();
   }
   root.addView(AuroraDesign.overline(this,"INICIAR TEMPORIZADOR"));
@@ -272,9 +272,9 @@ public class MainActivity extends Activity {
    if(i>0)lp.leftMargin=dp(6);
    presets.addView(buttons[i],lp);
   }
-  one.setOnClickListener(v->{countdown(1,counter);counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
-  five.setOnClickListener(v->{countdown(5,counter);counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
-  ten.setOnClickListener(v->{countdown(10,counter);counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
+  one.setOnClickListener(v->{if(countdown(1,counter))counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
+  five.setOnClickListener(v->{if(countdown(5,counter))counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
+  ten.setOnClickListener(v->{if(countdown(10,counter))counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
   Button stop=btn("■  DETENER TEMPORIZADOR");
   accent(stop,0xff66364d,0xff42283f,0xffaa6f91);
   root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("00:00");counterInfo.setText("TEMPORIZADOR DETENIDO");});
@@ -517,17 +517,39 @@ public class MainActivity extends Activity {
   try{am.setAlarmClock(new AlarmManager.AlarmClockInfo(when,show),event);}
   catch(SecurityException ex){android.util.Log.e("Aurora","No se pudo programar alarma exacta",ex);}
  }
- void cancelTimer(){AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);PendingIntent pi=PendingIntent.getBroadcast(this,3100,new Intent(this,TimerReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);am.cancel(pi);prefs.edit().remove("timer_end").apply();}
- void countdown(int minutes,TextView output){
-  if(timer!=null)timer.cancel();cancelTimer();
-  long end=System.currentTimeMillis()+minutes*60000L;
+ void cancelTimer(){AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);PendingIntent pi=PendingIntent.getBroadcast(this,3100,new Intent(this,TimerReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);am.cancel(pi);prefs.edit().remove("timer_end").remove("timer_end_elapsed").apply();}
+ boolean countdown(int minutes,TextView output){
+  if(minutes<1||minutes>24*60)return false;
+  if(timer!=null)timer.cancel();
+  cancelTimer();
+  long endWall=System.currentTimeMillis()+minutes*60000L;
+  long endElapsed=SystemClock.elapsedRealtime()+minutes*60000L;
   AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);
+  if(am==null)return false;
   PendingIntent pi=PendingIntent.getBroadcast(this,3100,new Intent(this,TimerReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   try{
-   if(Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms()){new AlertDialog.Builder(this).setTitle("Permiso necesario").setMessage("Para avisarte a tiempo con la aplicación cerrada, habilitá las alarmas exactas.").setPositiveButton("Configurar",(d,w)->startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,android.net.Uri.parse("package:"+getPackageName())))).setNegativeButton("Cancelar",null).show();return;}
-   am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,end,pi);prefs.edit().putLong("timer_end",end).apply();
-  }catch(SecurityException ex){new AlertDialog.Builder(this).setMessage("Android no permitió programar el temporizador exacto.").setPositiveButton("Aceptar",null).show();return;}
-  timer=new CountDownTimer(minutes*60000L,1000){public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}public void onFinish(){output.setText("¡TIEMPO CUMPLIDO!");prefs.edit().remove("timer_end").apply();showTimerFinished();}}.start();
+   if(Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms()){
+    new AlertDialog.Builder(this).setTitle("Permiso necesario")
+     .setMessage("Para avisarte a tiempo con la aplicación cerrada, habilitá las alarmas exactas.")
+     .setPositiveButton("Configurar",(d,w)->startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,android.net.Uri.parse("package:"+getPackageName()))))
+     .setNegativeButton("Cancelar",null).show();
+    return false;
+   }
+   // A monotonic elapsed deadline remains accurate even if the user changes the clock.
+   am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,endWall,pi);
+   prefs.edit().putLong("timer_end",endWall).putLong("timer_end_elapsed",endElapsed).apply();
+  }catch(SecurityException ex){
+   new AlertDialog.Builder(this).setMessage("Android no permitió programar el temporizador exacto.").setPositiveButton("Aceptar",null).show();return false;
+  }
+  timer=new CountDownTimer(minutes*60000L,1000){
+   public void onTick(long ms){output.setText(String.format(Locale.getDefault(),"%02d:%02d",ms/60000,(ms/1000)%60));}
+   public void onFinish(){
+    output.setText("¡TIEMPO CUMPLIDO!");
+    prefs.edit().remove("timer_end").remove("timer_end_elapsed").apply();
+    showTimerFinished();
+   }
+  }.start();
+  return true;
  }
  void vibrate(){Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null&&v.hasVibrator()){long[] pat={0,800,200,800,200,800};if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(pat,-1));else v.vibrate(pat,-1);}}
  @Override protected void onPause(){stopHomeSpeech();super.onPause();}
