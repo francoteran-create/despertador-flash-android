@@ -3,6 +3,7 @@ import android.app.*;
 import android.content.*;
 import android.os.Build;
 import android.os.SystemClock;
+import android.provider.Settings;
 
 /** Restores user-scheduled alerts after reboot, update, or a manual clock change.
  * Never starts microphone capture on boot.
@@ -35,9 +36,10 @@ public class BootReceiver extends BroadcastReceiver {
   if(endWall<=0L)return;
   long nowWall=System.currentTimeMillis();
   long nowElapsed=SystemClock.elapsedRealtime();
-  long endElapsed=p.getLong("timer_end_elapsed",0L);
-  // Android's elapsedRealtime counter resets after boot; use stored wall time
-  // only for recovery across a real reboot, then create a fresh monotonic anchor.
+  int currentBoot=Settings.Global.getInt(c.getContentResolver(),Settings.Global.BOOT_COUNT,-1);
+  long endElapsed=TimerBootClock.elapsedDeadlineForBoot(p.getLong("timer_end_elapsed",0L),
+    p.getInt("timer_boot_count",-1),currentBoot);
+  // Reboot broadcasts must rebase even when the boot counter is not available.
   if(boot)endElapsed=0L;
   long remaining=TimerDeadline.remaining(endWall,endElapsed,nowWall,nowElapsed);
   if(remaining<=0L){
@@ -47,7 +49,7 @@ public class BootReceiver extends BroadcastReceiver {
   }
   long revisedWall=TimerDeadline.newWallDeadline(remaining,nowWall);
   p.edit().putLong("timer_end",revisedWall)
-   .putLong("timer_end_elapsed",nowElapsed+remaining).apply();
+   .putLong("timer_end_elapsed",nowElapsed+remaining).putInt("timer_boot_count",currentBoot).apply();
   AlarmManager am=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
   if(am==null)return;
   PendingIntent pi=PendingIntent.getBroadcast(c,3100,new Intent(c,TimerReceiver.class),
