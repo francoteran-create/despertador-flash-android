@@ -331,8 +331,66 @@ public class MainActivity extends Activity {
   a.setOnClickListener(v->showFullMessage(first));
   b.setOnClickListener(v->showFullMessage(second));
  }
+ void startBackgroundMonitor(){
+  if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+   new AlertDialog.Builder(this).setTitle("Micrófono necesario")
+    .setMessage("AURORA solo puede escuchar en segundo plano con tu autorización. El micrófono se indica mediante una notificación permanente y podés detenerlo cuando quieras.")
+    .setPositiveButton("Autorizar",(d,w)->requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO},73))
+    .setNegativeButton("Cancelar",null).show();return;
+  }
+  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+   requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},74);
+   Toast.makeText(this,"Concedé notificaciones y volvé a activar la escucha",Toast.LENGTH_LONG).show();
+   return;
+  }
+  new AlertDialog.Builder(this).setTitle("Activar escucha del entorno")
+   .setMessage("Mientras esté activa, AURORA usa el micrófono y consume batería. Solo registra las categorías detectadas, no guarda audio. No sustituye equipos de seguridad certificados.")
+   .setPositiveButton("ACTIVAR",(d,w)->{
+    Intent it=new Intent(this,AuroraSoundMonitorService.class).setAction(AuroraSoundMonitorService.START);
+    try{if(Build.VERSION.SDK_INT>=26)startForegroundService(it);else startService(it);
+     Toast.makeText(this,"Iniciando escucha. Verificá la notificación permanente.",Toast.LENGTH_LONG).show();
+    }catch(Exception e){new AlertDialog.Builder(this).setMessage("Android no permitió iniciar la escucha: "+e.getMessage()).setPositiveButton("OK",null).show();}
+   }).setNegativeButton("Cancelar",null).show();
+ }
+ void stopBackgroundMonitor(){
+  Intent stop=new Intent(this,AuroraSoundMonitorService.class).setAction(AuroraSoundMonitorService.STOP);
+  try{startService(stop);}catch(Exception e){stopService(new Intent(this,AuroraSoundMonitorService.class));}
+  prefs.edit().putBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false).apply();
+ }
  void renderSettingsPage(){
   setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
+  root.addView(section("ESCUCHA DEL ENTORNO EN SEGUNDO PLANO"));
+  root.addView(txt("Activala solo cuando la necesites. Android mostrará una notificación permanente mientras se usa el micrófono. La escucha se detiene al apagarla y no se reactiva sola al reiniciar.",15));
+  Button bgStart=btn("◉  INICIAR ESCUCHA CONTINUA");
+  AuroraDesign.action(bgStart,0xff18524c,0xff224845,0xff61c7b7);
+  root.addView(bgStart);bgStart.setOnClickListener(v->startBackgroundMonitor());
+  Button bgStop=btn("■  DETENER ESCUCHA CONTINUA");root.addView(bgStop);
+  bgStop.setOnClickListener(v->{stopBackgroundMonitor();Toast.makeText(this,"Deteniendo escucha",Toast.LENGTH_SHORT).show();});
+  root.addView(txt("Última detección: "+prefs.getString(AuroraSoundMonitorService.KEY_LAST,"Sin eventos"),14));
+  root.addView(section("AVISOS POR TIPO DE SONIDO"));
+  for(int cat=0;cat<SoundAlertPreferences.KEYS.length;cat++){
+   String key=SoundAlertPreferences.KEYS[cat];
+   android.widget.Switch check=new android.widget.Switch(this);
+   check.setText(SoundAlertPreferences.LABELS[cat]);
+   check.setTextColor(Color.WHITE);check.setTextSize(16);
+   check.setPadding(dp(10),dp(10),dp(10),dp(10));
+   check.setChecked(prefs.getBoolean("monitor_alert_"+key,!"other".equals(key)));
+   root.addView(check);
+   check.setOnCheckedChangeListener((v,on)->prefs.edit().putBoolean("monitor_alert_"+key,on).apply());
+  }
+  root.addView(txt("Las categorías que no marques pueden seguir siendo detectadas, pero no generarán un aviso emergente. La clasificación es aproximada.",13));
+  root.addView(section("SENSIBILIDAD DE ALERTAS"));
+  final String[] levels={"ALTA","EQUILIBRADA","PRECISA"};
+  android.widget.RadioGroup rg=new android.widget.RadioGroup(this);rg.setOrientation(0);
+  for(int i=0;i<3;i++){
+   android.widget.RadioButton b=new android.widget.RadioButton(this);
+   b.setText(levels[i]);b.setTextSize(12);b.setTextColor(Color.WHITE);b.setId(600+i);
+   rg.addView(b,new android.widget.RadioGroup.LayoutParams(0,dp(55),1));
+  }
+  rg.check(600+Math.max(0,Math.min(2,prefs.getInt("monitor_sensitivity",1))));
+  rg.setOnCheckedChangeListener((group,id)->prefs.edit().putInt("monitor_sensitivity",id-600).apply());
+  root.addView(rg);
+
   TextView motionTitle=section("AURORA VISUAL ENGINE");root.addView(motionTitle);
   android.widget.Switch motion=new android.widget.Switch(this);motion.setText("Auroras y núcleo animados");
   motion.setTextColor(Color.WHITE);motion.setTextSize(17);motion.setPadding(dp(12),dp(12),dp(12),dp(12));
