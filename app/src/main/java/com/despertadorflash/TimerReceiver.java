@@ -6,9 +6,25 @@ public class TimerReceiver extends BroadcastReceiver {
  @Override public void onReceive(Context context,Intent intent){
   android.content.SharedPreferences prefs=context.getSharedPreferences("aurora",0);
   long expected=prefs.getLong("timer_end",0L);
-  // Ignore an obsolete or canceled PendingIntent and premature deliveries.
-  if(expected<=0||expected-System.currentTimeMillis()>2000L)return;
-  prefs.edit().remove("timer_end").apply();
+  if(expected<=0L)return; // Stale notification after cancellation.
+  long nowWall=System.currentTimeMillis();
+  long remaining=TimerDeadline.remaining(expected,prefs.getLong("timer_end_elapsed",0L),
+   nowWall,SystemClock.elapsedRealtime());
+  if(remaining>2000L){
+   // A wall-clock jump may fire the RTC alarm too early. Re-arm using elapsed time.
+   AlarmManager alarmManager=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+   if(alarmManager==null)return;
+   PendingIntent next=PendingIntent.getBroadcast(context,3100,new Intent(context,TimerReceiver.class),
+     PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+   try{
+    if(Build.VERSION.SDK_INT>=31&&!alarmManager.canScheduleExactAlarms())return;
+    long newWall=TimerDeadline.newWallDeadline(remaining,nowWall);
+    prefs.edit().putLong("timer_end",newWall).apply();
+    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,newWall,next);
+   }catch(SecurityException error){android.util.Log.w("Aurora","No se pudo rearmar el temporizador",error);}
+   return;
+  }
+  prefs.edit().remove("timer_end").remove("timer_end_elapsed").apply();
   Intent open=new Intent(context,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("timer_finished",true);
   PendingIntent pending=PendingIntent.getActivity(context,3100,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   NotificationManager manager=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
