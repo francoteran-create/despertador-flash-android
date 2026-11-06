@@ -51,6 +51,14 @@ public class SoundEventGateTest {
   assertFalse(gate.accept("TIMBRE",49,1,17100));
   assertTrue(gate.accept("TIMBRE",49,1,17600));
  }
+ @Test public void observationsInsideCooldownDoNotPreConfirmNextAlert(){
+  SoundEventGate gate=new SoundEventGate();
+  assertTrue(gate.accept("A",88,1,1000));
+  assertFalse(gate.accept("A",50,1,14900));
+  assertFalse(gate.accept("A",50,1,15200));
+  assertFalse(gate.accept("A",50,1,16050));
+  assertTrue(gate.accept("A",50,1,16500));
+ }
  @Test public void clockRollbackAndResetDontLockOutAlerts(){
   SoundEventGate gate=new SoundEventGate();
   assertTrue(gate.accept("A",95,1,100_000));
