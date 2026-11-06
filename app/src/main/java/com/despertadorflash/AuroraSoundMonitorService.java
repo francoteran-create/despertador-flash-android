@@ -65,6 +65,16 @@ public final class AuroraSoundMonitorService extends Service {
   NotificationChannel alarms=new NotificationChannel(EVENTS,"AURORA · Sonidos detectados",NotificationManager.IMPORTANCE_HIGH);
   alarms.setDescription("Avisos visuales y vibratorios de sonidos seleccionados");
   alarms.enableVibration(true);alarms.enableLights(true);alarms.setLightColor(Color.CYAN);n.createNotificationChannel(alarms);
+  for(int i=0;i<SoundAlertPreferences.KEYS.length;i++){
+   String key=SoundAlertPreferences.KEYS[i];
+   NotificationChannel group=new NotificationChannel(SoundAlertPreferences.channel(key),
+    "AURORA · "+SoundAlertPreferences.LABELS[i],NotificationManager.IMPORTANCE_HIGH);
+   group.setDescription("Avisos del entorno detectados aproximadamente por IA");
+   group.enableVibration(true);
+   group.setVibrationPattern(SoundAlertPreferences.vibrationPattern(key));
+   group.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+   n.createNotificationChannel(group);
+  }
  }
  private Notification status(String message){
   Intent open=new Intent(this,MainActivity.class);
@@ -149,14 +159,15 @@ public final class AuroraSoundMonitorService extends Service {
   if(!SoundAlertPreferences.isEnabled(this,found))return;
   if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
   NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+  String group=SoundAlertPreferences.category(found);
   Intent open=new Intent(this,SenseActivity.class).putExtra(SenseActivity.EXTRA_MODE,SenseActivity.MODE_SOUND);
   PendingIntent tap=PendingIntent.getActivity(this,5600,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-  Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,EVENTS):new Notification.Builder(this);
+  Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,SoundAlertPreferences.channel(group)):new Notification.Builder(this);
   b.setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("AURORA · Sonido detectado")
    .setContentText(found+" · estimación "+percent+"%").setContentIntent(tap)
    .setCategory(Notification.CATEGORY_STATUS).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PUBLIC)
-   .setPriority(Notification.PRIORITY_HIGH).setVibrate(new long[]{0,350,120,350,120,550});
-  try{nm.notify(5601,b.build());}catch(SecurityException ignored){}
+   .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
+  try{nm.notify(SoundAlertPreferences.notificationId(group),b.build());}catch(SecurityException ignored){}
  }
  private synchronized void shutdown(){
   if(!listening){getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();return;}
