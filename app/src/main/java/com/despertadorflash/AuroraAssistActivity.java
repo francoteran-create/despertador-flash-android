@@ -9,6 +9,14 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.provider.MediaStore;
+import androidx.core.content.FileProvider;
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import android.os.Handler;
+import android.os.Looper;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -41,6 +49,11 @@ public final class AuroraAssistActivity extends Activity {
  private static final int PHOTO=380,CAMERA=381,CAMERA_PERMISSION=382;
  private TextView output,status;
  private boolean processing=false;
+ private File pendingPhoto;
+ private Uri pendingPhotoUri;
+ private final ExecutorService imageWorker=Executors.newSingleThreadExecutor();
+ private final Handler main=new Handler(Looper.getMainLooper());
+ private volatile boolean destroyed=false;
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private TextView text(String value,int size){
   TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(Color.WHITE);
@@ -52,6 +65,10 @@ public final class AuroraAssistActivity extends Activity {
  }
  @Override protected void onCreate(Bundle state){
   super.onCreate(state);
+  if(state!=null&&state.containsKey("temporary_photo")){
+   pendingPhoto=new File(state.getString("temporary_photo"));
+   pendingPhotoUri=FileProvider.getUriForFile(this,getPackageName()+".photos",pendingPhoto);
+  }
   ScrollView scroll=new ScrollView(this);
   LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);
   layout.setBackground(new AuroraSkyDrawable());layout.setPadding(dp(16),dp(14),dp(16),dp(24));
@@ -103,9 +120,62 @@ public final class AuroraAssistActivity extends Activity {
   layout.addView(text("PRIVACIDAD: la foto se procesa en el dispositivo y no se guarda en el historial de AURORA. Si usás la cámara, solo analizamos la foto que tomaste. Esto no identifica personas ni garantiza la detección de peligros.",13));
  }
  private void launchCamera(){
-  Intent intent=new Intent("android.media.action.IMAGE_CAPTURE");
-  try{startActivityForResult(intent,CAMERA);}
-  catch(Exception error){status.setText("No se encontró una aplicación de cámara disponible.");}
+  try{
+   File directory=new File(getCacheDir(),"aurora_camera");
+   if(!directory.exists()&&!directory.mkdirs())throw new IOException("No se pudo preparar la cámara");
+   pendingPhoto=File.createTempFile("aurora_photo_",".jpg",directory);
+   pendingPhotoUri=FileProvider.getUriForFile(this,getPackageName()+".photos",pendingPhoto);
+   Intent intent=new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+   intent.putExtra(MediaStore.EXTRA_OUTPUT,pendingPhotoUri);
+   intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
+   startActivityForResult(intent,CAMERA);
+  }catch(Exception error){
+   clearPhoto();status.setText("No se pudo abrir la cámara: revisá los permisos del teléfono.");
+  }
+ }
+ private void clearPhoto(){
+  if(pendingPhoto!=null&&pendingPhoto.exists()&&!pendingPhoto.delete()){
+   android.util.Log.w("Aurora","No se pudo limpiar foto temporal");
+  }
+  pendingPhoto=null;pendingPhotoUri=null;
+ }
+ private void decodeImage(Uri uri,boolean cameraFile){
+  if(uri==null){status.setText("No se recibió una imagen.");clearPhoto();return;}
+  processing=true;
+  output.setText("Preparando la foto para analizar…");
+  imageWorker.execute(()->{
+   Bitmap bitmap=null;String failure=null;
+   try{
+    BitmapFactory.Options bounds=new BitmapFactory.Options();
+    bounds.inJustDecodeBounds=true;
+    try(InputStream in=getContentResolver().openInputStream(uri)){
+     if(in==null)throw new IOException("Imagen inaccesible");
+     BitmapFactory.decodeStream(in,null,bounds);
+    }
+    if(!ImageDecodePolicy.dimensionsAllowed(bounds.outWidth,bounds.outHeight))
+     throw new IOException("Dimensiones de imagen no admitidas");
+    BitmapFactory.Options options=new BitmapFactory.Options();
+    options.inSampleSize=ImageDecodePolicy.sampleSize(bounds.outWidth,bounds.outHeight,1600);
+    options.inPreferredConfig=Bitmap.Config.ARGB_8888;
+    try(InputStream in=getContentResolver().openInputStream(uri)){
+     if(in==null)throw new IOException("No se pudo abrir la foto");
+     bitmap=BitmapFactory.decodeStream(in,null,options);
+    }
+    if(bitmap==null)throw new IOException("No se pudo decodificar la imagen");
+   }catch(Exception err){failure="No pude leer esta foto. Probá con otra imagen."; }
+   catch(OutOfMemoryError oom){failure="La foto es demasiado grande para este teléfono."; }
+   final Bitmap ready=bitmap;
+   final String error=failure;
+   main.post(()->{
+    if(cameraFile)clearPhoto();
+    if(destroyed){
+     if(ready!=null&&!ready.isRecycled())ready.recycle();
+     return;
+    }
+    if(error!=null){processing=false;status.setText(error);return;}
+    analyze(ready);
+   });
+  });
  }
  @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants){
   super.onRequestPermissionsResult(request,permissions,grants);
@@ -116,31 +186,24 @@ public final class AuroraAssistActivity extends Activity {
  }
  @Override protected void onActivityResult(int request,int result,Intent data){
   super.onActivityResult(request,result,data);
-  if(result!=RESULT_OK||data==null)return;
-  try{
-   Bitmap bitmap=null;
-   if(request==PHOTO&&data.getData()!=null){
-    Uri uri=data.getData();
-    BitmapFactory.Options options=new BitmapFactory.Options();
-    options.inJustDecodeBounds=true;
-    try(InputStream stream=getContentResolver().openInputStream(uri)){if(stream!=null)BitmapFactory.decodeStream(stream,null,options);}
-    if(options.outWidth<=0||options.outHeight<=0){status.setText("No se pudo leer esta imagen.");return;}
-    options.inJustDecodeBounds=false;
-    int max=Math.max(options.outWidth,options.outHeight);options.inSampleSize=1;
-    while(max/options.inSampleSize>1600)options.inSampleSize*=2;
-    try(InputStream stream=getContentResolver().openInputStream(uri)){
-     if(stream!=null)bitmap=BitmapFactory.decodeStream(stream,null,options);
-    }
-   }else if(request==CAMERA){
-    Object thumbnail=data.getExtras()==null?null:data.getExtras().get("data");
-    if(thumbnail instanceof Bitmap)bitmap=(Bitmap)thumbnail;
+  if(request!=PHOTO&&request!=CAMERA)return;
+  if(result!=RESULT_OK){if(request==CAMERA)clearPhoto();status.setText("Selección de imagen cancelada.");return;}
+  if(processing)return;
+  if(request==CAMERA){
+   if(pendingPhoto==null||!pendingPhoto.isFile()||pendingPhoto.length()==0){
+    clearPhoto();status.setText("La cámara no devolvió una foto completa.");return;
    }
-   if(bitmap==null){status.setText("La foto no está disponible. Probá con otra.");return;}
-   analyze(bitmap);
-  }catch(Exception error){status.setText("No se pudo procesar la foto seleccionada.");}
+   decodeImage(pendingPhotoUri,true);
+  }else if(data!=null&&data.getData()!=null){
+   decodeImage(data.getData(),false);
+  }else status.setText("No se recibió una foto de la galería.");
+ }
+ @Override protected void onSaveInstanceState(Bundle out){
+  super.onSaveInstanceState(out);
+  if(pendingPhoto!=null)out.putString("temporary_photo",pendingPhoto.getAbsolutePath());
  }
  private void analyze(Bitmap bitmap){
-  if(processing)return;processing=true;
+  processing=true;
   output.setText("Analizando objetos y texto de la imagen…");
   status.setText("Procesamiento local activo. No se está grabando video.");
   InputImage input=InputImage.fromBitmap(bitmap,0);
@@ -150,7 +213,7 @@ public final class AuroraAssistActivity extends Activity {
   Runnable finish=()->{
    if(++complete[0]!=2)return;
    processing=false;
-   if(isFinishing()||isDestroyed()){labels.close();ocr.close();return;}
+   if(isFinishing()||isDestroyed()){labels.close();ocr.close();if(!bitmap.isRecycled())bitmap.recycle();return;}
    String result="LECTURA DE LA FOTO\n\n"+
     (parts[0].isEmpty()?"No pude reconocer objetos con suficiente confianza.\n":parts[0])+
     "\nTEXTO VISIBLE\n"+(parts[1].isEmpty()?"No se reconoció texto legible.":parts[1])+
@@ -158,6 +221,7 @@ public final class AuroraAssistActivity extends Activity {
    output.setText(result);
    status.setText("Análisis finalizado. La cámara no está activa en AURORA.");
    labels.close();ocr.close();
+   if(bitmap!=null&&!bitmap.isRecycled())bitmap.recycle();
   };
   labels.process(input).addOnSuccessListener(found->{
    StringBuilder b=new StringBuilder("OBJETOS POSIBLES (etiquetas automáticas):\n");
@@ -173,5 +237,12 @@ public final class AuroraAssistActivity extends Activity {
    parts[1]=read.length()>5000?read.substring(0,5000)+"…":read;
    finish.run();
   }).addOnFailureListener(e->{parts[1]="Lectura de texto no disponible en este teléfono.";finish.run();});
+ }
+ @Override protected void onDestroy(){
+  destroyed=true;
+  imageWorker.shutdownNow();
+  main.removeCallbacksAndMessages(null);
+  if(isFinishing())clearPhoto();
+  super.onDestroy();
  }
 }
