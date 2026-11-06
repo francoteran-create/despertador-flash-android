@@ -506,6 +506,10 @@ public class MainActivity extends Activity {
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
 
 
+ root.addView(section("ASISTENTE DE IMÁGENES"));
+ Button photoAssistant=btn("ANALIZAR UNA FOTO");
+ root.addView(photoAssistant);
+ photoAssistant.setOnClickListener(v->startActivity(new Intent(this,AuroraAssistActivity.class)));
  root.addView(section("DIAGNÓSTICO TÉCNICO PARA PRUEBAS"));
  root.addView(txt("Podés copiar un resumen de permisos, batería y estado de alertas para revisar problemas en el teléfono. No incluye conversaciones, sonidos grabados ni datos personales.",14));
  Button diagnostic=btn("COPIAR REPORTE TÉCNICO");root.addView(diagnostic);
