@@ -7,7 +7,10 @@ public final class MonitorHealth {
  public static State evaluate(boolean active,long startedAt,long classifierHeartbeat,long now,String error){
   if(error!=null&&!error.trim().isEmpty())return State.ERROR;
   if(!active)return State.OFF;
-  if(classifierHeartbeat>0&&classifierHeartbeat<=now+5000L&&now-classifierHeartbeat<=45000L)return State.LISTENING;
+  if(classifierHeartbeat>0L){
+   if(classifierHeartbeat<=now+5000L&&now-classifierHeartbeat<=45000L)return State.LISTENING;
+   return State.STALE; // Once the model replied, stale callbacks are not "still starting".
+  }
   if(startedAt>0&&startedAt<=now+5000L&&now-startedAt<=90000L)return State.STARTING;
   return State.STALE;
  }
