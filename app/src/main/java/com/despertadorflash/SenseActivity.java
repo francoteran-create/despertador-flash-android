@@ -40,6 +40,24 @@ public final class SenseActivity extends Activity {
  private final Handler main=new Handler(Looper.getMainLooper());
  private final ExecutorService work=Executors.newSingleThreadExecutor();
  private SpeechRecognizer recognizer;
+ private final SpeechRetryController speechRetries=new SpeechRetryController();
+ private int speechSession=0;
+ private Runnable speechRetryTask;
+ private void scheduleSpeechRetry(long delay){
+  if(mode!=MODE_SPEECH)return;
+  final int token=speechSession;
+  if(speechRetryTask!=null)main.removeCallbacks(speechRetryTask);
+  speechRetryTask=()->{
+   speechRetryTask=null;
+   if(mode==MODE_SPEECH&&speechSession==token&&recognizer==null)startSpeech();
+  };
+  main.postDelayed(speechRetryTask,delay);
+ }
+ private void cancelSpeechRetry(){
+  speechSession++;
+  if(speechRetryTask!=null){main.removeCallbacks(speechRetryTask);speechRetryTask=null;}
+ }
+
  private volatile boolean soundRunning=false;
  private AudioRecord audioRecord;
  private AudioClassifier classifier;
@@ -318,40 +336,71 @@ public final class SenseActivity extends Activity {
    .addOnFailureListener(e->detail.setText("No se pudo descargar el modelo de traducción: "+e.getMessage()));
  }
  private void startSpeech(){
+  if(mode!=MODE_SPEECH||recognizer!=null)return;
+  if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
+   state.setText("MICRÓFONO SIN PERMISO");detail.setText("Volvé a autorizar el micrófono desde Android.");
+   stopAll(false);return;
+  }
   state.setText("ESCUCHANDO CONVERSACIÓN");
   if(lastTranscript.isEmpty()&&eventCount==0)result.setText("Hablá cerca del teléfono…");
-  detail.setText("Transcribiendo en vivo. Guardado automático al detener o salir.");
-  if(!SpeechRecognizer.isRecognitionAvailable(this)){state.setText("SIN RECONOCIMIENTO DE VOZ");result.setText("Este teléfono no tiene un servicio de transcripción disponible.");mode=MODE_NONE;finishHistory();return;}
+  detail.setText("Transcripción activa. Las pausas no interrumpen el historial; el micrófono se detiene al salir.");
+  if(!SpeechRecognizer.isRecognitionAvailable(this)){
+   state.setText("SIN RECONOCIMIENTO DE VOZ");
+   result.setText("No hay servicio de transcripción en este teléfono.");
+   stopAll(false);return;
+  }
   try{
-   if(Build.VERSION.SDK_INT>=31&&SpeechRecognizer.isOnDeviceRecognitionAvailable(this))recognizer=SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
-   else recognizer=SpeechRecognizer.createSpeechRecognizer(this);
-   recognizer.setRecognitionListener(new RecognitionListener(){
-    public void onReadyForSpeech(Bundle params){state.setText("ESCUCHANDO · HABLÁ AHORA");}
-    public void onBeginningOfSpeech(){state.setText("DETECTANDO VOZ");}
-    public void onRmsChanged(float rms){if(mode==MODE_SPEECH&&visual!=null)visual.setEnergy(Math.max(0f,Math.min(1f,rms/12f)));}
+   final SpeechRecognizer current=(Build.VERSION.SDK_INT>=31&&SpeechRecognizer.isOnDeviceRecognitionAvailable(this))
+    ?SpeechRecognizer.createOnDeviceSpeechRecognizer(this):SpeechRecognizer.createSpeechRecognizer(this);
+   recognizer=current;
+   current.setRecognitionListener(new RecognitionListener(){
+    public void onReadyForSpeech(Bundle params){if(mode==MODE_SPEECH&&recognizer==current)state.setText("ESCUCHANDO · HABLÁ AHORA");}
+    public void onBeginningOfSpeech(){if(mode==MODE_SPEECH&&recognizer==current)state.setText("DETECTANDO VOZ");}
+    public void onRmsChanged(float rms){if(mode==MODE_SPEECH&&recognizer==current&&visual!=null)visual.setEnergy(Math.max(0f,Math.min(1f,rms/12f)));}
     public void onBufferReceived(byte[] buffer){}
-    public void onEndOfSpeech(){state.setText("PROCESANDO PALABRAS…");}
+    public void onEndOfSpeech(){if(mode==MODE_SPEECH&&recognizer==current)state.setText("PROCESANDO PALABRAS…");}
     public void onError(int error){
-     if(mode!=MODE_SPEECH)return;
+     if(mode!=MODE_SPEECH||recognizer!=current)return;
      releaseSpeech();
-     if(error==SpeechRecognizer.ERROR_NO_MATCH||error==SpeechRecognizer.ERROR_SPEECH_TIMEOUT){
-      state.setText("ESCUCHANDO · REINICIANDO");
-      main.postDelayed(()->{if(mode==MODE_SPEECH)startSpeech();},650);
+     if(SpeechRetryController.isSilence(error)){
+      // Silence is normal during long conversations; do not count it as a failure.
+      state.setText("ESCUCHANDO · EN PAUSA");
+      scheduleSpeechRetry(speechRetries.silenceDelay());
+     }else if(SpeechRetryController.isTemporary(error)){
+      long delay=speechRetries.onTemporaryFailure();
+      if(delay>=0){
+       state.setText("RECONEXIÓN AUTOMÁTICA");
+       detail.setText(SpeechRetryController.explanation(error)+" · próximo intento en "+((delay+999)/1000)+" s");
+       scheduleSpeechRetry(delay);
+      }else{
+       state.setText("TRANSCRIPCIÓN PAUSADA");
+       detail.setText("Android rechazó varios intentos. Tocá ESCUCHAR para reintentar cuando quieras.");
+       stopAll(false);
+      }
      }else{
       state.setText("TRANSCRIPCIÓN DETENIDA");
-      detail.setText("Android no pudo continuar (código "+error+"). Se guardó la sesión.");
-      mode=MODE_NONE;finishHistory();
+      detail.setText(SpeechRetryController.explanation(error)+". Podés iniciar una nueva sesión.");
+      stopAll(false);
      }
     }
-    public void onResults(Bundle data){ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-     if(mode==MODE_SPEECH){
-      String phrase=matches!=null&&!matches.isEmpty()?matches.get(0):"";
-      if(!phrase.isEmpty()){result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}}
-      state.setText("ESCUCHANDO · NUEVA FRASE");
-      releaseSpeech();
-      main.postDelayed(()->{if(mode==MODE_SPEECH)startSpeech();},650);
-     }}
-    public void onPartialResults(Bundle data){ArrayList<String> partial=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);if(mode==MODE_SPEECH&&partial!=null&&!partial.isEmpty())result.setText(partial.get(0));}
+    public void onResults(Bundle data){
+     if(mode!=MODE_SPEECH||recognizer!=current)return;
+     ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+     String phrase=matches!=null&&!matches.isEmpty()?matches.get(0).trim():"";
+     if(!phrase.isEmpty()){
+      result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);
+      speechRetries.reset();
+      if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}
+     }
+     state.setText("ESCUCHANDO · NUEVA FRASE");
+     releaseSpeech();
+     scheduleSpeechRetry(speechRetries.silenceDelay());
+    }
+    public void onPartialResults(Bundle data){
+     if(mode!=MODE_SPEECH||recognizer!=current)return;
+     ArrayList<String> partial=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+     if(partial!=null&&!partial.isEmpty())result.setText(partial.get(0));
+    }
     public void onEvent(int event,Bundle params){}
    });
    Intent intent=new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -359,8 +408,20 @@ public final class SenseActivity extends Activity {
    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,recognizedLanguage());
    intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);
    intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
-   recognizer.startListening(intent);
-  }catch(Exception e){state.setText("NO SE PUDO INICIAR");detail.setText(e.getMessage());mode=MODE_NONE;releaseSpeech();finishHistory();}
+   current.startListening(intent);
+  }catch(Exception ex){
+   releaseSpeech();
+   long delay=speechRetries.onTemporaryFailure();
+   if(delay>=0&&mode==MODE_SPEECH){
+    state.setText("INTENTANDO RECUPERAR MICRÓFONO");
+    detail.setText("No se pudo iniciar el servicio de voz. Reintentando sin perder la sesión.");
+    scheduleSpeechRetry(delay);
+   }else{
+    state.setText("TRANSCRIPCIÓN DETENIDA");
+    detail.setText("No se pudo iniciar el reconocimiento: "+ex.getMessage());
+    stopAll(false);
+   }
+  }
  }
  private void releaseSpeech(){if(recognizer!=null){SpeechRecognizer old=recognizer;recognizer=null;old.destroy();}}
  private void startSounds(){
@@ -422,6 +483,7 @@ public final class SenseActivity extends Activity {
   });
  }
  private void stopAll(boolean show){
+  cancelSpeechRetry();speechRetries.reset();
   mode=MODE_NONE;soundRunning=false;
   if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
   finishHistory();
