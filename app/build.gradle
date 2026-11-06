@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 36; versionName '3.6' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 37; versionName '3.7' }
  // Deliver only the native libraries required by each real Android CPU.
  // No emulators/Intel libraries and no duplicate ARM architectures per APK.
  splits {
