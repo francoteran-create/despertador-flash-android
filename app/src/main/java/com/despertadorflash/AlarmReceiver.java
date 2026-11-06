@@ -10,7 +10,8 @@ public class AlarmReceiver extends BroadcastReceiver {
   // A PendingIntent that slipped through after disabling/deleting an alarm must not ring.
   if(!c.getSharedPreferences("aurora",0).getBoolean("on"+id,false))return;
   boolean snooze=i.getBooleanExtra("snooze",false);
-  if(!snooze)MainActivity.schedule(c,id);
+  if(snooze)c.getSharedPreferences("aurora",0).edit().remove("snooze_until"+id).apply();
+  else MainActivity.schedule(c,id);
   Intent open=new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("ring",true).putExtra("alarm_id",id);
   PendingIntent tap=PendingIntent.getActivity(c,1000+id,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
