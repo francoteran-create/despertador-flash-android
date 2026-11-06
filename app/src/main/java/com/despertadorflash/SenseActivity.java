@@ -70,6 +70,12 @@ public final class SenseActivity extends Activity {
  private Button button(String content){Button b=new Button(this);b.setText(content);AuroraDesign.action(b,0xff1a4264,0xff292656,0xff4b7898);return b;}
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);history=new SenseHistory(this);
+  // One microphone owner at a time. Entering live Sense stops the background monitor.
+  if(getSharedPreferences("aurora",0).getBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false)){
+   try{startService(new Intent(this,AuroraSoundMonitorService.class).setAction(AuroraSoundMonitorService.STOP));}
+   catch(Exception ignored){}
+   Toast.makeText(this,"Escucha continua detenida para usar el micrófono aquí",Toast.LENGTH_LONG).show();
+  }
   screenMode=getIntent().getIntExtra(EXTRA_MODE,MODE_SPEECH)==MODE_SOUND?MODE_SOUND:MODE_SPEECH;
   draw();
   main.post(()->toggle(screenMode));
