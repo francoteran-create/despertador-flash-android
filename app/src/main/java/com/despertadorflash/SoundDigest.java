@@ -14,7 +14,7 @@ public final class SoundDigest {
   LinkedHashMap<String,Integer> counts=new LinkedHashMap<>();
   String latest="";
   int total=0;
-  for(String line:data.split("\\r?\\n")){
+  for(String line:data.split("\\r?\n")){
    if(total>=200)break;
    int start=line.indexOf("POSIBLE");
    if(start<0)start=line.indexOf("POSIBLES");
@@ -29,11 +29,11 @@ public final class SoundDigest {
    total++;
   }
   if(total==0)return "En los registros elegidos no hay detecciones de sonido para resumir.";
-  StringBuilder b=new StringBuilder("RESUMEN DE DETECCIONES REGISTRADAS\\n");
-  b.append("Observaciones analizadas: ").append(total).append(".\\n");
+  StringBuilder b=new StringBuilder("RESUMEN DE DETECCIONES REGISTRADAS\n");
+  b.append("Observaciones analizadas: ").append(total).append(".\n");
   for(Map.Entry<String,Integer> entry:counts.entrySet())
-   b.append("• ").append(entry.getKey()).append(": ").append(entry.getValue()).append(" registro(s).\\n");
-  b.append("Última categoría observada: ").append(latest).append(".\\n");
+   b.append("• ").append(entry.getKey()).append(": ").append(entry.getValue()).append(" registro(s).\n");
+  b.append("Última categoría observada: ").append(latest).append(".\n");
   b.append("Estas son clasificaciones aproximadas del micrófono; no confirman qué ocurrió ni quién produjo un sonido.");
   return b.toString();
  }
