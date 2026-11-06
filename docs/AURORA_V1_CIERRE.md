@@ -1,6 +1,6 @@
 # AURORA 1.0 — Contrato de cierre funcional
 
-Estado inicial de esta revisión: código acumulativo de la rama main, versión interna 3.8. Este documento NO declara que la app esté validada en hardware.
+Estado de revisión: código acumulativo de la rama main, MASTER interna 4.0. Este documento NO declara que la app esté validada en hardware.
 
 ## Alcance fijo de V1
 1. Clasificación local de sonidos YAMNet. El reconocimiento es probabilístico y no constituye un detector certificado.
@@ -11,7 +11,17 @@ Estado inicial de esta revisión: código acumulativo de la rama main, versión 
 6. Alarmas repetidas, pospuestos de 10 minutos y temporizadores con recuperación.
 7. Mensajes de comunicación visual, perfil, registros locales exportables.
 8. Asistente de IA visual local *solamente a demanda*: seleccionar foto o iniciar cámara, clasificar objetos y leer texto de la imagen. Sin vigilancia de cámara, sin vídeo permanente, sin identificación facial ni subida de foto.
-9. Resumen local de sonidos registrados, explícitamente aproximado y sin atribuir causas. No es un modelo de lenguaje ni un asistente de IA generativa conversacional.
+9. Consulta local de sonidos registrados y de las últimas frases realmente transcritas, sin enviar audio ni textos a servidores. Es recuperación/extracción de registros, NO un asistente generativo de lenguaje.
+10. Confirmación independiente por sonido, intervalos de aviso sin reuso de detecciones antiguas, guardado fuera del hilo de inferencia y protección contra callbacks de sesiones detenidas.
+
+## Mejoras integradas en la MASTER interna 4.0
+- Detecciones en vivo y segundo plano usan la misma política de confirmación de sonidos y categorías independientes.
+- Los sonidos detectados en primer plano utilizan un historial compatible con la consulta posterior.
+- El reconocimiento del micrófono queda separado del guardado de registros y notificaciones para evitar bloqueos del clasificador.
+- Se recuperan las últimas frases reconocidas de una conversación; no se inventa una síntesis.
+- Las fotografías se leen con su orientación EXIF y solo bajo demanda.
+- La prueba manual del despertador no hereda alarmas antiguas; detener una alarma no cancela las otras.
+- La verificación automatizada de código no reemplaza pruebas de cámara, micrófono, notificaciones y batería en teléfonos reales.
 
 ## Fuera de alcance V1
 - Monitorización visual continua, reconocimiento de personas, predicción de peligros o identificación de intenciones.
