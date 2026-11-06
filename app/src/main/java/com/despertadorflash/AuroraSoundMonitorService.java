@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 /** Explicitly started foreground microphone monitor. Never auto-start on boot. */
 public final class AuroraSoundMonitorService extends Service {
  public static final String START="com.despertadorflash.START_MONITOR",STOP="com.despertadorflash.STOP_MONITOR";
- public static final String KEY_ACTIVE="monitor_active", KEY_LAST="monitor_last_sound", KEY_ERROR="monitor_last_error", KEY_HEARTBEAT="monitor_heartbeat";
+ public static final String KEY_ACTIVE="monitor_active", KEY_LAST="monitor_last_sound", KEY_ERROR="monitor_last_error", KEY_HEARTBEAT="monitor_heartbeat", KEY_STARTED="monitor_started";
  private static final String CHANNEL="aurora_monitor", EVENTS="aurora_monitor_events";
  private static final int FOREGROUND_ID=5400;
  private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -30,7 +30,8 @@ public final class AuroraSoundMonitorService extends Service {
  private volatile AudioRecord recorder;
  private volatile AudioClassifier classifier;
  private final SoundEventGate gate=new SoundEventGate();
- private long lastHeartbeatAt=0L;
+ private volatile long lastClassifierCallbackElapsed=0L;
+ private volatile long lastHeartbeatAt=0L;
  private SenseHistory history;
  @Override public void onCreate(){super.onCreate();history=new SenseHistory(this);createChannels();
   // Reset any stale status from a previous process termination; no automatic restart.
@@ -41,18 +42,24 @@ public final class AuroraSoundMonitorService extends Service {
   if(intent==null||!START.equals(intent.getAction())){stopSelf();return START_NOT_STICKY;}
   if(listening)return START_NOT_STICKY;
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
+   getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"El permiso de micrófono está desactivado").apply();
    Log.w("AURORA","No se inicia escucha sin permiso de micrófono");stopSelf();return START_NOT_STICKY;
   }
   if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+   getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"El permiso de notificaciones está desactivado").apply();
    Log.w("AURORA","Sin permiso de notificaciones no se inicia el monitoreo");stopSelf();return START_NOT_STICKY;
   }
   try{
    Notification notice=status("Escucha activa · tocá para abrir AURORA");
    if(Build.VERSION.SDK_INT>=29)startForeground(FOREGROUND_ID,notice,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
    else startForeground(FOREGROUND_ID,notice);
-  }catch(Exception ex){Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;}
-  listening=true;gate.reset();lastHeartbeatAt=0L;
-  getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR).putLong(KEY_HEARTBEAT,System.currentTimeMillis()).apply();
+  }catch(Exception ex){
+   getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"Android no permitió activar el micrófono en segundo plano").apply();
+   Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;
+  }
+  listening=true;gate.reset();lastHeartbeatAt=0L;lastClassifierCallbackElapsed=0L;
+  getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
+   .putLong(KEY_STARTED,System.currentTimeMillis()).putLong(KEY_HEARTBEAT,0L).apply();
   history.begin("sonidos");worker.execute(this::classifyLoop);
   return START_NOT_STICKY; // Do not restart microphone capture without user interaction.
  }
@@ -93,14 +100,27 @@ public final class AuroraSoundMonitorService extends Service {
    AudioClassifierOptions options=AudioClassifierOptions.builder().setBaseOptions(BaseOptions.builder().setModelAssetPath("yamnet.tflite").build())
     .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(6).setScoreThreshold(.15f)
     .setResultListener(result->{
-     if(!listening||result.classificationResults().isEmpty()||result.classificationResults().get(0).classifications().isEmpty())return;
-     List<Category> categories=result.classificationResults().get(0).classifications().get(0).categories();
-     String best=null;float confidence=0;
-     for(Category item:categories){
-      String name=SoundLabelsEs.name(item.categoryName());
-      if(name!=null&&item.score()>confidence){best=name;confidence=item.score();}
+     if(!listening)return;
+     long now=SystemClock.elapsedRealtime();
+     lastClassifierCallbackElapsed=now;
+     // Heartbeat means the model actually responded, not merely that AudioRecord exists.
+     if(now-lastHeartbeatAt>=15000L||lastHeartbeatAt==0L){
+      lastHeartbeatAt=now;
+      getSharedPreferences("aurora",0).edit().putLong(KEY_HEARTBEAT,System.currentTimeMillis()).apply();
      }
-     if(best!=null)consider(best,Math.round(confidence*100));
+     if(result.classificationResults().isEmpty()||result.classificationResults().get(0).classifications().isEmpty())return;
+     List<Category> categories=result.classificationResults().get(0).classifications().get(0).categories();
+     java.util.Map<String,Float> strongestByLabel=new java.util.HashMap<>();
+     for(Category item:categories){
+      String label=SoundLabelsEs.name(item.categoryName());
+      if(label==null)continue;
+      Float old=strongestByLabel.get(label);
+      if(old==null||item.score()>old)strongestByLabel.put(label,item.score());
+     }
+     // Two simultaneous sound types can both be confirmed and reported.
+     for(java.util.Map.Entry<String,Float> detected:strongestByLabel.entrySet()){
+      consider(detected.getKey(),Math.round(detected.getValue()*100f));
+     }
     }).setErrorListener(err->{
      Log.e("AURORA","Clasificador de fondo: "+err.getMessage());
      reportFailure("Error interno del detector de sonidos");
@@ -110,6 +130,7 @@ public final class AuroraSoundMonitorService extends Service {
    AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
    if(!listening)return;
    localRecord.startRecording();
+   final long monitoringStarted=SystemClock.elapsedRealtime();
    if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)throw new IllegalStateException("El micrófono no comenzó a grabar");
    int emptyReads=0;
    while(listening){
@@ -117,10 +138,8 @@ public final class AuroraSoundMonitorService extends Service {
     if(count>0){localClassifier.classifyAsync(samples,SystemClock.uptimeMillis());emptyReads=0;}
     else {SystemClock.sleep(120);if(++emptyReads>=6)throw new IllegalStateException("Micrófono sin muestras");}
     long now=SystemClock.elapsedRealtime();
-    if(now-lastHeartbeatAt>=15000){
-     lastHeartbeatAt=now;
-     getSharedPreferences("aurora",0).edit().putLong(KEY_HEARTBEAT,System.currentTimeMillis()).apply();
-    }
+    long lastInference=lastClassifierCallbackElapsed>0L?lastClassifierCallbackElapsed:monitoringStarted;
+    if(now-lastInference>90000L)throw new IllegalStateException("El detector no envía resultados");
    }
   }catch(Exception error){
    if(listening){Log.e("AURORA","No se pudo mantener la escucha",error);reportFailure("El micrófono o el detector se interrumpió");}
