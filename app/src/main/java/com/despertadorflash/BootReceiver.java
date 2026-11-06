@@ -16,6 +16,21 @@ public class BootReceiver extends BroadcastReceiver {
      !Intent.ACTION_TIME_CHANGED.equals(action)&&!Intent.ACTION_TIMEZONE_CHANGED.equals(action))return;
   for(int id=0;id<5;id++)MainActivity.schedule(c,id);
   SharedPreferences p=c.getSharedPreferences("aurora",0);
+  // Preserve a pending ten-minute snooze after reboot or manual clock changes.
+  AlarmManager snoozeManager=(AlarmManager)c.getSystemService(Context.ALARM_SERVICE);
+  for(int id=0;id<5;id++){
+   long desired=p.getLong("snooze_until"+id,0L);
+   if(desired<=0L)continue;
+   long recovery=SnoozePolicy.recoverAt(desired,System.currentTimeMillis(),p.getBoolean("on"+id,false));
+   if(recovery<=0L){MainActivity.cancelSnooze(c,id);continue;}
+   if(snoozeManager==null)continue;
+   if(Build.VERSION.SDK_INT>=31&&!snoozeManager.canScheduleExactAlarms())continue;
+   Intent snoozed=new Intent(c,AlarmReceiver.class).putExtra("snooze",true).putExtra("id",id);
+   PendingIntent delivery=PendingIntent.getBroadcast(c,4100+id,snoozed,
+    PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+   try{snoozeManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,recovery,delivery);}
+   catch(SecurityException error){android.util.Log.w("Aurora","No se pudo recuperar pospuesto",error);}
+  }
   long endWall=p.getLong("timer_end",0L);
   if(endWall<=0L)return;
   long nowWall=System.currentTimeMillis();
