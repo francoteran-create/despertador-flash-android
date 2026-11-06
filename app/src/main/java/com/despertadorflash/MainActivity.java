@@ -252,7 +252,10 @@ public class MainActivity extends Activity {
   TextView caption=txt("CUENTA REGRESIVA",14);caption.setTextColor(0xff94e9e9);
   caption.setGravity(Gravity.CENTER);timerCard.addView(caption);
   long savedEnd=prefs.getLong("timer_end",0);
-  long remaining=TimerDeadline.remaining(savedEnd,prefs.getLong("timer_end_elapsed",0L),System.currentTimeMillis(),SystemClock.elapsedRealtime());
+  int currentBoot=Settings.Global.getInt(getContentResolver(),Settings.Global.BOOT_COUNT,-1);
+  long safeElapsed=TimerBootClock.elapsedDeadlineForBoot(prefs.getLong("timer_end_elapsed",0L),
+    prefs.getInt("timer_boot_count",-1),currentBoot);
+  long remaining=TimerDeadline.remaining(savedEnd,safeElapsed,System.currentTimeMillis(),SystemClock.elapsedRealtime());
   TextView counter=txt(remaining>0?String.format(Locale.getDefault(),"%02d:%02d",remaining/60000,(remaining/1000)%60):"05:00",64);
   counter.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
   counter.setTextColor(0xfff4faff);counter.setGravity(Gravity.CENTER);counter.setLetterSpacing(.08f);
@@ -602,7 +605,7 @@ public class MainActivity extends Activity {
   try{am.setAlarmClock(new AlarmManager.AlarmClockInfo(when,show),event);}
   catch(SecurityException ex){android.util.Log.e("Aurora","No se pudo programar alarma exacta",ex);}
  }
- void cancelTimer(){AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);PendingIntent pi=PendingIntent.getBroadcast(this,3100,new Intent(this,TimerReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);am.cancel(pi);prefs.edit().remove("timer_end").remove("timer_end_elapsed").apply();}
+ void cancelTimer(){AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);PendingIntent pi=PendingIntent.getBroadcast(this,3100,new Intent(this,TimerReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);am.cancel(pi);prefs.edit().remove("timer_end").remove("timer_end_elapsed").remove("timer_boot_count").apply();}
  boolean countdown(int minutes,TextView output){
   if(minutes<1||minutes>24*60)return false;
   if(timer!=null)timer.cancel();
@@ -622,7 +625,8 @@ public class MainActivity extends Activity {
    }
    // A monotonic elapsed deadline remains accurate even if the user changes the clock.
    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,endWall,pi);
-   prefs.edit().putLong("timer_end",endWall).putLong("timer_end_elapsed",endElapsed).apply();
+   prefs.edit().putLong("timer_end",endWall).putLong("timer_end_elapsed",endElapsed)
+    .putInt("timer_boot_count",Settings.Global.getInt(getContentResolver(),Settings.Global.BOOT_COUNT,-1)).apply();
   }catch(SecurityException ex){
    new AlertDialog.Builder(this).setMessage("Android no permitió programar el temporizador exacto.").setPositiveButton("Aceptar",null).show();return false;
   }
