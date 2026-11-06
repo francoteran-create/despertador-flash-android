@@ -8,6 +8,9 @@ public final class TimerBootClockTest {
  @Test public void rebootForcesWallClockRecovery(){
   assertEquals(0L,TimerBootClock.elapsedDeadlineForBoot(60000L,41,42));
  }
+ @Test public void unknownPreviousBootCountCannotValidateMonotonicDeadline(){
+  assertEquals(0L,TimerBootClock.elapsedDeadlineForBoot(90000L,-1,47));
+ }
  @Test public void unavailableBootCountPreservesLegacyTimers(){
   assertEquals(60000L,TimerBootClock.elapsedDeadlineForBoot(60000L,-1,-1));
  }
