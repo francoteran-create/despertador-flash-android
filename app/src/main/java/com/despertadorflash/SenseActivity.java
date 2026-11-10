@@ -464,18 +464,18 @@ public final class SenseActivity extends Activity {
    try{
     BaseOptions base=BaseOptions.builder().setModelAssetPath("yamnet.tflite").build();
     AudioClassifierOptions settings=AudioClassifierOptions.builder().setBaseOptions(base)
-     .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(6).setScoreThreshold(.15f)
+     .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(10).setScoreThreshold(.15f)
      .setResultListener(r->{
       if(!soundRunning||soundSession!=run||r==null)return;
       lastResult.set(SystemClock.elapsedRealtime());
       if(r.classificationResults().isEmpty()||r.classificationResults().get(0).classifications().isEmpty())return;
-      java.util.Map<String,Float> strongest=new java.util.LinkedHashMap<>();
+      java.util.Map<String,Float> rawScores=new java.util.LinkedHashMap<>();
       for(Category cat:r.classificationResults().get(0).classifications().get(0).categories()){
-       String name=SoundLabelsEs.name(cat.categoryName());
-       if(name==null)continue;
-       Float old=strongest.get(name);
-       if(old==null||cat.score()>old)strongest.put(name,cat.score());
+       String raw=cat.categoryName();
+       Float previous=rawScores.get(raw);
+       if(previous==null||cat.score()>previous)rawScores.put(raw,cat.score());
       }
+      java.util.Map<String,Float> strongest=SoundEvidence.fromRawScores(rawScores);
       if(strongest.isEmpty())return;
       main.post(()->{
        if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)return;
