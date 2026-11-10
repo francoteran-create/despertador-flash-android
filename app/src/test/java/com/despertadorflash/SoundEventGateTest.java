@@ -73,6 +73,19 @@ public class SoundEventGateTest {
   assertTrue(gate.accept("POSIBLE PERRO LADRANDO",65,1,1700));
   assertTrue(new SoundEventGate().accept("POSIBLE TIMBRE DE PUERTA",91,1,500));
  }
+ @Test public void preciseModeNeedsTwoIndependentFramesEvenAt99(){
+  SoundEventGate gate=new SoundEventGate();
+  assertFalse(gate.accept("POSIBLE TIMBRE DE PUERTA",99,2,1000));
+  assertFalse(gate.accept("POSIBLE TIMBRE DE PUERTA",99,2,1070));
+  assertTrue(gate.accept("POSIBLE TIMBRE DE PUERTA",70,2,1500));
+  assertTrue(new SoundEventGate().accept("POSIBLE SIRENA",80,2,2000));
+ }
+ @Test public void increasingSensitivityResetsUnconfirmedEvidence(){
+  SoundEventGate gate=new SoundEventGate();
+  assertFalse(gate.accept("POSIBLE PERRO LADRANDO",60,0,1000));
+  assertFalse(gate.accept("POSIBLE PERRO LADRANDO",60,2,1800));
+  assertTrue(gate.accept("POSIBLE PERRO LADRANDO",60,2,2400));
+ }
  @Test public void clockRollbackAndResetDontLockOutAlerts(){
   SoundEventGate gate=new SoundEventGate();
   assertTrue(gate.accept("A",95,1,100_000));
