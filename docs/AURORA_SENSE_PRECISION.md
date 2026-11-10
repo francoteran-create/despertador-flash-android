@@ -32,6 +32,27 @@ La transcripcion textual tiene un modulo separado.
 - Se agrega la categoria opcional de avisos de voces y conversaciones,
   desactivada por defecto; las detecciones siguen mostrandose en pantalla.
 
+## Validacion voluntaria sin guardar audio
+- En Ajustes, activar "Evaluar detecciones con ACERTÓ / NO COINCIDE"
+  (desactivado por defecto). Abrir el modulo SONIDOS.
+- Cada evento visible ofrece acciones independientes para marcar si la
+  etiqueta coincide o no, incluso cuando hay varios sonidos simultaneos.
+- "REGISTRAR SONIDO NO DETECTADO" permite anotar omisiones declaradas
+  por la persona que realiza la prueba. El sistema no presume que esa
+  anotacion haya sido verificada de forma independiente.
+- Los datos se escriben en el historial local al detener la sesion.
+  No se almacena audio; no se transmiten las respuestas a servidores.
+- Tras exportar los TXT de AURORA, un desarrollador puede analizar
+  los marcados mediante:
+  `python3 scripts/evaluate_sound_feedback.py ruta/registro1.txt ruta/registro2.txt`
+  El script NO presenta estos marcados voluntarios como precision,
+  recall o una tasa representativa de aciertos.
+- Las notificaciones simultaneas del mismo grupo se mantienen separadas
+  por etiqueta; desactivar una categoria retira solo sus avisos y
+  no detiene la indicacion de escucha permanente.
+- En etiquetas inglesas se evitan falsos positivos por subcadenas,
+  como Outdoor confundido con Door o Carillon confundido con Car.
+
 ## Pruebas automatizadas previstas en CI
 - Nombres de clases no atribuyen causas no detectadas.
 - Timbre y ladrido simultaneos no se anulan mutuamente.
