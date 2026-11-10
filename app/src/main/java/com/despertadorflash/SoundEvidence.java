@@ -25,6 +25,19 @@ public final class SoundEvidence {
    Float previous=result.get(label);
    if(previous==null||score>previous)result.put(label,score);
   }
+  // A generic "Knock" model category does not establish that a door
+  // was involved. Require separate door evidence before saying so.
+  Float knocking=rawScore(rawScores,"Knock");
+  Float door=rawScore(rawScores,"Door");
+  Float doorSlam=rawScore(rawScores,"Door slam");
+  if(knocking!=null&&door!=null&&knocking>=.35f&&door>=.30f
+     &&(doorSlam==null||doorSlam<door*.5f)){
+   result.put("POSIBLES GOLPES EN UNA PUERTA",Math.min(knocking,door));
+   Float general=result.get("POSIBLES GOLPES O IMPACTOS");
+   if(general!=null&&general<=knocking*1.05f)
+    result.remove("POSIBLES GOLPES O IMPACTOS");
+  }
+
   // More specific evidence supersedes a broad hypothesis about the same
   // kind of event within this frame, without hiding concurrent other sounds.
   if(dominates(result,"POSIBLE PUERTA O CAJÓN",
@@ -37,6 +50,16 @@ public final class SoundEvidence {
   if(dominates(result,"POSIBLE ALARMA O PITIDO","POSIBLE ALARMA DE INCENDIO"))
    result.remove("POSIBLE ALARMA O PITIDO");
   return result;
+ }
+
+ private static Float rawScore(Map<String,Float> raw,String requested){
+  for(Map.Entry<String,Float> item:raw.entrySet()){
+   Float value=item.getValue();
+   if(item.getKey()!=null&&item.getKey().trim().equalsIgnoreCase(requested)
+      &&value!=null&&!Float.isNaN(value)&&!Float.isInfinite(value)
+      &&value>=0f&&value<=1f)return value;
+  }
+  return null;
  }
 
  private static boolean dominates(Map<String,Float> result,String generic,String... specific){
