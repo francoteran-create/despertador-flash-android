@@ -105,6 +105,21 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
         "independientes para no reemplazarse entre si. Al desactivar "
         "una categoria se limpian sus avisos y permanece el indicador "
         "del microfono activo.")
+    add("MODO PRECISA Y RESPALDOS", "AuroraSection")
+    add("Modo Precisa: dos observaciones separadas obligatorias para sonidos "
+        "comunes, incluso ante un puntaje alto; las sirenas y alarmas de "
+        "incendio tienen una via rapida que NO equivale a deteccion certificada.")
+    add("Ajustes: exportar e importar TXT con alarmas y preferencias, "
+        "checksum SHA-256 y confirmacion antes de restaurar. "
+        "Excluye datos personales, foto, registros, transcripciones y audio.")
+    add("Registros: copiar TXT a carpeta seleccionada por usuario y "
+        "comprobar que su hash SHA-256 coincide con el original, "
+        "sin sobrescribir copias antiguas diferentes.")
+    add("AURORA BETA 4.2 utiliza paquete com.despertadorflash.beta, "
+        "distinto del original com.despertadorflash: ambas apps pueden "
+        "coexistir sin desinstalar la AURORA original. "
+        "Los datos NO se comparten. Vigilar alarmas duplicadas. "
+        "Las APK debug pueden tener firmas efimeras entre compilaciones.")
     add("LIMITACIONES Y RIESGOS", "AuroraSection")
     add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
         "de certeza ni permiten garantizar identificacion perfecta.")
@@ -159,7 +174,9 @@ def main() -> None:
         "MANIFEST.json: hashes de cada archivo y estado de verificacion.\n\n"
         "NO VERSION COMERCIAL. No se han validado pruebas en telefono "
         "ni metricas de precision con audios reales.\n"
-        "La estetica AURORA 2.8 esta pendiente de restaurar.\n"
+        "La portada se recupero del codigo historico 2.8; falta validacion en el telefono.\n"
+        "Paquete de instalacion: com.despertadorflash.beta; no desinstalar la AURORA original.\n"
+        "Desde Ajustes se pueden respaldar alarmas/preferencias y desde Registros los TXT.\n"
     )
     with ZipFile(target, "w", compression=ZIP_DEFLATED, compresslevel=6) as out:
         for rel in rel_paths:
@@ -186,6 +203,10 @@ def main() -> None:
             "approved_ui_reference": "AURORA 2.8",
             "approved_ui_home_source_restored": True,
             "approved_ui_verified_on_device": False,
+            "debug_application_id": "com.despertadorflash.beta",
+            "can_install_alongside_original": True,
+            "settings_backup_txt": "export_and_import_with_sha256_check",
+            "record_backup": "user_folder_copy_verified_sha256",
             "apks_signed_for_production": False,
             "files_sha256": checksums,
         }
