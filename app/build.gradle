@@ -2,7 +2,18 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 41; versionName '4.1-sense-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 42; versionName '4.2-sense-backup-beta' }
+ // Debug beta deliberately coexists with stable AURORA: never overwrite the
+ // existing user installation or its private data because of a debug key.
+ buildTypes {
+  debug {
+   applicationIdSuffix '.beta'
+   resValue 'string', 'app_name', 'AURORA BETA'
+  }
+  release {
+   resValue 'string', 'app_name', 'AURORA'
+  }
+ }
  // Deliver only the native libraries required by each real Android CPU.
  // No emulators/Intel libraries and no duplicate ARM architectures per APK.
  splits {
