@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.1-sense-beta, versionCode 41), revisión en PR #1.
+  (4.2-sense-backup-beta, versionCode 42), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -48,17 +48,36 @@ para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
 ## Instalación de la beta y seguridad de los datos
-La APK de GitHub Actions esta firmada con clave debug efimera del entorno
-de compilacion. Puede NO actualizar una AURORA 2.8 ya instalada por tener
-firmas diferentes. **No desinstalar una version que funciona ni borrar sus
-datos hasta haber exportado los registros y respaldado la configuracion.**
-Para comparar la interfaz, se recomienda usar un segundo dispositivo de
-prueba o verificar un procedimiento de migracion de datos antes de sustituir
-la instalacion existente. Nunca prometer instalacion sin desinstalar si
-las firmas no coinciden.
+La version 4.2 BETA se compila con el identificador Android
+`com.despertadorflash.beta` y nombre visible `AURORA BETA`. La
+AURORA original utiliza `com.despertadorflash`. Por tanto, la APK
+debug 4.2 puede instalarse **EN PARALELO** a la original, sin
+desinstalarla ni reemplazar sus datos. Los datos de ambas instalaciones
+estan aislados; no se copian automaticamente y las alarmas de cada app
+son independientes. Comprobar que no queden alarmas duplicadas activas.
 
-La beta 4.1 es una version de PRUEBA, no una release para Play Store;
-se requieren pruebas con sonido real y validacion en un Galaxy S9+.
+La beta tiene firma de desarrollo efimera. Puede no actualizar otra
+beta ya instalada con firma distinta: exportar primero alarmas y
+registros de la beta anterior. **No desinstalar la AURORA original.**
+La beta 4.2 no restaura por si sola la informacion de una AURORA 2.8
+anterior: el exportador nuevo solo existe en las versiones que lo
+incorporan. La copia nueva de configuracion no contiene datos privados
+de perfil ni historiales.
+
+En AJUSTES aparecen los botones `GUARDAR ALARMAS Y AJUSTES EN UN
+ARCHIVO` y `RESTAURAR ALARMAS Y AJUSTES`. Exportan/importan un TXT
+con checksum SHA-256 y valores restringidos a alarmas, preferencias de
+vibracion/flash y avisos. No incluye sesiones, perfil ni audio. La
+importacion solicita confirmacion y reprograma las alarmas. El checksum
+detecta corrupcion, **no autentica al emisor del archivo**.
+
+En REGISTROS, elegir una carpeta del telefono y tocar `RESPALDAR Y
+VERIFICAR TODOS LOS REGISTROS`. Las copias TXT se verifican por hash,
+no sobrescriben archivos previos distintos y se procesan sin bloquear
+la interfaz. Estos respaldos se guardan en la carpeta elegida.
+
+La beta 4.2 sigue siendo una version de PRUEBA, no un lanzamiento para
+Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Entrega oficial: un único ZIP MASTER
 
@@ -71,8 +90,9 @@ después de superar pruebas y compilación, se construye un único ZIP con:
 4. `MANIFEST.json` - commit exacto, versión, hash de archivos y estado real.
 5. `LEEME_PRIMERO.txt` - guía rápida y restricciones.
 
-El workflow de PR verifica el empaquetado sin publicar APKs. Solo la
-ejecución manual publica el archivo como artefacto de GitHub Actions.
+El workflow de PR verifica el empaquetado sin publicar APKs. La
+ejecucion manual o un commit especial marcado `[MASTER-ZIP]`
+publica el archivo como artefacto de GitHub Actions.
 
 **El paquete debug NO ES un APK de lanzamiento firmado para Play Store.**
 Para distribuir: pruebas físicas, privacidad, firma de release, validación
