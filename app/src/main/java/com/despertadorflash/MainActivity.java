@@ -507,6 +507,17 @@ public class MainActivity extends Activity {
    });
   }
   root.addView(txt("Las categorías que no marques pueden seguir siendo detectadas, pero no generarán un aviso emergente. La clasificación es aproximada.",13));
+  root.addView(section("MODO DE VALIDACIÓN DE SONIDOS"));
+  android.widget.Switch validation=new android.widget.Switch(this);
+  validation.setText("Evaluar detecciones con ACERTÓ / NO COINCIDE");
+  validation.setTextColor(Color.WHITE);validation.setTextSize(16);
+  validation.setPadding(dp(10),dp(10),dp(10),dp(10));
+  validation.setChecked(prefs.getBoolean("sense_feedback_mode",false));
+  root.addView(validation);
+  validation.setOnCheckedChangeListener((v,enabled)->
+   prefs.edit().putBoolean("sense_feedback_mode",enabled).apply());
+  root.addView(txt("Modo de prueba voluntario: permite marcar aciertos o errores por sonido en la pantalla SONIDOS. "
+   +"Se guardan solo las etiquetas y tus respuestas, nunca el audio. Desactivado de forma predeterminada.",13));
   root.addView(section("SENSIBILIDAD DE ALERTAS"));
   final String[] levels={"ALTA","EQUILIBRADA","PRECISA"};
   android.widget.RadioGroup rg=new android.widget.RadioGroup(this);rg.setOrientation(0);
