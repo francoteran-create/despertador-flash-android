@@ -112,7 +112,7 @@ public final class AuroraSoundMonitorService extends Service {
   AudioRecord localRecord=null;AudioClassifier localClassifier=null;
   try{
    AudioClassifierOptions options=AudioClassifierOptions.builder().setBaseOptions(BaseOptions.builder().setModelAssetPath("yamnet.tflite").build())
-    .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(6).setScoreThreshold(.15f)
+    .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(10).setScoreThreshold(.15f)
     .setResultListener(result->{
      if(!listening||sessionId!=run)return;
      long now=SystemClock.elapsedRealtime();
@@ -131,13 +131,13 @@ public final class AuroraSoundMonitorService extends Service {
      }
      if(result.classificationResults().isEmpty()||result.classificationResults().get(0).classifications().isEmpty())return;
      List<Category> categories=result.classificationResults().get(0).classifications().get(0).categories();
-     java.util.Map<String,Float> strongestByLabel=new java.util.HashMap<>();
+     java.util.Map<String,Float> rawScores=new java.util.LinkedHashMap<>();
      for(Category item:categories){
-      String label=SoundLabelsEs.name(item.categoryName());
-      if(label==null)continue;
-      Float old=strongestByLabel.get(label);
-      if(old==null||item.score()>old)strongestByLabel.put(label,item.score());
+      String raw=item.categoryName();
+      Float previous=rawScores.get(raw);
+      if(previous==null||item.score()>previous)rawScores.put(raw,item.score());
      }
+     java.util.Map<String,Float> strongestByLabel=SoundEvidence.fromRawScores(rawScores);
      // Two simultaneous sound types can both be confirmed and reported.
      for(java.util.Map.Entry<String,Float> detected:strongestByLabel.entrySet()){
       consider(detected.getKey(),Math.round(detected.getValue()*100f),run);
