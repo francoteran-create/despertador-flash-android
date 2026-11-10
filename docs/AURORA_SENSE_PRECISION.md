@@ -71,10 +71,14 @@ temperatura y consumo de bateria durante una hora.
 - No afirmar "llaman a la puerta" si solo se oyeron golpes.
 
 ## Diseño y continuidad
-AURORA 2.8 enviada por el usuario es REFERENCIA VISUAL APROBADA. La
-restauracion de esa estetica sobre el codigo nuevo esta PENDIENTE.
-No incluir personaje animado que mueve las manos. La funcionalidad y el
-diseno no deben darse por validados sin instalacion fisica.
+AURORA 2.8 enviada por el usuario es REFERENCIA VISUAL APROBADA.
+Se restauro en MainActivity.render() el bloque exacto de inicio de
+AURORA 2.8 desde el commit Git 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
+Incluye reloj AURORA Visual Engine, accesos de Sonidos/Conversacion,
+controles de alarmas y comunicacion, tarjetas de transcripcion en vivo,
+registros y temporizador. El personaje de versiones 3.x fue eliminado
+del codigo nuevo. PENDIENTE: comprobar visualmente fidelidad, legibilidad
+y comportamiento en Samsung Galaxy S9+; no se declara validado en telefono.
 
 ## Empaquetado
 La siguiente entrega al usuario debe ser UN SOLO ZIP con:
