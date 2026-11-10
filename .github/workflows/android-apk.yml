@@ -47,7 +47,7 @@ jobs:
           for apk in "${apks[@]}"; do
             echo "Archivo: $apk"
             "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | head -n 12
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -Fq com.despertadorflash
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -Fq "package: name='com.despertadorflash.beta'"
           done
       - name: Verificar firmas y tamaños de las dos APKs
         run: |
