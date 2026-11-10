@@ -56,6 +56,12 @@ desinstalarla ni reemplazar sus datos. Los datos de ambas instalaciones
 estan aislados; no se copian automaticamente y las alarmas de cada app
 son independientes. Comprobar que no queden alarmas duplicadas activas.
 
+No ejecutar ambos detectores de microfono a la vez: detener la escucha
+en la AURORA original antes de probar la beta (Android puede bloquear
+el acceso simultaneo al microfono).
+
+Instrucciones detalladas: `docs/AURORA_BETA_42_INSTALACION.md`.
+
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
