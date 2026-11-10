@@ -33,6 +33,8 @@ jobs:
             https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite \
             --output app/src/main/assets/yamnet.tflite
           test "$(wc -c < app/src/main/assets/yamnet.tflite)" -gt 1000000
+      - name: Probar resumen de validaciones voluntarias
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
       - name: Probar clasificación y reglas de alertas
         run: gradle --no-daemon :app:testDebugUnitTest --stacktrace
       - name: Compilar APK
