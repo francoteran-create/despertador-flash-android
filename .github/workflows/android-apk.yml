@@ -60,13 +60,15 @@ jobs:
       # La entrega manual construye un unico ZIP: APKs, fuentes completas,
       # modelo YAMNet, informe PDF y MANIFEST de hashes/estado.
       - name: Verificar armado de ZIP MASTER y PDF de continuidad
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[MASTER-ZIP]'))
         run: |
           python3 -m pip install --disable-pip-version-check 'reportlab>=4,<5'
           python3 scripts/build_master.py
           unzip -t dist/AURORA_MASTER_INTEGRAL_*.zip | tail -n 2
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'
+        # Publicar solo al solicitar manualmente o al marcar un commit
+        # de consolidación; nunca por cada avance pequeño.
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[MASTER-ZIP]'))
         with:
           name: AURORA-MASTER-INTEGRAL
           path: dist/AURORA_MASTER_INTEGRAL_*.zip
