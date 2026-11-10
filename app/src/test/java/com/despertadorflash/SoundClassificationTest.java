@@ -13,7 +13,7 @@ public class SoundClassificationTest {
   assertEquals("POSIBLE ALARMA DE INCENDIO",SoundLabelsEs.name("Fire alarm"));
  }
  @Test public void eventNamesDoNotInventCauses(){
-  assertEquals("POSIBLES GOLPES EN UNA PUERTA",SoundLabelsEs.name("Knock"));
+  assertEquals("POSIBLES GOLPES O IMPACTOS",SoundLabelsEs.name("Knock"));
   assertEquals("POSIBLE PORTAZO",SoundLabelsEs.name("Door slam"));
   assertEquals("POSIBLE PUERTA O CAJÓN",SoundLabelsEs.name("Sliding door"));
   assertEquals("POSIBLE PERRO",SoundLabelsEs.name("Dog"));
