@@ -10,6 +10,11 @@ sobre sonidos del entorno. "Reconocer un sonido" NO equivale a "transcribir voz"
 La transcripcion textual tiene un modulo separado.
 
 ## Cambios incorporados al codigo
+- Knock (golpe aislado) solo implica POSIBLES GOLPES O IMPACTOS.
+  Para mostrar POSIBLES GOLPES EN UNA PUERTA se exige evidencia
+  independiente de Knock y Door con umbrales minimos, sin un portazo
+  dominante en el mismo resultado. Estos umbrales son heuristicas de
+  desarrollo y NO han sido validados con grabaciones reales.
 - Etiquetas conservadoras: Speech -> POSIBLE VOZ HUMANA, Conversation ->
   POSIBLE CONVERSACION, Dog -> POSIBLE PERRO, Bark -> POSIBLE PERRO LADRANDO,
   Knock -> POSIBLES GOLPES EN UNA PUERTA, Door slam -> POSIBLE PORTAZO.
