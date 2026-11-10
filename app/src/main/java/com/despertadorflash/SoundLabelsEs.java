@@ -11,7 +11,7 @@ public final class SoundLabelsEs {
   if(raw==null)return null;
   String s=raw.toLowerCase(Locale.ROOT);
   if(has(s,"doorbell","ding-dong"))return "POSIBLE TIMBRE DE PUERTA";
-  if(has(s,"knock"))return "POSIBLES GOLPES EN UNA PUERTA";
+  if(has(s,"knock"))return "POSIBLES GOLPES O IMPACTOS";
   if(has(s,"door slam"))return "POSIBLE PORTAZO";
   if((s.contains("door")&&!s.contains("indoor"))||s.contains("drawer"))return "POSIBLE PUERTA O CAJÓN";
   if(has(s,"tap","thump","bang","thud","pounding","hammer","slam"))return "POSIBLES GOLPES O IMPACTOS";
