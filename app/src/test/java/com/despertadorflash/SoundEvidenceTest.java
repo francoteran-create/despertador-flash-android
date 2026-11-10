@@ -41,6 +41,11 @@ public class SoundEvidenceTest {
   assertTrue(found.containsKey("POSIBLE PERRO LADRANDO"));
   assertTrue(found.containsKey("POSIBLE TIMBRE DE PUERTA"));
  }
+ @Test public void weakSpecificGuessDoesNotHideStrongGenericEvidence(){
+  Map<String,Float> found=SoundEvidence.fromRawScores(raw("Door",.90f,"Doorbell",.20f));
+  assertTrue(found.containsKey("POSIBLE PUERTA O CAJÓN"));
+  assertTrue(found.containsKey("POSIBLE TIMBRE DE PUERTA"));
+ }
  @Test public void invalidAndUnknownScoresAreIgnored(){
   Map<String,Float> found=SoundEvidence.fromRawScores(raw("Speech",Float.NaN,"Dog",1.2f,"Unknown event",.98f,"Bark",.77f));
   assertEquals(1,found.size());
