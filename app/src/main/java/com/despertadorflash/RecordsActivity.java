@@ -20,6 +20,7 @@ import java.util.Locale;
 public final class RecordsActivity extends Activity {
  private static final int CHOOSE_FOLDER=81;
  private static final int BROWSE_FOLDER=82;
+ private final java.util.concurrent.ExecutorService fileWorker=java.util.concurrent.Executors.newSingleThreadExecutor();
  private final ArrayList<File> shown=new ArrayList<>();
  private SenseHistory history;
  private SavedFolderManager destination;
@@ -37,6 +38,11 @@ public final class RecordsActivity extends Activity {
   root.addView(txt("Buscá y abrí las escuchas guardadas. Las copias en una carpeta del teléfono también se podrán ver desde Archivos.",15));
   folderStatus=txt("",14);folderStatus.setTextColor(0xffc0e2ef);root.addView(folderStatus);
   Button select=btn("📁  ELEGIR CARPETA DEL TELÉFONO");root.addView(select);select.setOnClickListener(v->chooseFolder());
+  Button backup=btn("RESPALDAR Y VERIFICAR TODOS LOS REGISTROS");
+  root.addView(backup);backup.setOnClickListener(v->{
+   if(destination.selectedFolder()==null){chooseFolder();return;}
+   backupAndVerify();
+  });
   Button browse=btn("↗  BUSCAR ARCHIVOS EN LA CARPETA ELEGIDA");root.addView(browse);browse.setOnClickListener(v->browseFolder());
   root.addView(AuroraDesign.overline(this,"EXPLORADOR DE SESIONES"));
   count=txt("",15);root.addView(count);
@@ -74,8 +80,13 @@ public final class RecordsActivity extends Activity {
    new AlertDialog.Builder(this).setTitle(SenseHistory.readableName(file)).setView(sc)
     .setNeutralButton("COPIAR A CARPETA",(d,w)->{
      if(destination.selectedFolder()==null){chooseFolder();return;}
-     try{destination.copyOne(file);Toast.makeText(this,"Archivo copiado a tu carpeta",Toast.LENGTH_LONG).show();}
-     catch(IOException e){showError(e.getMessage());}
+     fileWorker.execute(()->{
+      try{
+       destination.copyOne(file);
+       runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())
+        Toast.makeText(this,"Copia guardada y verificada",Toast.LENGTH_LONG).show();});
+      }catch(IOException e){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())showError(e.getMessage());});}
+     });
     }).setNegativeButton("ELIMINAR REGISTRO",(d,w)->new AlertDialog.Builder(this)
      .setTitle("Eliminar este registro")
      .setMessage("¿Borrar este archivo del almacenamiento interno de AURORA? Si lo copiaste a otra carpeta, esa copia no se eliminará.")
@@ -85,6 +96,32 @@ public final class RecordsActivity extends Activity {
       catch(IOException error){showError(error.getMessage());}
      }).show()).setPositiveButton("CERRAR",null).show();
   }catch(IOException e){showError(e.getMessage());}
+ }
+ private void backupAndVerify(){
+  // Copying and reading hashes through Android's document provider can be slow;
+  // never block the accessibility interface or the system UI thread.
+  File[] files=history.list();
+  if(files.length==0){
+   Toast.makeText(this,"Todavía no hay registros terminados para respaldar",Toast.LENGTH_LONG).show();
+   return;
+  }
+  folderStatus.setText("Verificando copia de "+files.length+" registros…");
+  fileWorker.execute(()->{
+   try{
+    int checked=destination.copyAll(files);
+    runOnUiThread(()->{
+     if(isFinishing()||isDestroyed())return;
+     refreshFolder();
+     Toast.makeText(this,checked+" registros respaldados o verificados por SHA-256",Toast.LENGTH_LONG).show();
+    });
+   }catch(IOException error){
+    runOnUiThread(()->{
+     if(isFinishing()||isDestroyed())return;
+     refreshFolder();
+     showError("El respaldo no se completó: "+error.getMessage()+". Los originales permanecen en AURORA.");
+    });
+   }
+  });
  }
  private void chooseFolder(){
   Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -111,8 +148,8 @@ public final class RecordsActivity extends Activity {
   if(code==CHOOSE_FOLDER){
    try{
     destination.select(data.getData(),data.getFlags());
-    int copied=destination.copyAll(history.list());
-    refreshFolder();Toast.makeText(this,copied+" archivos copiados. Las próximas escuchas se copiarán automáticamente.",Toast.LENGTH_LONG).show();
+    refreshFolder();
+    backupAndVerify();
    }catch(Exception e){showError("No se pudo configurar o copiar a la carpeta: "+e.getMessage());}
   }else if(code==BROWSE_FOLDER){
    try{
@@ -122,4 +159,5 @@ public final class RecordsActivity extends Activity {
   }
  }
  @Override protected void onResume(){super.onResume();if(results!=null)refresh();}
+ @Override protected void onDestroy(){fileWorker.shutdown();super.onDestroy();}
 }
