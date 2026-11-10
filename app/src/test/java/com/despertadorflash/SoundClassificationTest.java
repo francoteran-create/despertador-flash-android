@@ -24,6 +24,24 @@ public class SoundClassificationTest {
   assertEquals("POSIBLE VOZ HUMANA",SoundLabelsEs.name("Narration, monologue"));
   assertEquals("POSIBLE MÚSICA",SoundLabelsEs.name("Music"));
  }
+ @Test public void nearbyUnrelatedWordsDoNotBecomeDoorOrVehicle(){
+  assertNull(SoundLabelsEs.name("Outdoor ambience"));
+  assertNull(SoundLabelsEs.name("Indoor ambience"));
+  assertNull(SoundLabelsEs.name("Carillon"));
+  assertEquals("POSIBLE VEHÍCULO",SoundLabelsEs.name("Car passing by"));
+  assertEquals("POSIBLE PUERTA O CAJÓN",SoundLabelsEs.name("Door"));
+ }
+ @Test public void simultaneousAlertsWithinOneCategoryHaveDifferentTags(){
+  String bell=SoundAlertPreferences.notificationTag("doors","POSIBLE TIMBRE DE PUERTA");
+  String knocks=SoundAlertPreferences.notificationTag("doors","POSIBLES GOLPES EN UNA PUERTA");
+  assertNotEquals(bell,knocks);
+  assertEquals(bell,SoundAlertPreferences.notificationTag("doors","POSIBLE TIMBRE DE PUERTA"));
+  assertTrue(SoundAlertPreferences.isNotificationForCategory(bell,"doors"));
+  assertTrue(SoundAlertPreferences.isNotificationForCategory(knocks,"doors"));
+  assertFalse(SoundAlertPreferences.isNotificationForCategory(knocks,"alarms"));
+  assertFalse(SoundAlertPreferences.isNotificationForCategory("aurora_monitor","doors"));
+  assertFalse(SoundAlertPreferences.isNotificationForCategory(null,"doors"));
+ }
  @Test public void unknownClassesDoNotPretendRecognition(){
   assertNull(SoundLabelsEs.name(null));
   assertNull(SoundLabelsEs.name("Unknown audio class"));
