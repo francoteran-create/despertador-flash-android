@@ -19,6 +19,7 @@ public final class SoundEventGate {
  private static final class Candidate{
   long firstAt=-1L,lastSeen=-1L,lastAlertAt=-1L;
   int hits=0;
+  int sensitivity=-1;
  }
 
  public synchronized boolean accept(String label,int confidence,int sensitivity,long elapsedMs){
@@ -29,6 +30,12 @@ public final class SoundEventGate {
   if(candidate==null){
    candidate=new Candidate();
    candidates.put(label,candidate);
+  }
+  if(candidate.sensitivity!=sensitivity){
+   // Do not carry confirmations from a more permissive listening mode.
+   candidate.sensitivity=sensitivity;
+   candidate.hits=0;
+   candidate.firstAt=-1L;
   }
   if(candidate.firstAt<0||elapsedMs<candidate.firstAt||elapsedMs-candidate.firstAt>CONFIRM_WINDOW_MS){
    candidate.firstAt=elapsedMs;
@@ -43,7 +50,11 @@ public final class SoundEventGate {
   // strong single score. Urgent alarms retain a faster path, but this
   // classifier does not replace a certified safety detector.
   int immediate=(label.contains("SIRENA")||label.contains("INCENDIO"))?75:88;
-  if(candidate.hits<2&&confidence<immediate)return false;
+  // PRECISE requires independent confirmation for ordinary sounds even
+  // when one model frame has a high score. Urgent sirens and fire alarms
+  // keep a fast path, but are not certified emergency detectors.
+  boolean urgent=label.contains("SIRENA")||label.contains("INCENDIO");
+  if(candidate.hits<2&&(sensitivity>=2&&!urgent||confidence<immediate))return false;
   if(candidate.lastAlertAt>=0&&elapsedMs>=candidate.lastAlertAt&&
      elapsedMs-candidate.lastAlertAt<COOLDOWN_MS){
    // Observations suppressed inside the cooldown are not evidence for
