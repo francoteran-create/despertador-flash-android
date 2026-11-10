@@ -95,6 +95,16 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Mantener separados escuchar sonidos, transcribir conversacion y "
         "traducir. Guardar registros al detener la sesion segun la "
         "politica vigente y sin almacenar audio salvo autorizacion.")
+    add("VERIFICACION VOLUNTARIA DE EVENTOS", "AuroraSection")
+    add("Un modo de prueba opcional permite marcar detecciones como ACERTO "
+        "o NO COINCIDE y registrar sonidos omitidos manualmente. Las "
+        "marcas se guardan en TXT sin grabar audio. "
+        "scripts/evaluate_sound_feedback.py resume solo casos evaluados; "
+        "NO mide precision ni recall representativos.")
+    add("Las alertas simultaneas de una misma categoria usan etiquetas "
+        "independientes para no reemplazarse entre si. Al desactivar "
+        "una categoria se limpian sus avisos y permanece el indicador "
+        "del microfono activo.")
     add("LIMITACIONES Y RIESGOS", "AuroraSection")
     add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
         "de certeza ni permiten garantizar identificacion perfecta.")
