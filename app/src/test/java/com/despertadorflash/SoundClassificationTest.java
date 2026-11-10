@@ -12,6 +12,18 @@ public class SoundClassificationTest {
   assertEquals("POSIBLE PERRO LADRANDO",SoundLabelsEs.name("Bark"));
   assertEquals("POSIBLE ALARMA DE INCENDIO",SoundLabelsEs.name("Fire alarm"));
  }
+ @Test public void eventNamesDoNotInventCauses(){
+  assertEquals("POSIBLES GOLPES EN UNA PUERTA",SoundLabelsEs.name("Knock"));
+  assertEquals("POSIBLE PORTAZO",SoundLabelsEs.name("Door slam"));
+  assertEquals("POSIBLE PUERTA O CAJÓN",SoundLabelsEs.name("Sliding door"));
+  assertEquals("POSIBLE PERRO",SoundLabelsEs.name("Dog"));
+  assertEquals("POSIBLE PERRO LADRANDO",SoundLabelsEs.name("Bark"));
+  assertEquals("POSIBLE AULLIDO",SoundLabelsEs.name("Howl"));
+  assertEquals("POSIBLE CONVERSACIÓN",SoundLabelsEs.name("Conversation"));
+  assertEquals("POSIBLE VOZ HUMANA",SoundLabelsEs.name("Speech"));
+  assertEquals("POSIBLE VOZ HUMANA",SoundLabelsEs.name("Narration, monologue"));
+  assertEquals("POSIBLE MÚSICA",SoundLabelsEs.name("Music"));
+ }
  @Test public void unknownClassesDoNotPretendRecognition(){
   assertNull(SoundLabelsEs.name(null));
   assertNull(SoundLabelsEs.name("Unknown audio class"));
@@ -27,6 +39,7 @@ public class SoundClassificationTest {
  }
  @Test public void soundCategoriesAreStable(){
   assertEquals("doors",SoundAlertPreferences.category("POSIBLE TIMBRE DE PUERTA"));
+  assertEquals("doors",SoundAlertPreferences.category("POSIBLE PORTAZO"));
   assertEquals("alarms",SoundAlertPreferences.category("POSIBLE SIRENA"));
   assertEquals("people",SoundAlertPreferences.category("POSIBLES GRITOS"));
   assertEquals("pets",SoundAlertPreferences.category("POSIBLE PERRO LADRANDO"));
