@@ -55,11 +55,16 @@ jobs:
             sha256sum "$apk"
             du -h "$apk"
           done
-      # En cada avance compilamos y probamos, sin publicar instalables.
-      # Sólo una ejecución manual produce un artefacto cuando el usuario lo pida.
+      # La entrega manual construye un unico ZIP: APKs, fuentes completas,
+      # modelo YAMNet, informe PDF y MANIFEST de hashes/estado.
+      - name: Preparar ZIP MASTER y PDF de continuidad
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 -m pip install --disable-pip-version-check 'reportlab>=4,<5'
+          python3 scripts/build_master.py
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch'
         with:
-          name: AURORA-MASTER-ARM
-          path: app/build/outputs/apk/debug/*.apk
+          name: AURORA-MASTER-INTEGRAL
+          path: dist/AURORA_MASTER_INTEGRAL_*.zip
           if-no-files-found: error
