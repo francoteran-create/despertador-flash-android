@@ -207,6 +207,30 @@ public final class SenseActivity extends Activity {
   root.addView(result);
   detail=text("El micrófono funciona únicamente mientras la escucha está activa.",14,0xffcad9f0);
   root.addView(detail);
+  if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
+   TextView note=text("MODO PRUEBA: marcá ACERTÓ o NO COINCIDE debajo de cada detección. "
+    +"Si escuchaste algo que AURORA no detectó, usá el botón. No se guarda audio.",13,0xffb0dfee);
+   root.addView(note);
+   Button missed=button("REGISTRAR SONIDO NO DETECTADO");
+   root.addView(missed,new LinearLayout.LayoutParams(-1,dp(62)));
+   missed.setOnClickListener(v->{
+    String[] categories={"Timbre de puerta","Golpes en una puerta","Ladrido de perro",
+     "Música","Voces o conversación","Otro sonido"};
+    new android.app.AlertDialog.Builder(this)
+     .setTitle("¿Qué sonido no detectó AURORA?")
+     .setItems(categories,(d,which)->{
+      if(history==null||!history.hasActive()){
+       Toast.makeText(this,"Iniciá la escucha para registrar una omisión",Toast.LENGTH_SHORT).show();
+       return;
+      }
+      final SenseHistory saved=history;
+      String line="OMISIÓN MANUAL · "+categories[which]+" · informado por la persona que prueba";
+      addTimeline(line);
+      historyWorker.execute(()->saved.event(line));
+     })
+     .setNegativeButton("Cancelar",null).show();
+   });
+  }
   if(screenMode==MODE_SPEECH){
    translateButton=button("🌐  TRADUCIR ÚLTIMA FRASE");
    root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(58)));
