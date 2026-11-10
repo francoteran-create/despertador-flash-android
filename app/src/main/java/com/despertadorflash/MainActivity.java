@@ -443,7 +443,7 @@ public class MainActivity extends Activity {
    check.setText(SoundAlertPreferences.LABELS[cat]);
    check.setTextColor(Color.WHITE);check.setTextSize(16);
    check.setPadding(dp(10),dp(10),dp(10),dp(10));
-   check.setChecked(prefs.getBoolean("monitor_alert_"+key,!"other".equals(key)));
+   check.setChecked(prefs.getBoolean("monitor_alert_"+key,!"other".equals(key)&&!"voices".equals(key)));
    root.addView(check);
    check.setOnCheckedChangeListener((v,on)->{
     prefs.edit().putBoolean("monitor_alert_"+key,on).apply();
