@@ -87,9 +87,11 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     ]:
         add("- " + line)
     add("DECISIONES DEL PROYECTO", "AuroraSection")
-    add("Diseno aprobado por el usuario: AURORA 2.8. No incorporar "
-        "personaje animado que mueva las manos. La restauracion de esa "
-        "estetica en este codigo es una TAREA PENDIENTE, no un hecho.")
+    add("Diseno aprobado: AURORA 2.8. La pantalla principal del codigo "
+        "de la version 2.8 se recupero desde el commit historico "
+        "1c0f41cbd9f44a798890afdfd23103db8d7ab9e9. Se retiro el "
+        "personaje animado de 3.x. Falta verificar fidelidad visual "
+        "y funcionamiento en telefono real.")
     add("Mantener separados escuchar sonidos, transcribir conversacion y "
         "traducir. Guardar registros al detener la sesion segun la "
         "politica vigente y sin almacenar audio salvo autorizacion.")
@@ -172,7 +174,8 @@ def main() -> None:
             "physical_device_tests": "pending",
             "real_world_sound_accuracy": "not_measured",
             "approved_ui_reference": "AURORA 2.8",
-            "approved_ui_restored": False,
+            "approved_ui_home_source_restored": True,
+            "approved_ui_verified_on_device": False,
             "apks_signed_for_production": False,
             "files_sha256": checksums,
         }
