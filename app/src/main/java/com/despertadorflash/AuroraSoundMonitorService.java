@@ -209,8 +209,8 @@ public final class AuroraSoundMonitorService extends Service {
   // No synchronous file writes, SharedPreferences writes, or NotificationManager
   // calls on MediaPipe's classifier callback thread.
   eventWorker.execute(()->{
-   savedHistory.event(found+" · confianza estimada "+percent+"%");
-   getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · "+percent+"%").apply();
+   savedHistory.event(found+" · puntaje de IA "+percent+"/100");
+   getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · puntaje IA "+percent+"/100").apply();
    if(!listening||sessionId!=run)return;
    if(!SoundAlertPreferences.isEnabled(this,found))return;
    if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
@@ -221,7 +221,7 @@ public final class AuroraSoundMonitorService extends Service {
    PendingIntent tap=PendingIntent.getActivity(this,5600,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
    Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,SoundAlertPreferences.channel(group)):new Notification.Builder(this);
    b.setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("AURORA · Sonido detectado")
-    .setContentText(found+" · estimación "+percent+"%").setContentIntent(tap)
+    .setContentText(found+" · puntaje IA "+percent+"/100").setContentIntent(tap)
     .setCategory(Notification.CATEGORY_STATUS).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PUBLIC)
     .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
    try{nm.notify(SoundAlertPreferences.notificationId(group),b.build());}
