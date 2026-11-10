@@ -82,7 +82,8 @@ public final class AuroraSettingsBackup {
   List<String> ordered=new ArrayList<>(prefs.keySet());
   Collections.sort(ordered);
   for(String key:ordered)body.append(key).append('=').append(prefs.get(key)).append('\n');
-  return body.append(CHECKSUM).append(hexDigest(body.toString())).append('\n').toString();
+  String unsigned=body.toString();
+  return unsigned+CHECKSUM+hexDigest(unsigned)+'\n';
  }
 
  public static Map<String,Object> parse(String file){
