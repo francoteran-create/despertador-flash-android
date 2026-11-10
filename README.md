@@ -34,6 +34,19 @@ portazo, perro/ladridos, voz/conversación y música; normalización de
 eventos simultáneos, antirrebote de confirmaciones y avisos opcionales
 de voces. Ver `docs/AURORA_SENSE_PRECISION.md` y los tests JUnit.
 
+## Modo de validacion de sonidos (opcional)
+En Ajustes, activar "Evaluar detecciones con ACERTÓ / NO COINCIDE".
+En la pantalla SONIDOS se puede marcar una etiqueta correcta o incorrecta,
+y registrar manualmente sonidos que no fueron detectados. Las marcas se
+guardan en registros TXT al detener, sin audio. El analizador local
+`scripts/evaluate_sound_feedback.py` resume solo los casos evaluados y
+NO calcula ni afirma tasas de precision a partir de muestras voluntarias.
+El script tiene tests en `scripts/tests/` ejecutados por GitHub Actions.
+
+Las notificaciones de eventos simultaneos se identifican por etiqueta,
+para que un timbre y unos golpes de puerta no se reemplacen dentro de
+la misma categoria. Desactivar avisos retira solo esa categoria.
+
 ## Entrega oficial: un único ZIP MASTER
 
 Al ejecutar manualmente el workflow `.github/workflows/android-apk.yml`,
