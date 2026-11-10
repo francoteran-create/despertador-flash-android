@@ -23,6 +23,29 @@ public class SoundEvidenceTest {
   assertTrue(found.containsKey("POSIBLES GOLPES O IMPACTOS"));
   assertFalse(found.containsKey("POSIBLES GOLPES EN UNA PUERTA"));
  }
+ @Test public void knockWithoutDoorEvidenceStaysGeneric(){
+  Map<String,Float> found=SoundEvidence.fromRawScores(raw("Knock",.87f,"Music",.74f));
+  assertTrue(found.containsKey("POSIBLES GOLPES O IMPACTOS"));
+  assertFalse(found.containsKey("POSIBLES GOLPES EN UNA PUERTA"));
+  assertTrue(found.containsKey("POSIBLE MÚSICA"));
+ }
+ @Test public void knockAndIndependentDoorEvidenceBecomePossibleDoorKnocks(){
+  Map<String,Float> found=SoundEvidence.fromRawScores(raw("Knock",.76f,"Door",.57f,"Music",.67f));
+  assertEquals(.57f,found.get("POSIBLES GOLPES EN UNA PUERTA"),.0001f);
+  assertFalse(found.containsKey("POSIBLES GOLPES O IMPACTOS"));
+  assertFalse(found.containsKey("POSIBLE PUERTA O CAJÓN"));
+  assertTrue(found.containsKey("POSIBLE MÚSICA"));
+ }
+ @Test public void portazoDoesNotTurnKnockIntoKnockAtDoor(){
+  Map<String,Float> found=SoundEvidence.fromRawScores(raw("Knock",.65f,"Door",.61f,"Door slam",.85f));
+  assertTrue(found.containsKey("POSIBLE PORTAZO"));
+  assertFalse(found.containsKey("POSIBLES GOLPES EN UNA PUERTA"));
+ }
+ @Test public void weakDoorEvidenceDoesNotTurnKnockIntoDoorKnock(){
+  Map<String,Float> found=SoundEvidence.fromRawScores(raw("Knock",.86f,"Door",.19f));
+  assertFalse(found.containsKey("POSIBLES GOLPES EN UNA PUERTA"));
+  assertTrue(found.containsKey("POSIBLES GOLPES O IMPACTOS"));
+ }
  @Test public void speechAndMusicRemainSeparateWhenBothArePresent(){
   Map<String,Float> found=SoundEvidence.fromRawScores(raw("Speech",.80f,"Music",.70f));
   assertTrue(found.containsKey("POSIBLE VOZ HUMANA"));
