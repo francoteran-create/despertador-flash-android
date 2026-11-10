@@ -36,7 +36,8 @@ public class SoundEventGateTest {
   assertTrue(gate.accept("TIMBRE",54,1,1500));
   assertTrue(gate.accept("SIRENA",51,1,1700));
   assertFalse(gate.accept("TIMBRE",85,1,2100));
-  assertTrue(gate.accept("TIMBRE",80,1,18000));
+  assertFalse(gate.accept("TIMBRE",80,1,18000));
+  assertTrue(gate.accept("TIMBRE",82,1,18600));
  }
  @Test public void expiredCandidateNeedsTwoFreshObservations(){
   SoundEventGate gate=new SoundEventGate();
