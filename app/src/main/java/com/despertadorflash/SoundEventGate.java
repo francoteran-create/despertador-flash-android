@@ -12,6 +12,7 @@ import java.util.Map;
 public final class SoundEventGate {
  private static final long CONFIRM_WINDOW_MS=4500L;
  private static final long COOLDOWN_MS=15000L;
+ private static final long MIN_EVIDENCE_GAP_MS=300L;
  private static final int MAX_TRACKED=128;
  private final Map<String,Candidate> candidates=new HashMap<>();
 
@@ -31,10 +32,18 @@ public final class SoundEventGate {
   }
   if(candidate.firstAt<0||elapsedMs<candidate.firstAt||elapsedMs-candidate.firstAt>CONFIRM_WINDOW_MS){
    candidate.firstAt=elapsedMs;
+   candidate.lastSeen=elapsedMs;
    candidate.hits=1;
-  }else candidate.hits++;
-  candidate.lastSeen=elapsedMs;
-  if(candidate.hits<2&&confidence<75)return false;
+  }else if(elapsedMs-candidate.lastSeen>=MIN_EVIDENCE_GAP_MS){
+   // Rapid repeats of one frame are not independent confirmations.
+   candidate.lastSeen=elapsedMs;
+   candidate.hits++;
+  }
+  // Ordinary sounds need either independent evidence or a particularly
+  // strong single score. Urgent alarms retain a faster path, but this
+  // classifier does not replace a certified safety detector.
+  int immediate=(label.contains("SIRENA")||label.contains("INCENDIO"))?75:88;
+  if(candidate.hits<2&&confidence<immediate)return false;
   if(candidate.lastAlertAt>=0&&elapsedMs>=candidate.lastAlertAt&&
      elapsedMs-candidate.lastAlertAt<COOLDOWN_MS){
    // Observations suppressed inside the cooldown are not evidence for
