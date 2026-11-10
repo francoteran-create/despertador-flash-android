@@ -47,6 +47,19 @@ Las notificaciones de eventos simultaneos se identifican por etiqueta,
 para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
+## Instalación de la beta y seguridad de los datos
+La APK de GitHub Actions esta firmada con clave debug efimera del entorno
+de compilacion. Puede NO actualizar una AURORA 2.8 ya instalada por tener
+firmas diferentes. **No desinstalar una version que funciona ni borrar sus
+datos hasta haber exportado los registros y respaldado la configuracion.**
+Para comparar la interfaz, se recomienda usar un segundo dispositivo de
+prueba o verificar un procedimiento de migracion de datos antes de sustituir
+la instalacion existente. Nunca prometer instalacion sin desinstalar si
+las firmas no coinciden.
+
+La beta 4.1 es una version de PRUEBA, no una release para Play Store;
+se requieren pruebas con sonido real y validacion en un Galaxy S9+.
+
 ## Entrega oficial: un único ZIP MASTER
 
 Al ejecutar manualmente el workflow `.github/workflows/android-apk.yml`,
