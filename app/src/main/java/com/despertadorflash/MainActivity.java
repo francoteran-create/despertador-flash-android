@@ -489,7 +489,20 @@ public class MainActivity extends Activity {
     prefs.edit().putBoolean("monitor_alert_"+key,on).apply();
     if(!on){
      NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-     if(manager!=null)manager.cancel(SoundAlertPreferences.notificationId(key));
+     if(manager!=null){
+      // Remove every active notice from this category only, including
+      // distinct simultaneous events. Never cancel the microphone service.
+      try{
+       for(android.service.notification.StatusBarNotification note:manager.getActiveNotifications()){
+        if(SoundAlertPreferences.isNotificationForCategory(note.getTag(),key))
+         manager.cancel(note.getTag(),note.getId());
+       }
+       // Clear any legacy untagged notice issued by older AURORA builds.
+       manager.cancel(SoundAlertPreferences.notificationId(key));
+      }catch(RuntimeException issue){
+       android.util.Log.w("AURORA","No se pudieron limpiar avisos de "+key,issue);
+      }
+     }
     }
    });
   }
