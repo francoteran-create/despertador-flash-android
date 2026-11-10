@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+"""Build one self-contained AURORA MASTER ZIP from a *successful* CI revision.
+
+Requires: built APKs for both ARM ABIs, Gradle test step passed before invoking,
+the downloaded YAMNet model, and reportlab.
+"""
+from __future__ import annotations
+
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+from datetime import datetime, timezone
+from xml.sax.saxutils import escape
+from zipfile import ZipFile, ZIP_DEFLATED
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+
+ROOT = Path(__file__).resolve().parents[1]
+DIST = ROOT / "dist"
+REPO = "francoteran-create/despertador-flash-android"
+
+
+def git(*args: str) -> str:
+    return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name="AuroraTitle", parent=styles["Heading1"],
+        fontName="Helvetica-Bold", fontSize=20, leading=24,
+        textColor=colors.HexColor("#1b435a"), spaceAfter=13,
+    ))
+    styles.add(ParagraphStyle(
+        name="AuroraSection", parent=styles["Heading2"],
+        fontName="Helvetica-Bold", fontSize=12, leading=16,
+        textColor=colors.HexColor("#1b435a"), spaceBefore=13, spaceAfter=7,
+    ))
+    styles.add(ParagraphStyle(
+        name="AuroraBody", parent=styles["Normal"], alignment=TA_LEFT,
+        fontName="Helvetica", fontSize=9.5, leading=14, spaceAfter=6,
+    ))
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=(210 * mm, 297 * mm),
+                            rightMargin=18 * mm, leftMargin=18 * mm,
+                            topMargin=17 * mm, bottomMargin=17 * mm)
+    story = []
+    def add(txt: str, style: str = "AuroraBody") -> None:
+        story.append(Paragraph(escape(txt), styles[style]))
+    add("AURORA - MASTER DE CONTINUIDAD", "AuroraTitle")
+    add("Informe automatico vinculado a la misma revision que las APKs.", "AuroraBody")
+    add("Repositorio: " + REPO)
+    add("Commit: " + commit)
+    add("Version del proyecto: " + version)
+    add("Fecha UTC: " + datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M"))
+    add("ESTADO DE VERIFICACION", "AuroraSection")
+    add("Compilacion y pruebas unitarias: el empaquetado solo se ejecuta despues "
+        "de los pasos de CI de Gradle exitosos en esta ejecucion.")
+    add("Pruebas en Galaxy S9+ y audios reales: PENDIENTES. "
+        "No hay mediciones reales de precision ni de falsos avisos.")
+    add("Firma: APK de desarrollo (debug). No equivale a un lanzamiento "
+        "firmado para Play Store. Conservar la clave de firma de lanzamiento.")
+    add("APK INCLUIDAS", "AuroraSection")
+    for p in apks:
+        add(p.name + " - " + str(round(p.stat().st_size / 1048576, 1)) + " MiB")
+    add("FUNCIONES Y CAMBIOS INCLUIDOS", "AuroraSection")
+    for line in [
+        "YAMNet local, deteccion multiclase y confirmacion independiente por sonido.",
+        "Diferenciacion entre golpe de puerta, portazo, timbre, perro, ladrido, "
+        "voz humana, conversacion y musica; etiquetas conservadoras.",
+        "Evidencia especifica frente a generica, con supresion de avisos redundantes.",
+        "Menor reuso de observaciones muy proximas; voces opcionales en avisos.",
+        "Alarmas, temporizadores, registros, transcripcion y traduccion: "
+        "funciones del codigo heredado, no todas verificadas en telefonos.",
+    ]:
+        add("- " + line)
+    add("DECISIONES DEL PROYECTO", "AuroraSection")
+    add("Diseno aprobado por el usuario: AURORA 2.8. No incorporar "
+        "personaje animado que mueva las manos. La restauracion de esa "
+        "estetica en este codigo es una TAREA PENDIENTE, no un hecho.")
+    add("Mantener separados escuchar sonidos, transcribir conversacion y "
+        "traducir. Guardar registros al detener la sesion segun la "
+        "politica vigente y sin almacenar audio salvo autorizacion.")
+    add("LIMITACIONES Y RIESGOS", "AuroraSection")
+    add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
+        "de certeza ni permiten garantizar identificacion perfecta.")
+    add("AURORA no sustituye alarmas certificadas de humo, fuego o "
+        "monoxido de carbono. Antes de comercializar: evaluar "
+        "falsos positivos y omisiones con audios reales, pantalla "
+        "bloqueada, interrupciones y consumo de bateria.")
+    add("PARA CONTINUAR EN OTRO CHAT", "AuroraSection")
+    add("Adjuntar este ZIP completo. Usar codigo fuente de FUENTES y el "
+        "commit indicado como punto de partida. Revisar docs/"
+        "AURORA_SENSE_PRECISION.md y docs/AURORA_V1_CIERRE.md; "
+        "no asumir pruebas fisicas ni lanzamiento.")
+    add("No integrar caracteristicas pendientes como si estuvieran terminadas. "
+        "Actualizar este PDF y el manifest en cada nueva entrega.")
+    doc.build(story)
+    return buf.getvalue()
+
+
+def main() -> None:
+    commit = git("rev-parse", "HEAD")
+    version_text = (ROOT / "app/build.gradle").read_text(encoding="utf-8")
+    m = re.search(r"versionName\s+['\"]([^'\"]+)['\"]", version_text)
+    if not m:
+        raise RuntimeError("No se encontro versionName")
+    version = m.group(1)
+    model = ROOT / "app/src/main/assets/yamnet.tflite"
+    if not model.is_file() or model.stat().st_size < 1_000_000:
+        raise RuntimeError("Falta el modelo YAMNet requerido para compilar offline")
+
+    apks = sorted((ROOT / "app/build/outputs/apk/debug").glob("*.apk"))
+    if len(apks) != 2:
+        raise RuntimeError("Se esperan EXACTAMENTE 2 APKs (ARM32 y ARM64)")
+
+    DIST.mkdir(exist_ok=True)
+    target = DIST / ("AURORA_MASTER_INTEGRAL_" + version.replace(".", "_") +
+                     "_" + commit[:8] + ".zip")
+    checksums = {}
+    def add_bytes(archive: ZipFile, name: str, data: bytes) -> None:
+        archive.writestr(name, data)
+        checksums[name] = sha256(data)
+
+    tracks = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT)
+    rel_paths = [Path(s.decode("utf-8")) for s in tracks.split(b"\0") if s]
+    readme = (
+        "AURORA - MASTER INTEGRAL\n"
+        "Origen: https://github.com/" + REPO + "\n"
+        "Commit exacto: " + commit + "\n"
+        "Version: " + version + "\n\n"
+        "APK/: dos instalables ARM de DESARROLLO.\n"
+        "FUENTES/: proyecto completo para editar y compilar, con modelo YAMNet.\n"
+        "DOCUMENTACION/: PDF de continuidad.\n"
+        "MANIFEST.json: hashes de cada archivo y estado de verificacion.\n\n"
+        "NO VERSION COMERCIAL. No se han validado pruebas en telefono "
+        "ni metricas de precision con audios reales.\n"
+        "La estetica AURORA 2.8 esta pendiente de restaurar.\n"
+    )
+    with ZipFile(target, "w", compression=ZIP_DEFLATED, compresslevel=6) as out:
+        for rel in rel_paths:
+            file_path = ROOT / rel
+            if file_path.is_file():
+                add_bytes(out, "FUENTES/" + rel.as_posix(), file_path.read_bytes())
+        # The model is downloaded by CI and normally remains untracked.
+        add_bytes(out, "FUENTES/app/src/main/assets/yamnet.tflite", model.read_bytes())
+        for apk in apks:
+            add_bytes(out, "APK/" + apk.name, apk.read_bytes())
+        add_bytes(out, "DOCUMENTACION/AURORA_MASTER_CONTINUIDAD.pdf",
+                  pdf_report(commit, version, apks))
+        add_bytes(out, "LEEME_PRIMERO.txt", readme.encode("utf-8"))
+        manifest = {
+            "project": "AURORA",
+            "repository": REPO,
+            "git_commit": commit,
+            "version": version,
+            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "ci_gradle_unit_tests": "passed_before_package_step",
+            "ci_android_debug_apks": "built_before_package_step",
+            "physical_device_tests": "pending",
+            "real_world_sound_accuracy": "not_measured",
+            "approved_ui_reference": "AURORA 2.8",
+            "approved_ui_restored": False,
+            "apks_signed_for_production": False,
+            "files_sha256": checksums,
+        }
+        out.writestr("MANIFEST.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+    with ZipFile(target) as check:
+        if check.testzip() is not None:
+            raise RuntimeError("ZIP master corrupto")
+    print("MASTER creado:", target, "bytes:", target.stat().st_size)
+
+
+if __name__ == "__main__":
+    main()
