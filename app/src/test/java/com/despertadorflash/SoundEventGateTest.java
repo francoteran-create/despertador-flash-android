@@ -59,6 +59,19 @@ public class SoundEventGateTest {
   assertFalse(gate.accept("A",50,1,16050));
   assertTrue(gate.accept("A",50,1,16500));
  }
+ @Test public void repeatedClassifierFrameIsNotIndependentConfirmation(){
+  SoundEventGate gate=new SoundEventGate();
+  assertFalse(gate.accept("POSIBLE TIMBRE DE PUERTA",58,1,1000));
+  assertFalse(gate.accept("POSIBLE TIMBRE DE PUERTA",60,1,1050));
+  assertFalse(gate.accept("POSIBLE TIMBRE DE PUERTA",72,1,1220));
+  assertTrue(gate.accept("POSIBLE TIMBRE DE PUERTA",61,1,1400));
+ }
+ @Test public void ordinarySoundsNeedStrongerEvidenceThanOneAmbiguousFrame(){
+  SoundEventGate gate=new SoundEventGate();
+  assertFalse(gate.accept("POSIBLE PERRO LADRANDO",80,1,1000));
+  assertTrue(gate.accept("POSIBLE PERRO LADRANDO",65,1,1700));
+  assertTrue(new SoundEventGate().accept("POSIBLE TIMBRE DE PUERTA",91,1,500));
+ }
  @Test public void clockRollbackAndResetDontLockOutAlerts(){
   SoundEventGate gate=new SoundEventGate();
   assertTrue(gate.accept("A",95,1,100_000));
