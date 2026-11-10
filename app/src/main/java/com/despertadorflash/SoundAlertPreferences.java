@@ -9,6 +9,15 @@ public final class SoundAlertPreferences {
  public static final String[] LABELS={"Timbre y puertas","Sirenas y alarmas","Llanto y gritos","Mascotas","Impactos y roturas","Teléfonos","Tránsito","Voces y conversaciones (opcional)","Otros sonidos"};
  public static final String[] KEYS={"doors","alarms","people","pets","impacts","phones","traffic","voices","other"};
  public static String channel(String group){return "aurora_sound_"+group;}
+ /** Android notification tags keep simultaneous sounds distinct even in the
+  * same user-configured category. A repeated label updates only its own event. */
+ public static String notificationTag(String group,String label){
+  if(group==null||label==null)throw new IllegalArgumentException("Sound group and label required");
+  return "aurora_sound_event:"+group+":"+label;
+ }
+ public static boolean isNotificationForCategory(String tag,String group){
+  return tag!=null&&group!=null&&tag.startsWith("aurora_sound_event:"+group+":");
+ }
  public static int notificationId(String group){
   for(int i=0;i<KEYS.length;i++)if(KEYS[i].equals(group))return 5700+i;
   return 5700+KEYS.length;
