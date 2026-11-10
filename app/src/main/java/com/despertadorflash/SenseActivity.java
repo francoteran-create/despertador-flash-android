@@ -243,6 +243,41 @@ public final class SenseActivity extends Activity {
   eventsView.addView(item,params);eventCount++;
   eventsScroll.post(()->eventsScroll.fullScroll(View.FOCUS_DOWN));
  }
+ /**
+  * Optional tester feedback for one detected event. Simultaneous sounds
+  * get independent controls. No audio is recorded or retained.
+  */
+ private void recordSoundEvent(String label,int score){
+  recordEvent(label+" · puntaje IA "+score+"/100");
+  if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||eventsView==null)return;
+  LinearLayout feedback=new LinearLayout(this);
+  feedback.setOrientation(LinearLayout.HORIZONTAL);
+  Button yes=button("ACERTÓ");
+  Button no=button("NO COINCIDE");
+  yes.setTextSize(12);no.setTextSize(12);
+  LinearLayout.LayoutParams a=new LinearLayout.LayoutParams(0,dp(54),1f);
+  LinearLayout.LayoutParams b=new LinearLayout.LayoutParams(0,dp(54),1f);
+  b.leftMargin=dp(7);
+  feedback.addView(yes,a);feedback.addView(no,b);
+  eventsView.addView(feedback);
+  yes.setContentDescription("Confirmar detección correcta: "+label);
+  no.setContentDescription("Marcar detección incorrecta: "+label);
+  yes.setOnClickListener(v->saveSoundFeedback(label,score,true,yes,no));
+  no.setOnClickListener(v->saveSoundFeedback(label,score,false,yes,no));
+ }
+ private void saveSoundFeedback(String label,int score,boolean correct,Button yes,Button no){
+  final SenseHistory saved=history;
+  if(saved==null||!saved.hasActive()){
+   Toast.makeText(this,"La sesión terminó: ya no se puede evaluar este sonido",Toast.LENGTH_SHORT).show();
+   return;
+  }
+  yes.setEnabled(false);no.setEnabled(false);
+  String verdict=correct?"ACERTÓ":"NO COINCIDE";
+  // This is user feedback, not an independently measured accuracy metric.
+  String entry="VALIDACIÓN MANUAL · "+verdict+" · "+label+" · puntaje IA "+score+"/100";
+  historyWorker.execute(()->saved.event(entry));
+  Toast.makeText(this,"Respuesta guardada en el registro",Toast.LENGTH_SHORT).show();
+ }
  private void beginHistory(String type){
   eventCount=0;eventsView.removeAllViews();lastSoundLabel="";lastSoundTime=0;
   candidateSound="";candidateHits=0;candidateSince=0;
@@ -488,7 +523,7 @@ public final class SenseActivity extends Activity {
         if(!foregroundSoundGate.accept(found,percent,sensitivity,SystemClock.elapsedRealtime()))continue;
         announced.add(found);
         maximumScore=Math.max(maximumScore,percent);
-        recordEvent(found+" · puntaje de IA "+percent+"/100");
+        recordSoundEvent(found,percent);
        }
        if(!announced.isEmpty()){
         state.setText("ESCUCHANDO EL ENTORNO");
