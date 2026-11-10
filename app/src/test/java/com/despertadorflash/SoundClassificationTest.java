@@ -44,5 +44,7 @@ public class SoundClassificationTest {
   assertEquals("people",SoundAlertPreferences.category("POSIBLES GRITOS"));
   assertEquals("pets",SoundAlertPreferences.category("POSIBLE PERRO LADRANDO"));
   assertEquals("other",SoundAlertPreferences.category("POSIBLE MÚSICA"));
+  assertEquals("voices",SoundAlertPreferences.category("POSIBLE VOZ HUMANA"));
+  assertEquals("voices",SoundAlertPreferences.category("POSIBLE CONVERSACIÓN"));
  }
 }
