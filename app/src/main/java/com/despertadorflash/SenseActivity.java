@@ -480,15 +480,23 @@ public final class SenseActivity extends Activity {
       main.post(()->{
        if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)return;
        int sensitivity=minConfidence<=22?0:minConfidence>=45?2:1;
+       java.util.List<String> announced=new java.util.ArrayList<>();
+       int maximumScore=0;
        for(java.util.Map.Entry<String,Float> entry:strongest.entrySet()){
         String found=entry.getKey();
         int percent=Math.round(entry.getValue()*100f);
         if(!foregroundSoundGate.accept(found,percent,sensitivity,SystemClock.elapsedRealtime()))continue;
+        announced.add(found);
+        maximumScore=Math.max(maximumScore,percent);
+        recordEvent(found+" · puntaje de IA "+percent+"/100");
+       }
+       if(!announced.isEmpty()){
         state.setText("ESCUCHANDO EL ENTORNO");
-        result.setText(found);
-        if(visual!=null){visual.setEnergy(percent/100f);visual.setDetected(true);}
-        detail.setText("Reconocimiento aproximado · confianza "+percent+"% · sensibilidad ajustable");
-        recordEvent(found+" · confianza estimada "+percent+"%");
+        // Show all simultaneously confirmed sounds rather than only the last.
+        result.setText(android.text.TextUtils.join("\n",announced));
+        if(visual!=null){visual.setEnergy(maximumScore/100f);visual.setDetected(true);}
+        detail.setText("Reconocimiento aproximado · puntaje maximo IA "+
+         maximumScore+"/100 · sensibilidad ajustable");
        }
       });
      })
