@@ -14,6 +14,7 @@ import android.widget.*;
 import java.util.*;
 public class MainActivity extends Activity {
  static final String PREF="aurora";
+ private static final int EXPORT_SETTINGS=9201,IMPORT_SETTINGS=9202;
  LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch; boolean alarmsPage=false; boolean timerPage=false; boolean communicationPage=false; boolean settingsPage=false;
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
@@ -118,6 +119,87 @@ public class MainActivity extends Activity {
  }
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if((requestCode==73||requestCode==74)&&grantResults.length>0){Toast.makeText(this,grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED?"Permiso concedido. Volvé a tocar Iniciar escucha continua.":"La escucha continua necesita ese permiso.",Toast.LENGTH_LONG).show();}if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
+ private void exportSettings(){
+  Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+  intent.addCategory(Intent.CATEGORY_OPENABLE);
+  intent.setType("text/plain");
+  String day=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.ROOT).format(new Date());
+  intent.putExtra(Intent.EXTRA_TITLE,"AURORA_CONFIGURACION_"+day+".txt");
+  try{startActivityForResult(intent,EXPORT_SETTINGS);}
+  catch(Exception problem){new AlertDialog.Builder(this).setTitle("Respaldo no disponible")
+   .setMessage("Android no permitió elegir un archivo: "+problem.getMessage())
+   .setPositiveButton("ENTENDIDO",null).show();}
+ }
+ private void importSettings(){
+  Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+  intent.addCategory(Intent.CATEGORY_OPENABLE);
+  intent.setType("text/plain");
+  intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+  try{startActivityForResult(intent,IMPORT_SETTINGS);}
+  catch(Exception problem){new AlertDialog.Builder(this).setTitle("Restauración no disponible")
+   .setMessage("Android no permitió abrir un archivo: "+problem.getMessage())
+   .setPositiveButton("ENTENDIDO",null).show();}
+ }
+ @Override protected void onActivityResult(int request,int response,Intent result){
+  super.onActivityResult(request,response,result);
+  if(response!=RESULT_OK||result==null||result.getData()==null)return;
+  if(request==EXPORT_SETTINGS){
+   try{
+    String backup=AuroraSettingsBackup.serialize(prefs.getAll());
+    try(java.io.OutputStream output=getContentResolver().openOutputStream(result.getData(),"wt")){
+     if(output==null)throw new java.io.IOException("No se pudo abrir el destino");
+     output.write(backup.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+     output.flush();
+    }
+    Toast.makeText(this,"Copia de alarmas y ajustes guardada",Toast.LENGTH_LONG).show();
+   }catch(Exception error){new AlertDialog.Builder(this).setTitle("No se guardó el respaldo")
+    .setMessage(error.getMessage()).setPositiveButton("ENTENDIDO",null).show();}
+  }else if(request==IMPORT_SETTINGS){
+   try{
+    java.io.ByteArrayOutputStream data=new java.io.ByteArrayOutputStream();
+    try(java.io.InputStream input=getContentResolver().openInputStream(result.getData())){
+     if(input==null)throw new java.io.IOException("No se pudo leer el archivo");
+     byte[] block=new byte[2048];int n;
+     while((n=input.read(block))!=-1){
+      if(data.size()+n>AuroraSettingsBackup.MAX_IMPORT_BYTES)
+       throw new java.io.IOException("La copia supera el límite de seguridad");
+      data.write(block,0,n);
+     }
+    }
+    final Map<String,Object> recovered=AuroraSettingsBackup.parse(
+     data.toString("UTF-8"));
+    int alarmCount=AuroraSettingsBackup.configuredAlarmCount(recovered);
+    new AlertDialog.Builder(this)
+     .setTitle("Confirmar restauración de AURORA")
+     .setMessage("Se encontraron "+alarmCount+" alarmas configuradas. "
+      +"Esta operación reemplazará las 5 posiciones de alarmas y las preferencias de notificación, flash y sensibilidad de esta instalación. "
+      +"Los registros y el perfil NO serán modificados. ¿Querés continuar?")
+     .setNegativeButton("CANCELAR",null)
+     .setPositiveButton("RESTAURAR",(dialog,choice)->applyRestoredSettings(recovered))
+     .show();
+   }catch(Exception error){new AlertDialog.Builder(this).setTitle("No se pudo restaurar")
+    .setMessage("El archivo no es una copia válida de AURORA o está incompleto: "+error.getMessage())
+    .setPositiveButton("ENTENDIDO",null).show();}
+  }
+ }
+ private void applyRestoredSettings(Map<String,Object> backup){
+  SharedPreferences.Editor edit=prefs.edit();
+  for(Map.Entry<String,Object> preference:backup.entrySet()){
+   Object value=preference.getValue();
+   if(value instanceof Boolean)edit.putBoolean(preference.getKey(),(Boolean)value);
+   else if(value instanceof Integer)edit.putInt(preference.getKey(),(Integer)value);
+  }
+  if(!edit.commit()){
+   new AlertDialog.Builder(this).setTitle("Restauración cancelada")
+    .setMessage("Android no pudo guardar los ajustes. No se reprogramaron alarmas.")
+    .setPositiveButton("ENTENDIDO",null).show();
+   return;
+  }
+  for(int id=0;id<5;id++){cancelSnooze(this,id);schedule(this,id);}
+  Toast.makeText(this,"Ajustes restaurados. Revisá permisos y alarmas.",Toast.LENGTH_LONG).show();
+  settingsPage=true;render();
+ }
+
  LinearLayout auroraCard(int first,int second){
   LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(12),dp(16),dp(12));
   AuroraDesign.panel(card,first,second);
@@ -518,6 +600,17 @@ public class MainActivity extends Activity {
    prefs.edit().putBoolean("sense_feedback_mode",enabled).apply());
   root.addView(txt("Modo de prueba voluntario: permite marcar aciertos o errores por sonido en la pantalla SONIDOS. "
    +"Se guardan solo las etiquetas y tus respuestas, nunca el audio. Desactivado de forma predeterminada.",13));
+  root.addView(section("COPIA DE SEGURIDAD DE CONFIGURACIÓN"));
+  root.addView(txt("Guardá tus alarmas, horarios y preferencias en un TXT que podrás restaurar en AURORA. "
+   +"No incluye fotos de perfil, conversaciones ni registros de sonidos. Estos últimos se respaldan desde REGISTROS.",14));
+  Button backup=btn("GUARDAR ALARMAS Y AJUSTES EN UN ARCHIVO");
+  root.addView(backup);
+  backup.setOnClickListener(v->exportSettings());
+  Button restore=btn("RESTAURAR ALARMAS Y AJUSTES");
+  root.addView(restore);
+  restore.setOnClickListener(v->importSettings());
+  root.addView(txt("Importar reemplaza las alarmas y ajustes actuales. No recupera datos eliminados de versiones antiguas; "
+   +"guardá antes los registros desde su propia carpeta.",13));
   root.addView(section("SENSIBILIDAD DE ALERTAS"));
   final String[] levels={"ALTA","EQUILIBRADA","PRECISA"};
   android.widget.RadioGroup rg=new android.widget.RadioGroup(this);rg.setOrientation(0);
