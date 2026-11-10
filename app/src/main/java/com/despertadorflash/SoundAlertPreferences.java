@@ -32,7 +32,7 @@ public final class SoundAlertPreferences {
   return p.getBoolean("monitor_alert_"+k,!"other".equals(k));
  }
  public static String category(String s){
-  if(s.contains("TIMBRE")||s.contains("PUERTA")||s.contains("CAJÓN")||s.contains("CAMPANA"))return "doors";
+  if(s.contains("TIMBRE")||s.contains("PUERTA")||s.contains("CAJÓN")||s.contains("CAMPANA")||s.contains("PORTAZO"))return "doors";
   if(s.contains("SIRENA")||s.contains("ALARMA")||s.contains("PITIDO")||s.contains("INCENDIO"))return "alarms";
   if(s.contains("LLANTO")||s.contains("GRITO"))return "people";
   if(s.contains("PERRO")||s.contains("GATO")||s.contains("AVES"))return "pets";
