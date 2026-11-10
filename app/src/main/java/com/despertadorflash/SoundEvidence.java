@@ -27,14 +27,26 @@ public final class SoundEvidence {
   }
   // More specific evidence supersedes a broad hypothesis about the same
   // kind of event within this frame, without hiding concurrent other sounds.
-  if(result.containsKey("POSIBLE TIMBRE DE PUERTA")
-    ||result.containsKey("POSIBLES GOLPES EN UNA PUERTA")
-    ||result.containsKey("POSIBLE PORTAZO")){
+  if(dominates(result,"POSIBLE PUERTA O CAJÓN",
+    "POSIBLE TIMBRE DE PUERTA","POSIBLES GOLPES EN UNA PUERTA","POSIBLE PORTAZO"))
    result.remove("POSIBLE PUERTA O CAJÓN");
-  }
-  if(result.containsKey("POSIBLE PERRO LADRANDO"))result.remove("POSIBLE PERRO");
-  if(result.containsKey("POSIBLE CONVERSACIÓN"))result.remove("POSIBLE VOZ HUMANA");
-  if(result.containsKey("POSIBLE ALARMA DE INCENDIO"))result.remove("POSIBLE ALARMA O PITIDO");
+  if(dominates(result,"POSIBLE PERRO","POSIBLE PERRO LADRANDO"))
+   result.remove("POSIBLE PERRO");
+  if(dominates(result,"POSIBLE VOZ HUMANA","POSIBLE CONVERSACIÓN"))
+   result.remove("POSIBLE VOZ HUMANA");
+  if(dominates(result,"POSIBLE ALARMA O PITIDO","POSIBLE ALARMA DE INCENDIO"))
+   result.remove("POSIBLE ALARMA O PITIDO");
   return result;
+ }
+
+ private static boolean dominates(Map<String,Float> result,String generic,String... specific){
+  Float general=result.get(generic);
+  if(general==null)return false;
+  for(String label:specific){
+   Float precise=result.get(label);
+   // A very weak specific guess must never mask strong generic evidence.
+   if(precise!=null&&precise>=general*.8f)return true;
+  }
+  return false;
  }
 }
