@@ -13,7 +13,7 @@ public final class SoundLabelsEs {
   if(has(s,"doorbell","ding-dong"))return "POSIBLE TIMBRE DE PUERTA";
   if(has(s,"knock"))return "POSIBLES GOLPES O IMPACTOS";
   if(has(s,"door slam"))return "POSIBLE PORTAZO";
-  if((s.contains("door")&&!s.contains("indoor"))||s.contains("drawer"))return "POSIBLE PUERTA O CAJÓN";
+  if((s.contains("door")&&!has(s,"indoor","outdoor"))||s.contains("drawer"))return "POSIBLE PUERTA O CAJÓN";
   if(has(s,"tap","thump","bang","thud","pounding","hammer","slam"))return "POSIBLES GOLPES O IMPACTOS";
   if(has(s,"conversation"))return "POSIBLE CONVERSACIÓN";
   if(has(s,"speech","narration","whisper","babbling"))return "POSIBLE VOZ HUMANA";
@@ -41,7 +41,7 @@ public final class SoundLabelsEs {
   if(has(s,"aircraft","airplane","helicopter"))return "POSIBLE AERONAVE";
   if(has(s,"train","rail"))return "POSIBLE TREN";
   if(has(s,"horn","honk"))return "POSIBLE BOCINA";
-  if(has(s,"traffic","engine","vehicle","car","truck","bus","idling"))return "POSIBLE VEHÍCULO";
+  if(has(s,"traffic","engine","vehicle","truck","bus","idling")||word(s,"car"))return "POSIBLE VEHÍCULO";
   if(has(s,"music","singing","guitar","piano","violin","drum","instrument"))return "POSIBLE MÚSICA";
   if(has(s,"applause","clap"))return "POSIBLES APLAUSOS";
   if(has(s,"vacuum","blender","drill","machine","motor","printer","mechanism"))return "POSIBLE MÁQUINA";
@@ -54,4 +54,15 @@ public final class SoundLabelsEs {
   return null;
  }
  private static boolean has(String x,String... words){for(String w:words)if(x.contains(w))return true;return false;}
+ /** Respect whole-word boundaries for short English classifier labels. */
+ private static boolean word(String text,String token){
+  int index=-1;
+  while((index=text.indexOf(token,index+1))>=0){
+   int end=index+token.length();
+   boolean before=index==0||!Character.isLetter(text.charAt(index-1));
+   boolean after=end==text.length()||!Character.isLetter(text.charAt(end));
+   if(before&&after)return true;
+  }
+  return false;
+ }
 }
