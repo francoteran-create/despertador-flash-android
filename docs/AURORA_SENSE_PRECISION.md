@@ -12,12 +12,13 @@ La transcripcion textual tiene un modulo separado.
 ## Cambios incorporados al codigo
 - Knock (golpe aislado) solo implica POSIBLES GOLPES O IMPACTOS.
   Para mostrar POSIBLES GOLPES EN UNA PUERTA se exige evidencia
-  independiente de Knock y Door con umbrales minimos, sin un portazo
-  dominante en el mismo resultado. Estos umbrales son heuristicas de
+  conjunta de las categorias Knock y Door del MISMO modelo YAMNet,
+  con umbrales minimos y sin portazo dominante. No son dos fuentes
+  estadisticamente independientes. Estos umbrales son heuristicas de
   desarrollo y NO han sido validados con grabaciones reales.
 - Etiquetas conservadoras: Speech -> POSIBLE VOZ HUMANA, Conversation ->
   POSIBLE CONVERSACION, Dog -> POSIBLE PERRO, Bark -> POSIBLE PERRO LADRANDO,
-  Knock -> POSIBLES GOLPES EN UNA PUERTA, Door slam -> POSIBLE PORTAZO.
+  Knock -> POSIBLES GOLPES O IMPACTOS, Door slam -> POSIBLE PORTAZO.
 - Un clasificador puede devolver multiples clases simultaneamente: se
   consolidan por etiqueta, reteniendo el puntaje mayor por clase.
 - Cuando la evidencia especifica tiene fuerza comparable con la generica,
@@ -27,8 +28,11 @@ La transcripcion textual tiene un modulo separado.
 - Se amplian a 10 los resultados evaluados por YAMNet en cada ventana.
 - Una observacion repetida con menos de 300 ms de separacion no constituye
   otra confirmacion. Los sonidos ordinarios requieren dos observaciones
-  independientes o un puntaje muy alto. Las sirenas y alarmas de incendio
-  conservan su via rapida existente, sin garantias de seguridad.
+  separadas, o puntaje muy alto en sensibilidades alta y equilibrada.
+  El modo PRECISA exige siempre dos observaciones para sonidos comunes,
+  incluso con puntaje 99/100; al modificar la sensibilidad se descartan
+  los indicios incompletos del modo anterior. Las sirenas y alarmas de
+  incendio conservan su via rapida existente, sin garantias de seguridad.
 - Se agrega la categoria opcional de avisos de voces y conversaciones,
   desactivada por defecto; las detecciones siguen mostrandose en pantalla.
 
