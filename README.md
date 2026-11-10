@@ -12,8 +12,10 @@ certificados de seguridad ni servicios de emergencia.
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
   (4.1-sense-beta, versionCode 41), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
-  en la conversación. La estética de 2.8 TODAVÍA NO se restauró en 4.1.
-  NO presentar un personaje que mueva las manos como diseño aprobado.
+  en la conversacion. La pantalla inicial se restauro desde el codigo
+  fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
+  Se elimino el personaje animado de versiones 3.x.
+  PENDIENTE: verificacion visual y de interaccion en Galaxy S9+.
 - CI: pruebas JUnit y compilación Android de dos ABI. El resultado se
   consulta en GitHub Actions por commit; no equivale a verificación física.
 - Pruebas en Samsung Galaxy S9+, batería y clips reales: PENDIENTES.
