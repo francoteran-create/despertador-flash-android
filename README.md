@@ -274,6 +274,18 @@ con lectura de V1 quedan documentados en esta rama.
 Galaxy S9+, precisión del detector, vibración/linterna bajo permisos
 reales y continuidad de transcripción/traducción.
 
+## Estado de cierre de AURORA 4.7
+La pantalla de conversacion incluye original y traduccion automatica
+en tarjetas contiguas. Cada frase final de SpeechRecognizer se traduce
+sin pedir una accion extra; ML Kit conserva el traductor por par de idiomas
+y evita mostrar respuestas viejas. Inicio abre directamente este modulo.
+Los textos originales de conversacion se guardan; los sonidos se limitan
+a una lista interna de 30 eventos sin nuevos TXT ni PDF.
+
+No se afirma que funcione con precision real sin comprobarlo en un
+Galaxy S9+; los modelos de idioma pueden necesitar Internet al principio.
+Las betas anteriores y el MASTER 4.0 de main no se sustituyen.
+
 ## Retomar desde otro chat
 
 Abrir este repositorio y el último ZIP MASTER. Verificar el commit del
