@@ -792,7 +792,7 @@ public final class SenseActivity extends Activity {
      classifier=localClassifier;
      localRecord=localClassifier.createAudioRecord(1,16000,16000);
      audioRecord=localRecord;
-     AudioData data=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
+     AudioData data=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),SoundAudioCapturePolicy.BLOCK_SAMPLES);
      if(!soundRunning||soundSession!=run)return;
      localRecord.startRecording();
      if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)
