@@ -455,6 +455,14 @@ public final class SenseActivity extends Activity {
    return;
   }
   translationGeneration++; // Old async translations must not overwrite this session.
+  if(screenMode==MODE_SPEECH){
+   lastTranscript="";partialTranscript="";
+   if(result!=null)result.setText("Escuchando… Esperando la primera frase.");
+   if(translationResult!=null)translationResult.setText("Esperando una frase para traducir…");
+   if(translationOriginal!=null)
+    translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
+   translationMessage("AUTOMÁTICO: cada frase se traducirá cuando Android termine de reconocerla.");
+  }
   history=new SenseHistory(this);
   history.begin(type);
   TextView placeholder=text("Escuchando… Las detecciones se agregarán aquí.",15,0xffa3b8d2);
@@ -673,7 +681,13 @@ public final class SenseActivity extends Activity {
    invalidateTranslation();
    TranslatorOptions options=new TranslatorOptions.Builder()
     .setSourceLanguage(source).setTargetLanguage(destination).build();
-   translator=Translation.getClient(options);
+   try{translator=Translation.getClient(options);}
+   catch(Exception error){
+    lastTranslationFailure="INICIALIZACIÓN "+error.getClass().getSimpleName();
+    translationResult.setText("No pude iniciar el traductor.");
+    translationMessage("Error al preparar ML Kit. Probá de nuevo o copiá el diagnóstico.");
+    return;
+   }
    activeTranslationPair=pair;
   }
   final Translator client=translator;
