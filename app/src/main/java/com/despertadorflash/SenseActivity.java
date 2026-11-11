@@ -587,6 +587,10 @@ public final class SenseActivity extends Activity {
    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,recognizedLanguage());
    intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);
+   // Advisory to speech services: wait longer before ending a spoken phrase.
+   // Some Android recognizers may ignore this suggestion.
+   intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,3000L);
+   intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,1800L);
    intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
    current.startListening(intent);
   }catch(Exception ex){
