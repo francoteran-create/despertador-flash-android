@@ -47,9 +47,9 @@ jobs:
           for apk in "${apks[@]}"; do
             echo "Archivo: $apk"
             "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | head -n 12
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta44'" > /dev/null
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.4 BETA'" > /dev/null
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta44.photos" > /dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta45'" > /dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.5 BETA'" > /dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta45.photos" > /dev/null
           done
       - name: Verificar permisos de conexión y micrófono en ambas APK
         run: |
