@@ -202,6 +202,18 @@ no para prometer que ya se resolvio la incidencia reportada. No
 fusionar en `main` hasta validar. Proxima evaluacion: issue #3,
 motor de voz realmente continuo.
 
+## Cierre del bloque SONIDOS 30 — beta 4.5
+La implementacion de sonidos esta consolidada en el codigo, con
+tests automatizados de orden, limite, simultaneidad y separacion
+de archivos. Los sonidos nuevos se almacenan solo como los
+30 eventos de la lista dentro de la app; las conversaciones
+se siguen guardando en TXT para releerlas. El guardado de eventos
+de sonidos no crea documentos. Los antiguos TXT se preservan.
+
+**Aún pendiente:** probar en Galaxy S9+ la interfaz y eventos
+reales, vibracion/flash, el comportamiento en segundo plano,
+consumo de bateria y traduccion. La beta no se fusiona a main.
+
 ## Retomar desde otro chat
 
 Abrir este repositorio y el último ZIP MASTER. Verificar el commit del
