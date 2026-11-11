@@ -589,6 +589,39 @@ public class MainActivity extends Activity {
    });
   }
   root.addView(txt("Las categorías que no marques pueden seguir siendo detectadas, pero no generarán un aviso emergente. La clasificación es aproximada.",13));
+  root.addView(section("AVISOS AL DETECTAR SONIDOS"));
+  android.widget.Switch soundHaptics=new android.widget.Switch(this);
+  soundHaptics.setText("Vibrar por sonidos importantes en pantalla");
+  soundHaptics.setTextColor(Color.WHITE);soundHaptics.setTextSize(16);
+  soundHaptics.setPadding(dp(10),dp(9),dp(10),dp(9));
+  soundHaptics.setChecked(prefs.getBoolean("monitor_sound_vibration",true));
+  root.addView(soundHaptics);
+  soundHaptics.setOnCheckedChangeListener((button,enabled)->
+   prefs.edit().putBoolean("monitor_sound_vibration",enabled).apply());
+  root.addView(txt("En segundo plano, la vibración depende de las categorías de notificación de Android; no se duplica desde la app.",13));
+  android.widget.Switch soundFlash=new android.widget.Switch(this);
+  soundFlash.setText("Encender flash LED con sonidos detectados");
+  soundFlash.setTextColor(Color.WHITE);soundFlash.setTextSize(16);
+  soundFlash.setPadding(dp(10),dp(9),dp(10),dp(9));
+  soundFlash.setChecked(prefs.getBoolean("monitor_sound_flash",false));
+  root.addView(soundFlash);
+  soundFlash.setOnCheckedChangeListener((button,enabled)->{
+   if(!enabled){prefs.edit().putBoolean("monitor_sound_flash",false).apply();return;}
+   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+    soundFlash.setChecked(false);
+    requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);
+    Toast.makeText(this,"Autorizá Cámara y después volvé a activar el flash de sonidos",Toast.LENGTH_LONG).show();
+    return;
+   }
+   new AlertDialog.Builder(this)
+    .setTitle("Flash LED para sonidos")
+    .setMessage("Este aviso usa destellos de la linterna tras detectar sonidos habilitados. Dura hasta 2,6 segundos y limita las repeticiones. Puede afectar a personas fotosensibles, consumir batería o no funcionar si otra app usa la cámara. Es opcional y no sustituye alarmas de seguridad.")
+    .setPositiveButton("ACTIVAR",(dialog,which)->prefs.edit().putBoolean("monitor_sound_flash",true).apply())
+    .setNegativeButton("CANCELAR",(dialog,which)->soundFlash.setChecked(false))
+    .setOnCancelListener(dialog->soundFlash.setChecked(false))
+    .show();
+  });
+  root.addView(txt("Los sonidos se incorporan a la lista de los últimos 30 aunque no tengan avisos habilitados. Vibración y flash sólo se disparan por detecciones confirmadas de las categorías elegidas.",13));
   root.addView(section("MODO DE VALIDACIÓN DE SONIDOS"));
   android.widget.Switch validation=new android.widget.Switch(this);
   validation.setText("Evaluar detecciones con ACERTÓ / NO COINCIDE");
