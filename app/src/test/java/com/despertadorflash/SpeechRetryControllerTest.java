@@ -6,7 +6,7 @@ import static org.junit.Assert.*;
 public class SpeechRetryControllerTest {
  @Test public void silenceDoesNotCountAsRepeatedFailure(){
   SpeechRetryController policy=new SpeechRetryController();
-  for(int i=0;i<50;i++)assertEquals(650L,policy.silenceDelay());
+  for(int i=0;i<50;i++)assertEquals(1200L,policy.silenceDelay());
   assertEquals(0,policy.failures());
  }
  @Test public void temporaryErrorsBackOffAndEventuallyPause(){
