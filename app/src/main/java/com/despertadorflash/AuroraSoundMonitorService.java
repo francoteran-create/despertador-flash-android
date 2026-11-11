@@ -153,7 +153,7 @@ public final class AuroraSoundMonitorService extends Service {
      err==null?"Fallo del clasificador":err.getMessage())).build();
    localClassifier=AudioClassifier.createFromOptions(this,options);classifier=localClassifier;
    localRecord=localClassifier.createAudioRecord(1,16000,16000);recorder=localRecord;
-   AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
+   AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),SoundAudioCapturePolicy.BLOCK_SAMPLES);
    if(!listening||sessionId!=run)return;
    localRecord.startRecording();
    final long monitoringStarted=SystemClock.elapsedRealtime();
