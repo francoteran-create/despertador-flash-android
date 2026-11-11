@@ -41,6 +41,7 @@ public final class SenseActivity extends Activity {
  private final ExecutorService work=Executors.newSingleThreadExecutor();
  private final ExecutorService historyWorker=Executors.newSingleThreadExecutor();
  private final SoundEventGate foregroundSoundGate=new SoundEventGate();
+ private SoundEventFeedback soundFeedback;
  private volatile int soundSession=0;
  private int historyGeneration=0;
  private SpeechRecognizer recognizer;
@@ -400,6 +401,7 @@ public final class SenseActivity extends Activity {
  private void recordSoundEvent(String label,int score){
   RecentSoundEvents.add(this,label,score);
   showRecentSounds();
+  if(soundFeedback!=null)soundFeedback.onConfirmed(label,true);
   if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||feedbackPanel==null)return;
   feedbackPanel.removeAllViews();
   feedbackPanel.addView(text("¿Coincidió el último sonido? "+label,14,0xffe5f8ff));
@@ -812,6 +814,7 @@ public final class SenseActivity extends Activity {
   main.postDelayed(soundDisplayTick,1000L);
  }
  private void startSounds(){
+  soundFeedback=new SoundEventFeedback(this);
   soundRunning=true;
   soundReconnecting=false;
   captureStats.begin(SystemClock.elapsedRealtime());
@@ -949,6 +952,7 @@ public final class SenseActivity extends Activity {
  private void stopAll(boolean show){
   cancelSpeechRetry();speechRetries.reset();
   soundSession++;
+  if(soundFeedback!=null){soundFeedback.stop();soundFeedback=null;}
   mode=MODE_NONE;soundRunning=false;soundReconnecting=false;stopSoundDisplayTick();
   if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
   finishHistory();
