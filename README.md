@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.3-sense-live-translate-beta, versionCode 43), revisión en PR #1.
+  (4.4-sense-diagnostics-beta, versionCode 44), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -48,24 +48,24 @@ para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
 ## Instalación de la beta y seguridad de los datos
-La version 4.3 BETA se compila con el identificador Android
-`com.despertadorflash.beta43` y nombre visible `AURORA 4.3 BETA`.
-La AURORA original utiliza `com.despertadorflash` y la anterior 4.2
-beta utiliza `com.despertadorflash.beta`. Pueden coexistir en el telefono;
-**no desinstales ninguna para probar la 4.3**. Sus datos no se comparten. Los datos de ambas instalaciones
-estan aislados; no se copian automaticamente y las alarmas de cada app
-son independientes. Comprobar que no queden alarmas duplicadas activas.
+La version 4.4 BETA se compila con identificador Android
+`com.despertadorflash.beta44` y nombre visible `AURORA 4.4 BETA`.
+La original es `com.despertadorflash`; beta 4.2 es
+`com.despertadorflash.beta`; beta 4.3 es
+`com.despertadorflash.beta43`. Se pueden instalar en paralelo;
+**no desinstales ninguna para probar la 4.4**. Los datos y alarmas
+no se comparten automaticamente. No activar alarmas duplicadas.
 
 No ejecutar ambos detectores de microfono a la vez: detener la escucha
 en la AURORA original antes de probar la beta (Android puede bloquear
 el acceso simultaneo al microfono).
 
-Instrucciones detalladas: `docs/AURORA_BETA_42_INSTALACION.md`.
+Instrucciones detalladas para esta beta: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
 
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.3 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.4 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -82,7 +82,7 @@ VERIFICAR TODOS LOS REGISTROS`. Las copias TXT se verifican por hash,
 no sobrescriben archivos previos distintos y se procesan sin bloquear
 la interfaz. Estos respaldos se guardan en la carpeta elegida.
 
-La beta 4.3 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.4 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Correcciones criticas 4.3: escucha y traduccion
@@ -110,6 +110,37 @@ Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 Detalles tecnicos y plan de prueba: `docs/AURORA_43_CORRECCIONES.md`.
 
+## Correcciones y prueba de diagnóstico 4.4
+- **Hallazgo técnico:** faltaba `android.permission.INTERNET` en el
+  manifest de 4.3. Agregados INTERNET y ACCESS_NETWORK_STATE para
+  descarga inicial de modelos ML Kit y proveedores de voz con red.
+  GitHub Actions inspecciona ambos permisos en las APK compiladas.
+- SONIDOS prueba bloques de entrada de 500 ms (antes 1 segundo) y
+  muestra eventos breves antes que música/viento/agua del ambiente.
+  No significa que YAMNet separe toda mezcla de sonidos.
+- `SoundCaptureTelemetry`: estados de muestreo, respuestas del modelo,
+  tiempo desde la última respuesta y recuperaciones, sin grabar sonido.
+  Botón **COPIAR DIAGNÓSTICO (SIN AUDIO)**. También incluye código de
+  error SpeechRecognizer, cantidad de frases parciales/finales y
+  categoría de error ML Kit, sin guardar frases ni audio.
+- CONVERSACIÓN permite escribir un texto de prueba y traducirlo
+  SIN depender del micrófono. Se desplaza a la traducción al tocar
+  el botón y avisa si no responde tras 30 segundos.
+- Se limita la vista de historial a 90 elementos para evitar que
+  una pantalla larguísima degrade la escucha; el archivo de sesión
+  tiene su propia conservación de registros.
+- **Limitación técnica real:** Android SpeechRecognizer no garantiza
+  transcripción continua. Según el proveedor Android, puede usar
+  procesamiento remoto. AURORA no guarda audio, pero ese servicio
+  externo puede procesarlo. Para transcripción continua de verdad
+  hace falta evaluar otro motor, no prometerlo por estas correcciones.
+- **Prueba recomendada**: escribir "Buenos días, ¿cómo estás?"
+  con idioma origen español y destino inglés; si traduce, el fallo
+  de voz está antes de ML Kit. Si no traduce, copiar diagnóstico.
+  En SONIDOS observar que suban los contadores de respuestas IA.
+
+Ver documentación: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
+
 ## Entrega oficial: un único ZIP MASTER
 
 Al ejecutar manualmente el workflow `.github/workflows/android-apk.yml`,
@@ -129,19 +160,11 @@ publica el archivo como artefacto de GitHub Actions.
 Para distribuir: pruebas físicas, privacidad, firma de release, validación
 con usuarios sordos e hipoacúsicos y métricas de sonido verificadas.
 
-## Entrega de la beta 4.3 para comprobar en el S9+
-Esta version se identifica como AURORA 4.3 BETA, con paquete
-`com.despertadorflash.beta43`, diferente de la beta anterior y de la
-original. Para instalar en Samsung Galaxy S9+ usar la APK ARM64 del
-ZIP MASTER. No desinstalar ninguna instalacion anterior, y no usar dos
-microfonos a la vez. En la primera prueba verificar si SONIDOS cambia
-ante eventos nuevos y borra los viejos, y si TRADUCCION muestra
-ORIGINAL, RESULTADO y ESTADO, incluso al fallar la descarga de ML Kit.
-
-Los resultados de pruebas en telefono, calidad con audio real y
-disponibilidad de modelos de traduccion en cada dispositivo estan
-pendientes. No se debe declarar AURORA 4.3 comercial ni detector de
-emergencias certificado.
+## Entrega beta 4.4 para Galaxy S9+
+Elegir APK ARM64 del ZIP MASTER. En Android debe aparecer
+`AURORA 4.4 BETA`, con datos propios. Probar texto manual,
+habla y sonidos por separado y copiar diagnóstico si falla.
+La compilación y tests NO equivalen a validación física.
 
 ## Retomar desde otro chat
 
