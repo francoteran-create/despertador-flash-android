@@ -243,7 +243,10 @@ public final class SenseActivity extends Activity {
        return;
       }
       String line="OMISIÓN MANUAL · "+categories[which]+" · informado por la persona que prueba";
-      addTimeline(line);
+      if(feedbackPanel!=null){
+       feedbackPanel.removeAllViews();
+       feedbackPanel.addView(text(line+" · solo durante esta prueba",14,0xffd5f0ff));
+      }
       // This manual observation is screen-only; no sound TXT.
      })
      .setNegativeButton("Cancelar",null).show();
@@ -378,7 +381,7 @@ public final class SenseActivity extends Activity {
   eventCount=recent.size();
  }
  private void addTimeline(String content){
-  if(eventsView==null)return;
+  if(screenMode==MODE_SOUND||eventsView==null)return;
   if(eventCount==0)eventsView.removeAllViews();
   // Keep UI responsive after long monitoring sessions. The saved journal
   // still retains the complete session up to its separate storage limit.
@@ -396,7 +399,9 @@ public final class SenseActivity extends Activity {
  private void recordSoundEvent(String label,int score){
   RecentSoundEvents.add(this,label,score);
   showRecentSounds();
-  if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||eventsView==null)return;
+  if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||feedbackPanel==null)return;
+  feedbackPanel.removeAllViews();
+  feedbackPanel.addView(text("¿Coincidió el último sonido? "+label,14,0xffe5f8ff));
   LinearLayout feedback=new LinearLayout(this);
   feedback.setOrientation(LinearLayout.HORIZONTAL);
   Button yes=button("ACERTÓ");
@@ -406,7 +411,7 @@ public final class SenseActivity extends Activity {
   LinearLayout.LayoutParams b=new LinearLayout.LayoutParams(0,dp(54),1f);
   b.leftMargin=dp(7);
   feedback.addView(yes,a);feedback.addView(no,b);
-  eventsView.addView(feedback);
+  feedbackPanel.addView(feedback);
   yes.setContentDescription("Confirmar detección correcta: "+label);
   no.setContentDescription("Marcar detección incorrecta: "+label);
   yes.setOnClickListener(v->saveSoundFeedback(label,score,true,yes,no));
@@ -421,7 +426,10 @@ public final class SenseActivity extends Activity {
   String verdict=correct?"ACERTÓ":"NO COINCIDE";
   // This is user feedback, not an independently measured accuracy metric.
   String entry="VALIDACIÓN MANUAL · "+verdict+" · "+label+" · puntaje IA "+score+"/100";
-  addTimeline(entry);
+  if(feedbackPanel!=null){
+   feedbackPanel.removeAllViews();
+   feedbackPanel.addView(text(entry+" · solo durante esta prueba",14,0xffd5f0ff));
+  }
   Toast.makeText(this,"Evaluación mostrada en pantalla",Toast.LENGTH_SHORT).show();
  }
  private void beginHistory(String type){
