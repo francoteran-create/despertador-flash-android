@@ -11,7 +11,7 @@ public final class SpeechRetryController {
  private int failures=0;
  public void reset(){failures=0;}
  public int failures(){return failures;}
- public long silenceDelay(){return 650L;}
+ public long silenceDelay(){return 1200L;}
  public long onTemporaryFailure(){
   int next=failures++;
   if(next>=BACKOFF_MS.length)return -1L;
