@@ -109,10 +109,17 @@ public final class AuroraSoundMonitorService extends Service {
  }
  private void classifyLoop(final long run){
   if(!listening||sessionId!=run)return;
-  AudioRecord localRecord=null;AudioClassifier localClassifier=null;
-  try{
+  int failures=0;
+  while(listening&&sessionId==run){
+   AudioRecord localRecord=null;AudioClassifier localClassifier=null;
+   final java.util.concurrent.atomic.AtomicReference<String> callbackError=new java.util.concurrent.atomic.AtomicReference<>();
+   long started=SystemClock.elapsedRealtime();
+   long retryDelay=0L;
+   try{
+    lastClassifierCallbackElapsed=0L;
+    gate.reset();
    AudioClassifierOptions options=AudioClassifierOptions.builder().setBaseOptions(BaseOptions.builder().setModelAssetPath("yamnet.tflite").build())
-    .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(10).setScoreThreshold(.15f)
+    .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(40).setScoreThreshold(.12f)
     .setResultListener(result->{
      if(!listening||sessionId!=run)return;
      long now=SystemClock.elapsedRealtime();
@@ -142,10 +149,8 @@ public final class AuroraSoundMonitorService extends Service {
      for(java.util.Map.Entry<String,Float> detected:strongestByLabel.entrySet()){
       consider(detected.getKey(),Math.round(detected.getValue()*100f),run);
      }
-    }).setErrorListener(err->{
-     Log.e("AURORA","Clasificador de fondo: "+err.getMessage());
-     reportFailure("Error interno del detector de sonidos",run);
-    }).build();
+    }).setErrorListener(err->callbackError.compareAndSet(null,
+     err==null?"Fallo del clasificador":err.getMessage())).build();
    localClassifier=AudioClassifier.createFromOptions(this,options);classifier=localClassifier;
    localRecord=localClassifier.createAudioRecord(1,16000,16000);recorder=localRecord;
    AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
@@ -155,12 +160,14 @@ public final class AuroraSoundMonitorService extends Service {
    if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)throw new IllegalStateException("El micrófono no comenzó a grabar");
    int emptyReads=0;
    while(listening&&sessionId==run){
+    if(callbackError.get()!=null)throw new IllegalStateException("El clasificador interrumpió la escucha");
     int count=samples.load(localRecord);
     if(count>0){localClassifier.classifyAsync(samples,SystemClock.uptimeMillis());emptyReads=0;}
-    else {SystemClock.sleep(120);if(++emptyReads>=6)throw new IllegalStateException("Micrófono sin muestras");}
+    else {SystemClock.sleep(120);if(++emptyReads>=12)throw new IllegalStateException("Micrófono sin muestras");}
     long now=SystemClock.elapsedRealtime();
     long lastInference=lastClassifierCallbackElapsed>0L?lastClassifierCallbackElapsed:monitoringStarted;
-    if(now-lastInference>90000L)throw new IllegalStateException("El detector no envía resultados");
+    if(SoundRecoveryPolicy.isStalled(lastInference,now))
+     throw new IllegalStateException("El detector dejó de responder");
     // Recheck user notification permission: a monitor with every alert blocked is misleading.
     if(Build.VERSION.SDK_INT>=24&&now-lastAlertsCheckAt>15000L){
      lastAlertsCheckAt=now;
@@ -170,16 +177,35 @@ public final class AuroraSoundMonitorService extends Service {
      }
     }
    }
-  }catch(Exception error){
-   if(listening&&sessionId==run){Log.e("AURORA","No se pudo mantener la escucha",error);
-    reportFailure(error.getMessage()!=null&&error.getMessage().contains("notificaciones")?
-     "Android bloqueó las notificaciones; escucha detenida":"El micrófono o el detector se interrumpió",run);}
-  }
-  finally{
+   }catch(Exception error){
+    if(!listening||sessionId!=run)break;
+    Log.w("AURORA","Interrupción en escucha continua, intentando recuperación",error);
+    String why=error.getMessage()==null?"Error de audio":error.getMessage();
+    if(why.contains("notificaciones")){
+     reportFailure("Android bloqueó las notificaciones; escucha detenida",run);break;
+    }
+    if(SystemClock.elapsedRealtime()-started>30000L)failures=0;
+    retryDelay=SoundRecoveryPolicy.delayAfterFailure(++failures);
+    if(retryDelay<0){
+     reportFailure("No se pudo recuperar el detector; escucha detenida",run);break;
+    }
+    final int retry=failures;
+    getSharedPreferences("aurora",0).edit()
+     .putString(KEY_ERROR,"Recuperando escucha · intento "+retry+" de 3").apply();
+    ui.post(()->{
+     if(!listening||sessionId!=run)return;
+     NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+     if(nm!=null)nm.notify(FOREGROUND_ID,
+      status("RECONECTANDO ("+retry+"/3) · no detecta durante la reconexión"));
+    });
+   }
+   finally{
    if(localRecord!=null){try{localRecord.stop();}catch(Exception ignored){}localRecord.release();}
    if(localClassifier!=null)localClassifier.close();
    if(recorder==localRecord)recorder=null;
    if(classifier==localClassifier)classifier=null;
+   }
+   if(retryDelay>0L)SystemClock.sleep(retryDelay);
   }
  }
  private void reportFailure(String message,long run){
