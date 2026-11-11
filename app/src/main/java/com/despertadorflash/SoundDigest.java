@@ -18,7 +18,12 @@ public final class SoundDigest {
    if(total>=200)break;
    int start=line.indexOf("POSIBLE");
    if(start<0)start=line.indexOf("POSIBLES");
-   if(start<0||!line.contains("confianza estimada"))continue;
+   if(start<0)continue;
+   // Saved formats differ across app versions; new 4.x writes "puntaje IA".
+   // Manual tester feedback must not be counted as a new sound.
+   if(line.contains("VALIDACIÓN MANUAL")||line.contains("OMISIÓN MANUAL"))continue;
+   if(!line.contains("confianza estimada")&&!line.contains("puntaje IA")
+      &&!line.contains("puntaje de IA"))continue;
    String text=line.substring(start);
    int end=text.indexOf(" · ");
    if(end>=0)text=text.substring(0,end);
