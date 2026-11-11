@@ -70,6 +70,9 @@ public final class SenseActivity extends Activity {
  private TextView state, result, detail;
  private AuroraVisualEngineView visual;
  private Button speechButton, soundsButton, translateButton;
+ private TextView translationResult, translationStatus, translationOriginal;
+ private String partialTranscript="";
+ private int translationTarget=-1, translationGeneration=0;
  private Spinner languagePicker;
  private int languageSelection=0;
  private Translator translator;
@@ -232,9 +235,44 @@ public final class SenseActivity extends Activity {
    });
   }
   if(screenMode==MODE_SPEECH){
-   translateButton=button("🌐  TRADUCIR ÚLTIMA FRASE");
-   root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(58)));
+   root.addView(AuroraDesign.overline(this,"TRADUCCIÓN VISIBLE"));
+   root.addView(text("ELEGÍ EL IDIOMA AL QUE QUERÉS TRADUCIR",13,0xffbedbe9));
+   LinearLayout targets=new LinearLayout(this);
+   targets.setOrientation(LinearLayout.HORIZONTAL);
+   root.addView(targets,new LinearLayout.LayoutParams(-1,dp(61)));
+   final String[] names={"ESPAÑOL","INGLÉS","PORTUGUÉS"};
+   final Button[] targetButtons=new Button[3];
+   int preferred=getPreferences(MODE_PRIVATE).getInt("translation_target",-1);
+   translationTarget=preferred>=0&&preferred<3&&preferred!=languageSelection?
+    preferred:(languageSelection==0?1:0);
+   for(int k=0;k<3;k++){
+    final int chosen=k;
+    Button target=button(names[k]);target.setTextSize(12);targetButtons[k]=target;
+    LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(0,dp(58),1f);
+    if(k>0)layout.leftMargin=dp(5);
+    targets.addView(target,layout);
+    AuroraDesign.action(target,k==translationTarget?0xff155a70:0xff1b2e46,
+     k==translationTarget?0xff2c4b7a:0xff242741,k==translationTarget?0xff86f4ed:0xff44647d);
+    target.setOnClickListener(v->{
+     translationTarget=chosen;
+     getPreferences(MODE_PRIVATE).edit().putInt("translation_target",chosen).apply();
+     for(int j=0;j<3;j++)AuroraDesign.action(targetButtons[j],
+      j==chosen?0xff155a70:0xff1b2e46,
+      j==chosen?0xff2c4b7a:0xff242741,j==chosen?0xff86f4ed:0xff44647d);
+     if(translationStatus!=null)translationStatus.setText("Destino: "+names[chosen]+". Tocá TRADUCIR.");
+    });
+   }
+   translateButton=button("🌐  TRADUCIR LO QUE SE DIJO");
+   root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(62)));
    translateButton.setOnClickListener(v->translateLast());
+   translationOriginal=text("ORIGINAL: todavía no se reconocieron palabras.",14,0xffc5d9ee);
+   translationResult=text("TRADUCCIÓN: aquí aparecerá el texto.",23,Color.WHITE);
+   translationResult.setTextIsSelectable(true);
+   translationResult.setBackground(bg(0xff163a4e,0xff1d2246));
+   translationStatus=text("La primera traducción puede requerir Internet para descargar el idioma.",13,0xffb0d6ea);
+   root.addView(translationOriginal);
+   root.addView(translationResult,new LinearLayout.LayoutParams(-1,-2));
+   root.addView(translationStatus);
   }
   root.addView(AuroraDesign.overline(this,"HISTORIAL DE ESTA SESIÓN"));
   eventsScroll=new ScrollView(this);eventsScroll.setFillViewport(false);
@@ -405,7 +443,8 @@ public final class SenseActivity extends Activity {
   int selected=languageSelection;return selected==1?"en-US":selected==2?"pt-BR":"es-AR";
  }
  private void saveTranscript(String phrase){
-  lastTranscript=phrase;getSharedPreferences("aurora",0).edit().putString("sense_last_transcript",phrase).apply();
+  lastTranscript=phrase;partialTranscript="";
+  getSharedPreferences("aurora",0).edit().putString("sense_last_transcript",phrase).apply();
  }
  private void translateLast(){
   String phrase=lastTranscript.trim();if(phrase.isEmpty()){detail.setText("Primero transcribí una conversación para poder traducirla.");return;}
@@ -484,7 +523,10 @@ public final class SenseActivity extends Activity {
     public void onPartialResults(Bundle data){
      if(mode!=MODE_SPEECH||recognizer!=current)return;
      ArrayList<String> partial=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-     if(partial!=null&&!partial.isEmpty())result.setText(partial.get(0));
+     if(partial!=null&&!partial.isEmpty()){
+      partialTranscript=partial.get(0).trim();
+      if(!partialTranscript.isEmpty())result.setText(partialTranscript);
+     }
     }
     public void onEvent(int event,Bundle params){}
    });
@@ -678,5 +720,10 @@ public final class SenseActivity extends Activity {
   if(show){state.setText("MICRÓFONO APAGADO");detail.setText("Escucha detenida. Ninguna función está capturando audio.");}updateModeVisibility();
  }
  @Override protected void onStop(){stopAll(true);super.onStop();}
- @Override protected void onDestroy(){stopAll(false);if(translator!=null)translator.close();work.shutdownNow();historyWorker.shutdown();super.onDestroy();}
+ @Override protected void onDestroy(){
+  translationGeneration++;
+  stopAll(false);
+  if(translator!=null){translator.close();translator=null;}
+  work.shutdownNow();historyWorker.shutdown();super.onDestroy();
+ }
 }
