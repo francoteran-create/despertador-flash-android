@@ -454,6 +454,7 @@ public final class SenseActivity extends Activity {
    detail.setText("Últimos 30 sonidos en la app. No se generan archivos de sonidos.");
    return;
   }
+  translationGeneration++; // Old async translations must not overwrite this session.
   history=new SenseHistory(this);
   history.begin(type);
   TextView placeholder=text("Escuchando… Las detecciones se agregarán aquí.",15,0xffa3b8d2);
@@ -604,75 +605,135 @@ public final class SenseActivity extends Activity {
  private void translationMessage(String message){
   if(translationStatus!=null)translationStatus.setText(message);
  }
+ private String selectedLanguageName(int choice){
+  return choice==0?"Español":choice==1?"Inglés":"Portugués";
+ }
+ private void refreshLanguageSelections(){
+  if(sourceLanguageButtons!=null)for(int i=0;i<sourceLanguageButtons.length;i++)
+   AuroraDesign.action(sourceLanguageButtons[i],i==languageSelection?0xff155a70:0xff1b2e46,
+    i==languageSelection?0xff2c4b7a:0xff242741,i==languageSelection?0xff86f4ed:0xff44647d);
+  if(translationTargetButtons!=null)for(int i=0;i<translationTargetButtons.length;i++)
+   AuroraDesign.action(translationTargetButtons[i],i==translationTarget?0xff155a70:0xff1b2e46,
+    i==translationTarget?0xff2c4b7a:0xff242741,i==translationTarget?0xff86f4ed:0xff44647d);
+ }
+ private void invalidateTranslation(){
+  translationGeneration++;
+  if(translator!=null){translator.close();translator=null;}
+  activeTranslationPair="";
+  translationModelReady=false;translationModelDownloading=false;pendingTranslationPhrase="";
+ }
+ private void showManualTranslationTest(){
+  EditText written=new EditText(this);
+  written.setInputType(android.text.InputType.TYPE_CLASS_TEXT|
+   android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+  written.setTextSize(18);written.setTextColor(Color.WHITE);
+  written.setHintTextColor(0xffbedbea);
+  written.setHint("Escribí una frase en "+selectedLanguageName(languageSelection));
+  written.setMinLines(2);
+  written.setPadding(dp(18),dp(15),dp(18),dp(15));
+  new android.app.AlertDialog.Builder(this)
+   .setTitle("PRUEBA MANUAL DEL TRADUCTOR")
+   .setMessage("Este ensayo no usa el micrófono ni se agrega a la conversación guardada.")
+   .setView(written)
+   .setNegativeButton("CERRAR",null)
+   .setPositiveButton("TRADUCIR",(dialog,which)->{
+    String phrase=written.getText().toString().trim();
+    if(phrase.isEmpty()){Toast.makeText(this,"Escribí una frase primero",Toast.LENGTH_SHORT).show();return;}
+    translatePhrase(phrase,false);
+    if(pageScroll!=null&&translationResult!=null)
+     pageScroll.post(()->pageScroll.smoothScrollTo(0,Math.max(0,translationResult.getTop()-dp(60))));
+   }).show();
+ }
  private void translateLast(){
-  // Partial live words can be translated on explicit request, but do not
-  // silently pass an empty old final phrase if only partial words exist.
-  // Test path isolates ML Kit from Android SpeechRecognizer: the user can
-  // type a phrase and verify translation even when voice recognition fails.
-  final String typed=manualTranslationInput==null?"":manualTranslationInput.getText().toString().trim();
-  final String partial=partialTranscript.trim();
-  final String phrase=!typed.isEmpty()?typed:!partial.isEmpty()?partial:lastTranscript.trim();
-  if(translationResult==null)return;
+  String phrase=lastTranscript.trim();
+  if(phrase.isEmpty())phrase=partialTranscript.trim();
   if(phrase.isEmpty()){
-   translationOriginal.setText("ORIGINAL: todavía no hay texto disponible.");
-   translationResult.setText("TRADUCCIÓN PENDIENTE");
-   translationMessage("Decí una frase con el micrófono o escribila en el recuadro de prueba y tocá TRADUCIR.");
+   translationMessage("Todavía no reconocí ninguna frase. También podés probar un texto escrito en herramientas.");
    return;
   }
+  translatePhrase(phrase,true);
+ }
+ /**
+  * Translate every FINAL recognized phrase automatically. Cache ML Kit
+  * for each source/target pair, and ignore superseded async callbacks.
+  */
+ private void translatePhrase(String phrase,boolean automatic){
+  if(translationResult==null||phrase==null)return;
+  final String clean=phrase.trim();
+  if(clean.isEmpty())return;
   final String source=targetLanguage(languageSelection);
   final String destination=targetLanguage(translationTarget);
-  translationOriginal.setText("ORIGINAL: "+phrase+(typed.isEmpty()&&!partial.isEmpty()?" (frase parcial)":""));
   if(source.equals(destination)){
-   translationResult.setText("Elegí otro idioma de destino.");
-   translationMessage("El idioma de origen y el destino no pueden ser iguales.");
+   translationResult.setText("Elegí dos idiomas diferentes.");
+   translationMessage("La conversación y la traducción no pueden tener el mismo idioma.");
    return;
   }
+  final String pair=source+"→"+destination;
+  if(!pair.equals(activeTranslationPair)||translator==null){
+   invalidateTranslation();
+   TranslatorOptions options=new TranslatorOptions.Builder()
+    .setSourceLanguage(source).setTargetLanguage(destination).build();
+   translator=Translation.getClient(options);
+   activeTranslationPair=pair;
+  }
+  final Translator client=translator;
   final int request=++translationGeneration;
+  pendingTranslationPhrase=clean;
   lastTranslationFailure="ninguno";
-  if(translator!=null){translator.close();translator=null;}
-  TranslatorOptions options=new TranslatorOptions.Builder()
-   .setSourceLanguage(source).setTargetLanguage(destination).build();
-  translator=Translation.getClient(options);
-  final Translator selectedClient=translator;
-  translationResult.setText("Preparando traducción…");
-  translationMessage("Modelo "+source+" → "+destination+
-   ". La primera vez puede necesitar descargar datos con Internet.");
+  translationOriginal.setText((automatic?"ÚLTIMA FRASE RECONOCIDA":"PRUEBA ESCRITA: "+clean)+
+   " · "+selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
+  translationResult.setText(translationModelReady?"Traduciendo…":"Preparando traductor…");
+  translationMessage(automatic?"Traducción automática en curso.":"Probando traducción con texto escrito.");
   main.postDelayed(()->{
-   if(request!=translationGeneration||translationResult==null||isFinishing()||isDestroyed())return;
-   String stateNow=translationResult.getText().toString();
-   if(stateNow.equals("Preparando traducción…")||stateNow.equals("Traduciendo…"))
-    translationMessage("Aún no llegó una respuesta después de 30 s. Revisá Internet o el servicio ML Kit; podés copiar el diagnóstico.");
+   if(!isCurrentTranslation(request,client))return;
+   String label=translationResult.getText().toString();
+   if(label.equals("Preparando traductor…")||label.equals("Traduciendo…"))
+    translationMessage("Aún no hay respuesta después de 30 segundos. Revisá Internet o la disponibilidad de ML Kit; podés reintentar.");
   },30000L);
-  selectedClient.downloadModelIfNeeded()
+  if(translationModelReady){runTranslation(request,clean,client);return;}
+  if(translationModelDownloading)return;
+  translationModelDownloading=true;
+  translationMessage("Preparando "+selectedLanguageName(languageSelection)+" → "+
+   selectedLanguageName(translationTarget)+". La primera descarga puede necesitar Internet.");
+  client.downloadModelIfNeeded()
    .addOnSuccessListener(ready->{
-    if(request!=translationGeneration||isFinishing()||isDestroyed())return;
-    translationResult.setText("Traduciendo…");
-    translationMessage("Modelo disponible. Procesando la frase.");
-    selectedClient.translate(phrase)
-     .addOnSuccessListener(translated->{
-      if(request!=translationGeneration||isFinishing()||isDestroyed())return;
-      if(translated==null||translated.trim().isEmpty()){
-       translationResult.setText("No se obtuvo texto traducido.");
-       translationMessage("El traductor respondió sin palabras. Probá otra frase.");
-      }else{
-       translationResult.setText(translated);
-       translationMessage("Traducción lista. El original queda arriba y podés copiar el texto.");
-      }
-     })
-     .addOnFailureListener(error->{
-      if(request!=translationGeneration||isFinishing()||isDestroyed())return;
-      lastTranslationFailure="TRADUCTOR "+error.getClass().getSimpleName();
-      translationResult.setText("NO SE PUDO TRADUCIR");
-      translationMessage("Error del traductor: "+error.getMessage()+
-       ". Comprobá conexión y volvé a intentar.");
-     });
+    if(translator!=client||isFinishing()||isDestroyed())return;
+    translationModelDownloading=false;translationModelReady=true;
+    runTranslation(translationGeneration,pendingTranslationPhrase,client);
    })
    .addOnFailureListener(error->{
-    if(request!=translationGeneration||isFinishing()||isDestroyed())return;
+    if(translator!=client||isFinishing()||isDestroyed())return;
+    translationModelDownloading=false;
     lastTranslationFailure="DESCARGA "+error.getClass().getSimpleName();
-    translationResult.setText("FALTA MODELO DE IDIOMA");
-    translationMessage("Android no pudo descargar el modelo de traducción: "+
-     error.getMessage()+". Conectate a Internet y volvé a tocar TRADUCIR.");
+    translationResult.setText("No pude preparar la traducción.");
+    translationMessage("No se descargó el modelo de idioma. Conectate a Internet y tocá REINTENTAR.");
+   });
+ }
+ private boolean isCurrentTranslation(int request,Translator client){
+  return request==translationGeneration&&client!=null&&translator==client&&
+   !isFinishing()&&!isDestroyed();
+ }
+ private void runTranslation(int request,String phrase,Translator client){
+  if(!isCurrentTranslation(request,client)||phrase==null||phrase.isEmpty())return;
+  translationResult.setText("Traduciendo…");
+  translationMessage("Traduciendo automáticamente al "+selectedLanguageName(translationTarget)+"…");
+  client.translate(phrase)
+   .addOnSuccessListener(translated->{
+    if(!isCurrentTranslation(request,client))return;
+    if(translated==null||translated.trim().isEmpty()){
+     translationResult.setText("No recibí ninguna traducción.");
+     translationMessage("ML Kit respondió sin texto. Tocá REINTENTAR o probá otra frase.");
+    }else{
+     translationResult.setText(translated.trim());
+     translationMessage("TRADUCCIÓN LISTA · La próxima frase se traducirá sola.");
+    }
+   })
+   .addOnFailureListener(error->{
+    if(!isCurrentTranslation(request,client))return;
+    lastTranslationFailure="TRADUCTOR "+error.getClass().getSimpleName();
+    translationResult.setText("No pude traducir esta frase.");
+    translationMessage("Error de traducción: "+error.getClass().getSimpleName()+
+     ". Revisá la conexión y tocá REINTENTAR.");
    });
  }
  private void startSpeech(){
@@ -734,6 +795,7 @@ public final class SenseActivity extends Activity {
       speechFinalResults++;
       lastSpeechError=-1;
       result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);
+       translatePhrase(phrase,true);
       speechRetries.reset();
       if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}
      }
@@ -747,7 +809,10 @@ public final class SenseActivity extends Activity {
      if(partial!=null&&!partial.isEmpty()){
       speechPartialResults++;
       partialTranscript=partial.get(0).trim();
-      if(!partialTranscript.isEmpty())result.setText(partialTranscript);
+      if(!partialTranscript.isEmpty()){
+         result.setText(partialTranscript);
+         if(translationStatus!=null)translationMessage("Escuchando la frase… Se traducirá sola cuando Android la termine de reconocer.");
+        }
      }
     }
     public void onEvent(int event,Bundle params){}
