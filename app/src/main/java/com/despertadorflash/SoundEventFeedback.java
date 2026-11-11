@@ -22,7 +22,7 @@ public final class SoundEventFeedback {
  private final SoundFeedbackPolicy policy=new SoundFeedbackPolicy();
  private TorchFlasher torch;
  private Runnable endFlash;
- private boolean closed=false;
+ private volatile boolean closed=false;
 
  public SoundEventFeedback(Context context){
   this.context=context.getApplicationContext();
