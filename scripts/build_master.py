@@ -184,6 +184,23 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Las funciones de alertas fisicas requieren prueba en Galaxy S9+: "
         "pantalla bloqueada, permisos, bateria, camara ocupada y alarmas.")
     add("Ver docs/AURORA_46_AVISOS_SONOROS.md.")
+    add("TRADUCCION AUTOMATICA CLARA - 4.7", "AuroraSection")
+    add("CONVERSACION: lo que se dijo aparece en una tarjeta; justo debajo, "
+        "la traduccion automatica al idioma seleccionado en tipografia grande.")
+    add("Cada frase FINAL reconocida por Android SpeechRecognizer inicia "
+        "traduccion en ML Kit sin tocar un boton. Las frases parciales se "
+        "muestran como texto original hasta que Android termine la frase.")
+    add("Se reutiliza el cliente del par de idiomas en lugar de abrir "
+        "uno nuevo por cada frase. Si el modelo tarda en descargar "
+        "se conserva la frase mas reciente; respuestas antiguas no "
+        "sobrescriben la traduccion nueva.")
+    add("En inicio se usa un solo acceso ABRIR TRADUCTOR; el flujo "
+        "separado de transcripcion rapida sin traduccion se retira "
+        "del acceso directo. Las herramientas de diagnostico quedan abajo.")
+    add("Las conversaciones guardan texto original. NO equivale a "
+        "transcripcion continua garantizada ni a traduccion "
+        "palabra por palabra. Se requiere probar ML Kit en S9+.")
+    add("Ver docs/AURORA_47_TRADUCCION_AUTOMATICA.md.")
     add("LIMITACIONES Y RIESGOS", "AuroraSection")
     add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
         "de certeza ni permiten garantizar identificacion perfecta.")
@@ -239,9 +256,9 @@ def main() -> None:
         "NO VERSION COMERCIAL. No se han validado pruebas en telefono "
         "ni metricas de precision con audios reales.\n"
         "La portada se recupero del codigo historico 2.8; falta validacion en el telefono.\n"
-        "Paquete de instalacion: com.despertadorflash.beta46; no desinstalar las AURORA anteriores.\n"
+        "Paquete de instalacion: com.despertadorflash.beta47; no desinstalar las AURORA anteriores.\n"
         "ESCUCHA: panel de sonidos recientes y reconexion automatica acotada.\n"
-        "TRADUCCION: panel independiente, selector de idioma, errores visibles.\n"
+        "TRADUCCION: cada frase completa se traduce sola junto al original, con idiomas claros.\n"
         "SONIDOS: ultimos 30 eventos en app, sin TXT/PDF. CONVERSACIONES: guardado y respaldos TXT.\n"
         "Desde Ajustes se pueden respaldar alarmas/preferencias y desde CONVERSACIONES los TXT.\n"
     )
@@ -270,7 +287,7 @@ def main() -> None:
             "approved_ui_reference": "AURORA 2.8",
             "approved_ui_home_source_restored": True,
             "approved_ui_verified_on_device": False,
-            "debug_application_id": "com.despertadorflash.beta46",
+            "debug_application_id": "com.despertadorflash.beta47",
             "can_install_alongside_original": True,
             "settings_backup_txt": "v2_accepts_v1_with_sha256_check",
             "sound_feedback_settings_in_backup": True,
@@ -289,6 +306,11 @@ def main() -> None:
             "sound_classifier_max_results": 40,
             "sound_recovery": "max_three_attempts",
             "translation_visible_panel": True,
+            "auto_translation_on_final_speech_result": True,
+            "auto_translation_on_partial_speech_result": False,
+            "translation_model_reused_per_language_pair": True,
+            "translation_stale_results_ignored": True,
+            "translation_device_test": "pending",
             "translation_target_languages": ["es", "en", "pt"],
             "internet_permission": True,
             "speech_recognizer_continuous": False,
