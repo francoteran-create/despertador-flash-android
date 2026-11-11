@@ -444,6 +444,41 @@ public final class SenseActivity extends Activity {
   String[] labels=new String[files.length];for(int i=0;i<files.length;i++)labels[i]=SenseHistory.readableName(files[i]);
   new android.app.AlertDialog.Builder(this).setTitle("Escuchas guardadas en AURORA").setItems(labels,(d,which)->showFile(files[which])).setNegativeButton("CERRAR",null).show();
  }
+ private void copySoundDiagnostic(){
+  StringBuilder report=new StringBuilder();
+  report.append("AURORA · DIAGNÓSTICO DE ESCUCHA (sin audio ni textos)\n");
+  report.append("Aplicación: ").append(getPackageName()).append("\n");
+  try{report.append("Versión: ").append(getPackageManager().getPackageInfo(getPackageName(),0).versionName).append("\n");}
+  catch(Exception ignored){report.append("Versión: no disponible\n");}
+  report.append("Sistema: ").append(android.os.Build.MANUFACTURER).append(" ")
+   .append(android.os.Build.MODEL).append(" · Android SDK ")
+   .append(android.os.Build.VERSION.SDK_INT).append("\n");
+  report.append("Módulo: ").append(screenMode==MODE_SOUND?"SONIDOS":"CONVERSACIÓN").append("\n");
+  report.append("Modo activo: ").append(mode).append("\n");
+  report.append("Micrófono autorizado: ")
+   .append(checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED).append("\n");
+  android.net.ConnectivityManager network=
+   (android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+  android.net.NetworkCapabilities capabilities=network==null?null:
+   network.getNetworkCapabilities(network.getActiveNetwork());
+  report.append("Conexión validada: ").append(capabilities!=null&&
+   capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)).append("\n");
+  report.append("Motor de voz Android disponible: ")
+   .append(SpeechRecognizer.isRecognitionAvailable(this)).append("\n");
+  report.append("Frases completas recibidas: ").append(speechFinalResults).append("\n");
+  report.append("Frases parciales recibidas: ").append(speechPartialResults).append("\n");
+  report.append("Último código error de voz: ").append(lastSpeechError).append("\n");
+  if(lastSpeechError>0)report.append("Detalle de voz: ")
+   .append(SpeechRetryController.explanation(lastSpeechError)).append("\n");
+  report.append(captureStats.report(SystemClock.elapsedRealtime())).append("\n");
+  report.append("AVISO: el informe no contiene sonidos grabados, etiquetas ni frases.");
+  android.content.ClipboardManager clipboard=
+   (android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+  if(clipboard!=null){
+   clipboard.setPrimaryClip(android.content.ClipData.newPlainText("AURORA DIAGNÓSTICO",report.toString()));
+   Toast.makeText(this,"Diagnóstico copiado, pegalo en el chat para revisar el error.",Toast.LENGTH_LONG).show();
+  }
+ }
  private void toggle(int next){
   if(next!=screenMode)return;
   if(mode==next){stopAll(true);return;}
@@ -568,6 +603,8 @@ public final class SenseActivity extends Activity {
     public void onError(int error){
      if(mode!=MODE_SPEECH||recognizer!=current)return;
      lastSpeechError=error;
+     if(audioHealth!=null)audioHealth.setText("Error del reconocimiento de voz: código "+
+      error+" · "+SpeechRetryController.explanation(error));
      releaseSpeech();
      if(SpeechRetryController.isSilence(error)){
       // Silence is normal during long conversations; do not count it as a failure.
