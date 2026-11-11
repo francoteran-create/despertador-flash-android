@@ -19,10 +19,12 @@ import java.util.Map;
  * A checksum detects accidental edits/truncation; it does NOT prove authorship.
  */
 public final class AuroraSettingsBackup {
- private static final String HEADER="AURORA_CONFIGURACION_V1";
+ private static final String HEADER_V1="AURORA_CONFIGURACION_V1";
+ private static final String HEADER_V2="AURORA_CONFIGURACION_V2";
  private static final String CHECKSUM="SHA256=";
  public static final int MAX_IMPORT_BYTES=8192;
  private static final Map<String,Object> DEFAULTS=makeDefaults();
+ private static final Map<String,Object> LEGACY_DEFAULTS=makeLegacyDefaults();
 
  private AuroraSettingsBackup(){}
 
@@ -41,12 +43,21 @@ public final class AuroraSettingsBackup {
     !group.equals("voices")&&!group.equals("other"));
   }
   result.put("monitor_sensitivity",1);
+  result.put("monitor_sound_vibration",true);
+  result.put("monitor_sound_flash",false);
   result.put("sense_feedback_mode",false);
   result.put("torch_alert",true);
   result.put("visual_flash",false);
   result.put("aurora_motion",true);
   result.put("aurora_smooth_mode",true);
   return Collections.unmodifiableMap(result);
+ }
+
+ private static Map<String,Object> makeLegacyDefaults(){
+  LinkedHashMap<String,Object> old=new LinkedHashMap<>(DEFAULTS);
+  old.remove("monitor_sound_vibration");
+  old.remove("monitor_sound_flash");
+  return Collections.unmodifiableMap(old);
  }
 
  public static Map<String,Object> normalize(Map<String,?> saved){
@@ -77,11 +88,19 @@ public final class AuroraSettingsBackup {
  }
 
  public static String serialize(Map<String,?> current){
-  Map<String,Object> prefs=normalize(current);
-  StringBuilder body=new StringBuilder(HEADER).append('\n');
-  List<String> ordered=new ArrayList<>(prefs.keySet());
+  return serializeExact(normalize(current),HEADER_V2,DEFAULTS);
+ }
+ private static String serializeExact(Map<String,?> current,String header,
+   Map<String,Object> schema){
+  StringBuilder body=new StringBuilder(header).append('\n');
+  List<String> ordered=new ArrayList<>(schema.keySet());
   Collections.sort(ordered);
-  for(String key:ordered)body.append(key).append('=').append(prefs.get(key)).append('\n');
+  for(String key:ordered){
+   Object value=current.get(key);
+   if(value==null)throw new IllegalArgumentException("Falta "+key);
+   validate(key,value);
+   body.append(key).append('=').append(value).append('\n');
+  }
   String unsigned=body.toString();
   return unsigned+CHECKSUM+hexDigest(unsigned)+'\n';
  }
@@ -90,9 +109,13 @@ public final class AuroraSettingsBackup {
   if(file==null||file.getBytes(StandardCharsets.UTF_8).length>MAX_IMPORT_BYTES)
    throw new IllegalArgumentException("Copia vacia o demasiado grande");
   String[] lines=file.split("\\n",-1);
-  if(lines.length<3||!lines[0].equals(HEADER)||!lines[lines.length-1].isEmpty()||
+  if(lines.length<3||!lines[lines.length-1].isEmpty()||
       !lines[lines.length-2].startsWith(CHECKSUM))
    throw new IllegalArgumentException("Formato o version de copia no reconocido");
+  String header=lines[0];
+  Map<String,Object> schema=header.equals(HEADER_V1)?LEGACY_DEFAULTS:
+   header.equals(HEADER_V2)?DEFAULTS:null;
+  if(schema==null)throw new IllegalArgumentException("Version de copia no reconocida");
   LinkedHashMap<String,Object> raw=new LinkedHashMap<>();
   for(int n=1;n<lines.length-2;n++){
    String row=lines[n];
@@ -100,9 +123,9 @@ public final class AuroraSettingsBackup {
    if(sep<1)throw new IllegalArgumentException("Linea invalida");
    String key=row.substring(0,sep);
    String str=row.substring(sep+1);
-   if(!DEFAULTS.containsKey(key)||raw.containsKey(key))
+   if(!schema.containsKey(key)||raw.containsKey(key))
     throw new IllegalArgumentException("Parametro desconocido o duplicado: "+key);
-   Object expected=DEFAULTS.get(key);
+   Object expected=schema.get(key);
    Object value;
    if(expected instanceof Boolean){
     if(!str.equals("true")&&!str.equals("false"))
@@ -116,11 +139,12 @@ public final class AuroraSettingsBackup {
    validate(key,value);
    raw.put(key,value);
   }
-  if(raw.size()!=DEFAULTS.size())throw new IllegalArgumentException("Copia incompleta");
-  String canonical=serialize(raw);
+  if(raw.size()!=schema.size())throw new IllegalArgumentException("Copia incompleta");
+  String canonical=serializeExact(raw,header,schema);
   if(!MessageDigest.isEqual(canonical.getBytes(StandardCharsets.UTF_8),
     file.getBytes(StandardCharsets.UTF_8)))
    throw new IllegalArgumentException("Checksum incorrecto o archivo modificado");
+  // V1 backups have no sound-LED options. Flash stays OFF by default.
   return normalize(raw);
  }
  private static String hexDigest(String text){
