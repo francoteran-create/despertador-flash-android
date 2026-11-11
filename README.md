@@ -71,6 +71,8 @@ anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
 
+En 4.6, el respaldo de preferencias es V2: incluye vibración y flash de sonidos. Sigue aceptando copias V1 de betas anteriores sin activar flash involuntariamente.
+
 En AJUSTES aparecen los botones `GUARDAR ALARMAS Y AJUSTES EN UN
 ARCHIVO` y `RESTAURAR ALARMAS Y AJUSTES`. Exportan/importan un TXT
 con checksum SHA-256 y valores restringidos a alarmas, preferencias de
