@@ -368,7 +368,7 @@ public final class SenseActivity extends Activity {
    for(SoundTimeline.Entry entry:recent){
     LinearLayout item=new LinearLayout(this);item.setOrientation(LinearLayout.VERTICAL);
     item.setPadding(dp(7),dp(4),dp(7),dp(5));item.setBackground(bg(0xff162f44,0xff202943));
-    TextView clock=text(format.format(new Date(entry.timestamp)),12,0xffb0d5e7);
+    TextView clock=text(format.format(new java.util.Date(entry.timestamp)),12,0xffb0d5e7);
     clock.setPadding(dp(5),0,dp(5),0);
     TextView label=text(entry.label,16,0xfff3faff);
     label.setPadding(dp(5),0,dp(5),dp(4));
