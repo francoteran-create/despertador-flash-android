@@ -120,6 +120,24 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
         "coexistir sin desinstalar la AURORA original. "
         "Los datos NO se comparten. Vigilar alarmas duplicadas. "
         "Las APK debug pueden tener firmas efimeras entre compilaciones.")
+    add("CORRECCIONES 4.3 - ESCUCHA Y TRADUCCION", "AuroraSection")
+    add("La vista SONIDOS muestra hasta cuatro hipotesis recientes; no "
+        "se queda mostrando indefinidamente el ultimo sonido confirmado. "
+        "La ventana caduca tras 3,5 segundos y no crea alertas falsas.")
+    add("MediaPipe YAMNet evalua hasta 40 resultados por ventana. Si "
+        "el modelo o microfono falla, se liberan recursos y se intenta "
+        "reconectar hasta tres veces antes de mostrar ESCUCHA DETENIDA. "
+        "Durante la reconexion NO se esta detectando sonido.")
+    add("El panel TRADUCCION es independiente de la transcripcion. "
+        "Permite elegir idioma destino (espanol, ingles y portugues), "
+        "ver la frase original, observar el resultado y leer errores. "
+        "Descargar el modelo ML Kit por primera vez puede exigir Internet.")
+    add("Resumir sonidos y conversaciones permite leer el formato actual "
+        "de los registros. Guardar sesiones internas sin elegir carpeta "
+        "externa no debe generar un falso error.")
+    add("La BETA 4.3 instala com.despertadorflash.beta43, separada de "
+        "AURORA original y de la BETA 4.2. No se comparten datos ni "
+        "se deben iniciar dos microfonos al mismo tiempo.")
     add("LIMITACIONES Y RIESGOS", "AuroraSection")
     add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
         "de certeza ni permiten garantizar identificacion perfecta.")
@@ -175,7 +193,9 @@ def main() -> None:
         "NO VERSION COMERCIAL. No se han validado pruebas en telefono "
         "ni metricas de precision con audios reales.\n"
         "La portada se recupero del codigo historico 2.8; falta validacion en el telefono.\n"
-        "Paquete de instalacion: com.despertadorflash.beta; no desinstalar la AURORA original.\n"
+        "Paquete de instalacion: com.despertadorflash.beta43; no desinstalar la AURORA original ni BETA 4.2.\n"
+        "ESCUCHA: panel de sonidos recientes y reconexion automatica acotada.\n"
+        "TRADUCCION: panel independiente, selector de idioma, errores visibles.\n"
         "Desde Ajustes se pueden respaldar alarmas/preferencias y desde Registros los TXT.\n"
     )
     with ZipFile(target, "w", compression=ZIP_DEFLATED, compresslevel=6) as out:
@@ -203,10 +223,15 @@ def main() -> None:
             "approved_ui_reference": "AURORA 2.8",
             "approved_ui_home_source_restored": True,
             "approved_ui_verified_on_device": False,
-            "debug_application_id": "com.despertadorflash.beta",
+            "debug_application_id": "com.despertadorflash.beta43",
             "can_install_alongside_original": True,
             "settings_backup_txt": "export_and_import_with_sha256_check",
             "record_backup": "user_folder_copy_verified_sha256",
+            "live_sound_window_ms": 3500,
+            "sound_classifier_max_results": 40,
+            "sound_recovery": "max_three_attempts",
+            "translation_visible_panel": True,
+            "translation_target_languages": ["es", "en", "pt"],
             "apks_signed_for_production": False,
             "files_sha256": checksums,
         }
