@@ -622,6 +622,18 @@ public class MainActivity extends Activity {
     .show();
   });
   root.addView(txt("Los sonidos se incorporan a la lista de los últimos 30 aunque no tengan avisos habilitados. Vibración y flash sólo se disparan por detecciones confirmadas de las categorías elegidas.",13));
+  Button testSoundSignal=btn("PROBAR ALERTA DE SONIDO · SIN MICRÓFONO");
+  root.addView(testSoundSignal);
+  testSoundSignal.setOnClickListener(v->{
+   if(!SoundAlertPreferences.isEnabled(this,"POSIBLE TIMBRE")){
+    Toast.makeText(this,"Habilitá Timbre y puertas para probar este aviso",Toast.LENGTH_LONG).show();
+    return;
+   }
+   SoundEventFeedback testFeedback=new SoundEventFeedback(this);
+   testFeedback.onConfirmed("POSIBLE TIMBRE",true);
+   new Handler(Looper.getMainLooper()).postDelayed(testFeedback::stop,5000);
+   Toast.makeText(this,"Probando vibración y flash según la configuración. No se registró ningún sonido.",Toast.LENGTH_LONG).show();
+  });
   root.addView(section("MODO DE VALIDACIÓN DE SONIDOS"));
   android.widget.Switch validation=new android.widget.Switch(this);
   validation.setText("Evaluar detecciones con ACERTÓ / NO COINCIDE");
