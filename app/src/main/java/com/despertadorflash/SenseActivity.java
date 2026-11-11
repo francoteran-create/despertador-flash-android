@@ -67,6 +67,10 @@ public final class SenseActivity extends Activity {
  private AudioClassifier classifier;
  private int mode=MODE_NONE, requestedMode=MODE_NONE, screenMode=MODE_SPEECH;
  private LinearLayout root;
+ private final SoundCaptureTelemetry captureStats=new SoundCaptureTelemetry();
+ private volatile int lastSpeechError=-1;
+ private volatile int speechFinalResults=0,speechPartialResults=0;
+ private TextView audioHealth;
  private TextView state, result, detail;
  private AuroraVisualEngineView visual;
  private Button speechButton, soundsButton, translateButton;
@@ -211,6 +215,11 @@ public final class SenseActivity extends Activity {
   root.addView(result);
   detail=text("El micrófono funciona únicamente mientras la escucha está activa.",14,0xffcad9f0);
   root.addView(detail);
+  audioHealth=text("DIAGNÓSTICO: todavía sin respuestas del detector.",12,0xffb8ddec);
+  root.addView(audioHealth);
+  Button diagnostic=button("COPIAR DIAGNÓSTICO (SIN AUDIO)");
+  root.addView(diagnostic);
+  diagnostic.setOnClickListener(v->copySoundDiagnostic());
   if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
    TextView note=text("MODO PRUEBA: marcá ACERTÓ o NO COINCIDE debajo de cada detección. "
     +"Si escuchaste algo que AURORA no detectó, usá el botón. No se guarda audio.",13,0xffb0dfee);
@@ -558,6 +567,7 @@ public final class SenseActivity extends Activity {
     public void onEndOfSpeech(){if(mode==MODE_SPEECH&&recognizer==current)state.setText("PROCESANDO PALABRAS…");}
     public void onError(int error){
      if(mode!=MODE_SPEECH||recognizer!=current)return;
+     lastSpeechError=error;
      releaseSpeech();
      if(SpeechRetryController.isSilence(error)){
       // Silence is normal during long conversations; do not count it as a failure.
@@ -585,6 +595,8 @@ public final class SenseActivity extends Activity {
      ArrayList<String> matches=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
      String phrase=matches!=null&&!matches.isEmpty()?matches.get(0).trim():"";
      if(!phrase.isEmpty()){
+      speechFinalResults++;
+      lastSpeechError=-1;
       result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);
       speechRetries.reset();
       if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}
@@ -597,6 +609,7 @@ public final class SenseActivity extends Activity {
      if(mode!=MODE_SPEECH||recognizer!=current)return;
      ArrayList<String> partial=data.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
      if(partial!=null&&!partial.isEmpty()){
+      speechPartialResults++;
       partialTranscript=partial.get(0).trim();
       if(!partialTranscript.isEmpty())result.setText(partialTranscript);
      }
@@ -654,7 +667,15 @@ public final class SenseActivity extends Activity {
   soundDisplayTick=new Runnable(){
    @Override public void run(){
     if(soundRunning&&mode==MODE_SOUND&&soundSession==run){
-     updateLiveSoundDisplay(SystemClock.elapsedRealtime());
+     long current=SystemClock.elapsedRealtime();
+     updateLiveSoundDisplay(current);
+     if(audioHealth!=null){
+      long age=captureStats.callbackAge(current);
+      audioHealth.setText(age<0?
+       "IA: sin respuesta todavía · muestras "+captureStats.getSamples():
+       "IA: "+captureStats.getResults()+" respuestas · última hace "+(age/1000)+
+        " s · reconexiones "+captureStats.getRecoveries());
+     }
      main.postDelayed(this,1000L);
     }
    }
@@ -663,6 +684,7 @@ public final class SenseActivity extends Activity {
  }
  private void startSounds(){
   soundRunning=true;
+  captureStats.begin(SystemClock.elapsedRealtime());
   final int run=++soundSession;
   foregroundSoundGate.reset();
   beginSoundDisplayTick(run);
@@ -685,6 +707,7 @@ public final class SenseActivity extends Activity {
       .setResultListener(r->{
        if(!soundRunning||soundSession!=run||r==null)return;
        lastResult.set(SystemClock.elapsedRealtime());
+       captureStats.classified(SystemClock.elapsedRealtime());
        if(r.classificationResults().isEmpty()||r.classificationResults().get(0).classifications().isEmpty())return;
        java.util.Map<String,Float> rawScores=new java.util.LinkedHashMap<>();
        for(Category cat:r.classificationResults().get(0).classifications().get(0).categories()){
@@ -737,6 +760,7 @@ public final class SenseActivity extends Activity {
       if(classifierError.get()!=null)throw new IllegalStateException("El modelo perdió la conexión de audio");
       int frames=data.load(localRecord);
       if(frames>0){
+       captureStats.samplesRead(frames);
        localClassifier.classifyAsync(data,SystemClock.uptimeMillis());
        emptyReads=0;
       }else{
@@ -751,10 +775,12 @@ public final class SenseActivity extends Activity {
     }catch(Exception error){
      if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)break;
      android.util.Log.w("AURORA","Escucha interrumpida: recuperación de micrófono/modelo",error);
+     captureStats.recovering(error.getClass().getSimpleName()+": "+error.getMessage());
      if(SystemClock.elapsedRealtime()-started>30000L)consecutiveFailures=0;
      recoveryDelay=SoundRecoveryPolicy.delayAfterFailure(++consecutiveFailures);
      if(recoveryDelay<0){
       final String reason=error.getMessage()==null?"Error persistente":error.getMessage();
+      captureStats.failed(error.getClass().getSimpleName()+": "+reason);
       main.post(()->{
        if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
         stopAll(false);
