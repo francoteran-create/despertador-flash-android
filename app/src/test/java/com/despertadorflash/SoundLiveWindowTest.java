@@ -12,6 +12,13 @@ public class SoundLiveWindowTest {
   for(int i=0;i<values.length;i+=2)m.put((String)values[i],(Float)values[i+1]);
   return m;
  }
+ @Test public void newDoorbellIsShownBeforeLouderSimultaneousMusic(){
+  SoundLiveWindow w=new SoundLiveWindow();
+  w.observe(obs("POSIBLE MÚSICA",.99f,"POSIBLE TIMBRE DE PUERTA",.28f),1000);
+  List<SoundLiveWindow.Item> shown=w.snapshot(1100,2);
+  assertEquals("POSIBLE TIMBRE DE PUERTA",shown.get(0).label);
+  assertEquals("POSIBLE MÚSICA",shown.get(1).label);
+ }
  @Test public void oldLoudSoundDoesNotHideNewQuieterSound(){
   SoundLiveWindow window=new SoundLiveWindow();
   window.observe(obs("MÚSICA",.94f),1000);
