@@ -341,7 +341,7 @@ public final class SenseActivity extends Activity {
   root.addView(eventsScroll,new LinearLayout.LayoutParams(-1,dp(205)));
   TextView empty=text(screenMode==MODE_SOUND?"Los últimos 30 sonidos detectados aparecen aquí.":"Las frases de la conversación aparecen aquí.",15,0xffa3b8d2);
   eventsView.addView(empty);
-  File[] files=history.list();lastSaved=files.length>0?files[0]:null;
+  File[] files=ConversationRecordFilter.conversations(history.list());lastSaved=files.length>0?files[0]:null;
   if(screenMode==MODE_SOUND)showRecentSounds();
   openSaved=button("ABRIR ÚLTIMO ARCHIVO");
   root.addView(openSaved);openSaved.setOnClickListener(v->showFile(lastSaved));
@@ -517,7 +517,7 @@ public final class SenseActivity extends Activity {
   pendingExport=null;
  }
  private void showHistory(){
-  File[] files=history.list();if(files.length==0){Toast.makeText(this,"No hay escuchas guardadas todavía",Toast.LENGTH_SHORT).show();return;}
+  File[] files=ConversationRecordFilter.conversations(history.list());if(files.length==0){Toast.makeText(this,"No hay escuchas guardadas todavía",Toast.LENGTH_SHORT).show();return;}
   String[] labels=new String[files.length];for(int i=0;i<files.length;i++)labels[i]=SenseHistory.readableName(files[i]);
   new android.app.AlertDialog.Builder(this).setTitle("Escuchas guardadas en AURORA").setItems(labels,(d,which)->showFile(files[which])).setNegativeButton("CERRAR",null).show();
  }
