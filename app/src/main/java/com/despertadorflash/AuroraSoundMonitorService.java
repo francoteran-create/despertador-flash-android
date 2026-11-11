@@ -265,7 +265,10 @@ public final class AuroraSoundMonitorService extends Service {
   eventWorker.execute(()->{
    try{
     java.io.File saved=closingHistory.finish();
-    if(saved!=null)new SavedFolderManager(this).copyOne(saved);
+    if(saved!=null){
+     SavedFolderManager copies=new SavedFolderManager(this);
+     if(copies.selectedFolder()!=null)copies.copyOne(saved);
+    }
    }catch(Exception e){Log.w("AURORA","No se pudo guardar o copiar el registro",e);}
   });
  }
