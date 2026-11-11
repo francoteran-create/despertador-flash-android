@@ -9,6 +9,28 @@ import java.util.Map;
  */
 public final class SoundDigest {
  private SoundDigest(){}
+ public static String summarizeRecent(java.util.List<SoundTimeline.Entry> recent){
+  if(recent==null||recent.isEmpty())
+   return "Todavía no hay sonidos confirmados en los últimos 30 eventos.";
+  LinkedHashMap<String,Integer> counts=new LinkedHashMap<>();
+  int total=0;
+  for(SoundTimeline.Entry event:recent){
+   if(event==null)continue;
+   counts.put(event.label,counts.getOrDefault(event.label,0)+1);
+   total++;
+   if(total>=SoundTimeline.LIMIT)break;
+  }
+  if(total==0)return "Todavía no hay sonidos confirmados en los últimos 30 eventos.";
+  StringBuilder output=new StringBuilder("ÚLTIMOS SONIDOS EN AURORA\n");
+  output.append("Eventos observados: ").append(total).append(" (máximo 30).\n");
+  for(Map.Entry<String,Integer> item:counts.entrySet()){
+   output.append("• ").append(item.getKey()).append(": ").append(item.getValue()).append(" evento(s).\n");
+  }
+  output.append("Más reciente: ").append(recent.get(0).label).append(".\n");
+  output.append("Son posibles clasificaciones de audio, no hechos confirmados. ");
+  output.append("Esta lista vive dentro de la app, sin archivos de sonidos.");
+  return output.toString();
+ }
  public static String summarize(String data){
   if(data==null||data.trim().isEmpty())return "No hay detecciones disponibles.";
   LinkedHashMap<String,Integer> counts=new LinkedHashMap<>();
