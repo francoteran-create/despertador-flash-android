@@ -53,6 +53,15 @@ en el S9+ y permitir al usuario desactivarlo en cualquier momento.
 - El modelo YAMNet, las etiquetas y las sesiones de
   conversaciones conservan la lógica de la beta 4.5.
 
+## Respaldo de ajustes y compatibilidad
+La copia de alarmas y configuraciones pasa al formato
+`AURORA_CONFIGURACION_V2`, incluyendo los interruptores
+`monitor_sound_vibration` y `monitor_sound_flash`.
+Las copias anteriores `V1` siguen siendo importables con validación
+de integridad; las nuevas opciones toman valores seguros,
+especialmente flash de sonidos **apagado**. Se incluyen pruebas
+automáticas del recorrido V1 → V2 y rechazo de archivos alterados.
+
 ## Prueba física necesaria
 
 1. Instalar AURORA 4.6 BETA aparte, sin desinstalar las otras apps.
