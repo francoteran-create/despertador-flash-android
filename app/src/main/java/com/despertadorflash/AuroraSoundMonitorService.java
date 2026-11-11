@@ -68,12 +68,11 @@ public final class AuroraSoundMonitorService extends Service {
   }
   listening=true;sessionId++;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
   final long run=sessionId;
-  final SenseHistory currentHistory=new SenseHistory(this);
-  history=currentHistory;
+  history=null;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
    .putLong(KEY_STARTED,System.currentTimeMillis()).putLong(KEY_HEARTBEAT,0L).apply();
   // Histories and notifications are serialized on a different thread from audio.
-  eventWorker.execute(()->currentHistory.begin("sonidos"));
+  // Sound events remain in the bounded in-app list; no TXT is opened.
   worker.execute(()->classifyLoop(run));
   return START_NOT_STICKY; // Do not restart microphone capture without user interaction.
  }
@@ -231,11 +230,11 @@ public final class AuroraSoundMonitorService extends Service {
   if(!listening||sessionId!=run)return;
   int sensitivity=getSharedPreferences("aurora",0).getInt("monitor_sensitivity",1);
   if(!gate.accept(found,percent,sensitivity,SystemClock.elapsedRealtime()))return;
-  final SenseHistory savedHistory=history;
+  // Sound event persistence uses only the 30-item app list.
   // No synchronous file writes, SharedPreferences writes, or NotificationManager
   // calls on MediaPipe's classifier callback thread.
   eventWorker.execute(()->{
-   savedHistory.event(found+" · puntaje de IA "+percent+"/100");
+   RecentSoundEvents.add(this,found,percent);
    getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · puntaje IA "+percent+"/100").apply();
    if(!listening||sessionId!=run)return;
    if(!SoundAlertPreferences.isEnabled(this,found))return;
@@ -261,16 +260,7 @@ public final class AuroraSoundMonitorService extends Service {
   // Release a blocking audio read on the capture worker before it disposes native objects.
   AudioRecord active=recorder;
   if(active!=null){try{if(active.getRecordingState()==AudioRecord.RECORDSTATE_RECORDING)active.stop();}catch(Exception ignored){}}
-  final SenseHistory closingHistory=history;
-  eventWorker.execute(()->{
-   try{
-    java.io.File saved=closingHistory.finish();
-    if(saved!=null){
-     SavedFolderManager copies=new SavedFolderManager(this);
-     if(copies.selectedFolder()!=null)copies.copyOne(saved);
-    }
-   }catch(Exception e){Log.w("AURORA","No se pudo guardar o copiar el registro",e);}
-  });
+  // No sound TXT files or external exports are generated.
  }
  @Override public void onDestroy(){
   shutdown();worker.shutdownNow();eventWorker.shutdown();ui.removeCallbacksAndMessages(null);super.onDestroy();
