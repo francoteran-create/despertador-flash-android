@@ -88,6 +88,8 @@ public final class SenseActivity extends Activity {
  private boolean speechLaunching=false;
  private SenseHistory history;
  private LinearLayout eventsView;
+ private LinearLayout feedbackPanel;
+ private TextView soundCount;
  private ScrollView eventsScroll;
  private Button openSaved;
  private File lastSaved;
@@ -306,7 +308,28 @@ public final class SenseActivity extends Activity {
    root.addView(translationResult,new LinearLayout.LayoutParams(-1,-2));
    root.addView(translationStatus);
   }
+  if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
+   feedbackPanel=new LinearLayout(this);
+   feedbackPanel.setOrientation(LinearLayout.VERTICAL);
+   root.addView(feedbackPanel);
+  }
   root.addView(AuroraDesign.overline(this,screenMode==MODE_SOUND?"ÚLTIMOS 30 SONIDOS":"HISTORIAL DE ESTA CONVERSACIÓN"));
+  if(screenMode==MODE_SOUND){
+   LinearLayout topHistory=new LinearLayout(this);topHistory.setGravity(Gravity.CENTER_VERTICAL);
+   soundCount=text("0/30 eventos",13,0xffb8ddec);
+   topHistory.addView(soundCount,new LinearLayout.LayoutParams(0,-2,1f));
+   Button clearSounds=button("BORRAR LISTA");clearSounds.setTextSize(11);
+   topHistory.addView(clearSounds,new LinearLayout.LayoutParams(dp(138),dp(48)));
+   clearSounds.setOnClickListener(v->new android.app.AlertDialog.Builder(this)
+    .setTitle("Borrar los últimos sonidos")
+    .setMessage("Solo se borran los últimos eventos detectados. Las conversaciones guardadas no se modifican.")
+    .setNegativeButton("CANCELAR",null)
+    .setPositiveButton("BORRAR",(dialog,which)->{
+     RecentSoundEvents.clear(this);
+     showRecentSounds();
+    }).show());
+   root.addView(topHistory);
+  }
   eventsScroll=new ScrollView(this);eventsScroll.setFillViewport(false);
   eventsScroll.setBackground(bg(0xff122b3c,0xff171b35));
   eventsView=new LinearLayout(this);eventsView.setOrientation(LinearLayout.VERTICAL);
@@ -333,14 +356,23 @@ public final class SenseActivity extends Activity {
  private void showRecentSounds(){
   if(screenMode!=MODE_SOUND||eventsView==null)return;
   eventsView.removeAllViews();
-  java.util.List<String> recent=RecentSoundEvents.list(this);
+  java.util.List<SoundTimeline.Entry> recent=RecentSoundEvents.snapshot(this);
+  if(soundCount!=null)soundCount.setText(recent.size()+"/30 eventos detectados");
   if(recent.isEmpty()){
-   eventsView.addView(text("Todavía no hay sonidos confirmados.",15,0xffa3b8d2));
+   eventsView.addView(text("Todavía no hay sonidos confirmados. La lista se completa al detectar eventos.",15,0xffa3b8d2));
   }else{
-   for(String item:recent){
-    TextView row=text(item,17,0xffe7f6ff);
-    row.setPadding(dp(8),dp(7),dp(8),dp(7));
-    eventsView.addView(row);
+   java.text.SimpleDateFormat format=new java.text.SimpleDateFormat("dd/MM HH:mm:ss",Locale.getDefault());
+   for(SoundTimeline.Entry entry:recent){
+    LinearLayout item=new LinearLayout(this);item.setOrientation(LinearLayout.VERTICAL);
+    item.setPadding(dp(7),dp(4),dp(7),dp(5));item.setBackground(bg(0xff162f44,0xff202943));
+    TextView clock=text(format.format(new Date(entry.timestamp)),12,0xffb0d5e7);
+    clock.setPadding(dp(5),0,dp(5),0);
+    TextView label=text(entry.label,16,0xfff3faff);
+    label.setPadding(dp(5),0,dp(5),dp(4));
+    item.addView(clock);item.addView(label);
+    LinearLayout.LayoutParams margin=new LinearLayout.LayoutParams(-1,-2);
+    margin.bottomMargin=dp(5);
+    eventsView.addView(item,margin);
    }
   }
   eventCount=recent.size();
