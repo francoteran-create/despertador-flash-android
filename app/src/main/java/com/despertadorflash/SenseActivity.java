@@ -78,7 +78,11 @@ public final class SenseActivity extends Activity {
  private AuroraVisualEngineView visual;
  private Button speechButton, soundsButton, translateButton;
  private TextView translationResult, translationStatus, translationOriginal;
- private EditText manualTranslationInput;
+ private Button[] translationTargetButtons;
+ private Button[] sourceLanguageButtons;
+ private String activeTranslationPair="";
+ private boolean translationModelReady=false,translationModelDownloading=false;
+ private String pendingTranslationPhrase="";
  private volatile String lastTranslationFailure="ninguno";
  private String partialTranscript="";
  private int translationTarget=-1, translationGeneration=0;
@@ -139,14 +143,15 @@ public final class SenseActivity extends Activity {
    startActivity(destination);finish();
   });
   root.addView(AuroraDesign.overline(this,"AURORA  /  INTELIGENCIA SENSORIAL"));
-  TextView intro=text(screenMode==MODE_SOUND?"Escuchá lo que sucede a tu alrededor.":"Convertí conversaciones en texto claro.",15,0xffcbddee);
+  TextView intro=text(screenMode==MODE_SOUND?"Escuchá lo que sucede a tu alrededor.":"Transcribí y traducí automáticamente, frase por frase.",15,0xffcbddee);
   intro.setGravity(Gravity.CENTER);root.addView(intro);
   visual=new AuroraVisualEngineView(this,screenMode==MODE_SOUND?AuroraVisualEngineView.SOUND:AuroraVisualEngineView.SPEECH);
   LinearLayout.LayoutParams vis=new LinearLayout.LayoutParams(-1,-2);vis.bottomMargin=dp(6);root.addView(visual,vis);
+  if(screenMode==MODE_SPEECH)visual.setVisibility(View.GONE);
   state=text("MICRÓFONO APAGADO",16,0xff8fe8df);state.setGravity(Gravity.CENTER);
   state.setBackground(bg(0xff0c303f,0xff14264b));root.addView(state);
-  String initial=getSharedPreferences("aurora",0).getString("sense_last_transcript","");
-  lastTranscript=initial;
+  String initial="";
+  lastTranscript="";
   if(screenMode==MODE_SOUND){
    root.addView(AuroraDesign.overline(this,"SENSIBILIDAD DE ESCUCHA"));
    LinearLayout sensitivityRow=new LinearLayout(this);sensitivityRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -183,6 +188,7 @@ public final class SenseActivity extends Activity {
    root.addView(languageRow,new LinearLayout.LayoutParams(-1,dp(64)));
    String[] languageLabels={"ESPAÑOL","INGLÉS","PORTUGUÉS"};
    Button[] languageButtons=new Button[3];
+   sourceLanguageButtons=languageButtons;
    languageSelection=Math.max(0,Math.min(2,getPreferences(MODE_PRIVATE).getInt("sense_language",0)));
    for(int k=0;k<3;k++){
     int chosen=k;
@@ -193,14 +199,54 @@ public final class SenseActivity extends Activity {
     if(k>0)lp.leftMargin=dp(6);
     languageRow.addView(item,lp);
     item.setOnClickListener(v->{
+     if(languageSelection==chosen)return;
      languageSelection=chosen;
+     if(translationTarget==chosen){
+      translationTarget=chosen==0?1:0;
+      getPreferences(MODE_PRIVATE).edit().putInt("translation_target",translationTarget).apply();
+     }
      getPreferences(MODE_PRIVATE).edit().putInt("sense_language",chosen).apply();
-     for(int j=0;j<3;j++)AuroraDesign.action(languageButtons[j],
-      j==chosen?0xff155a70:0xff1b2e46,j==chosen?0xff2c4b7a:0xff242741,
-      j==chosen?0xff86f4ed:0xff44647d);
+     refreshLanguageSelections();
+     invalidateTranslation();
+     lastTranscript="";partialTranscript="";
+     if(result!=null)result.setText("Esperando nueva conversación…");
+     if(translationResult!=null)translationResult.setText("Esperando una frase para traducir…");
+     if(translationOriginal!=null)translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
      if(mode==MODE_SPEECH){stopAll(true);toggle(MODE_SPEECH);}
     });
    }
+  }
+  if(screenMode==MODE_SPEECH){
+   root.addView(AuroraDesign.overline(this,"TRADUCIR AUTOMÁTICAMENTE AL"));
+   LinearLayout targets=new LinearLayout(this);
+   targets.setOrientation(LinearLayout.HORIZONTAL);
+   root.addView(targets,new LinearLayout.LayoutParams(-1,dp(61)));
+   final String[] names={"ESPAÑOL","INGLÉS","PORTUGUÉS"};
+   translationTargetButtons=new Button[3];
+   int preferred=getPreferences(MODE_PRIVATE).getInt("translation_target",-1);
+   translationTarget=preferred>=0&&preferred<3&&preferred!=languageSelection?
+    preferred:(languageSelection==0?1:0);
+   for(int k=0;k<3;k++){
+    final int chosen=k;
+    Button target=button(names[k]);target.setTextSize(12);
+    translationTargetButtons[k]=target;
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1f);
+    if(k>0)lp.leftMargin=dp(5);
+    targets.addView(target,lp);
+    target.setOnClickListener(v->{
+     if(chosen==languageSelection){
+      Toast.makeText(this,"Elegí un idioma distinto del original",Toast.LENGTH_SHORT).show();
+      return;
+     }
+     translationTarget=chosen;
+     getPreferences(MODE_PRIVATE).edit().putInt("translation_target",chosen).apply();
+     refreshLanguageSelections();
+     if(translationOriginal!=null)translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
+     if(!lastTranscript.trim().isEmpty())translatePhrase(lastTranscript,true);
+     else if(translationStatus!=null)translationMessage("Destino cambiado. La próxima frase se traducirá automáticamente.");
+    });
+   }
+   refreshLanguageSelections();
   }
   LinearLayout controls=new LinearLayout(this);controls.setOrientation(LinearLayout.HORIZONTAL);
   LinearLayout.LayoutParams controlsParams=new LinearLayout.LayoutParams(-1,-2);controlsParams.topMargin=dp(12);
@@ -215,17 +261,31 @@ public final class SenseActivity extends Activity {
   Button stop=button("■  DETENER");AuroraDesign.action(stop,0xff66334d,0xff4a253c,0xffa76e89);
   LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(0,dp(68),1f);stopParams.leftMargin=dp(9);
   controls.addView(stop,stopParams);stop.setOnClickListener(v->stopAll(true));
-  root.addView(AuroraDesign.overline(this,"RESULTADO ACTUAL"));
+  root.addView(AuroraDesign.overline(this,screenMode==MODE_SOUND?"SONIDO ACTUAL":"LO QUE SE DIJO · ORIGINAL"));
   result=text(screenMode==MODE_SOUND?"Buscando sonidos…":initial.isEmpty()?"Esperando conversación…":initial,25,Color.WHITE);
   result.setGravity(Gravity.CENTER);result.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
   result.setMinHeight(dp(126));result.setBackground(bg(0xff143447,0xff201e45));
   root.addView(result);
+  if(screenMode==MODE_SPEECH){
+   root.addView(AuroraDesign.overline(this,"TRADUCCIÓN AUTOMÁTICA"));
+   translationOriginal=text(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget),14,0xffb8e8fa);
+   root.addView(translationOriginal);
+   translationResult=text("Esperando una frase para traducir…",26,Color.WHITE);
+   translationResult.setMinHeight(dp(114));
+   translationResult.setTextIsSelectable(true);
+   translationResult.setGravity(Gravity.CENTER_VERTICAL);
+   translationResult.setBackground(bg(0xff0d434e,0xff1a3658));
+   root.addView(translationResult,new LinearLayout.LayoutParams(-1,-2));
+   translationStatus=text("AUTOMÁTICO: al finalizar cada frase aparecerá aquí su traducción. La primera vez puede necesitar Internet.",14,0xffbee9eb);
+   root.addView(translationStatus);
+   translateButton=button("REINTENTAR TRADUCCIÓN DE LA ÚLTIMA FRASE");
+   root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(54)));
+   translateButton.setOnClickListener(v->translateLast());
+  }
   detail=text("El micrófono funciona únicamente mientras la escucha está activa.",14,0xffcad9f0);
   root.addView(detail);
   audioHealth=text("DIAGNÓSTICO: todavía sin respuestas del detector.",12,0xffb8ddec);
-  root.addView(audioHealth);
   Button diagnostic=button("COPIAR DIAGNÓSTICO (SIN AUDIO)");
-  root.addView(diagnostic);
   diagnostic.setOnClickListener(v->copySoundDiagnostic());
   if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
    TextView note=text("MODO PRUEBA: marcá ACERTÓ o NO COINCIDE debajo de cada detección. "
@@ -252,65 +312,6 @@ public final class SenseActivity extends Activity {
      })
      .setNegativeButton("Cancelar",null).show();
    });
-  }
-  if(screenMode==MODE_SPEECH){
-   root.addView(AuroraDesign.overline(this,"TRADUCCIÓN VISIBLE"));
-   root.addView(text("ELEGÍ EL IDIOMA AL QUE QUERÉS TRADUCIR",13,0xffbedbe9));
-   LinearLayout targets=new LinearLayout(this);
-   targets.setOrientation(LinearLayout.HORIZONTAL);
-   root.addView(targets,new LinearLayout.LayoutParams(-1,dp(61)));
-   final String[] names={"ESPAÑOL","INGLÉS","PORTUGUÉS"};
-   final Button[] targetButtons=new Button[3];
-   int preferred=getPreferences(MODE_PRIVATE).getInt("translation_target",-1);
-   translationTarget=preferred>=0&&preferred<3&&preferred!=languageSelection?
-    preferred:(languageSelection==0?1:0);
-   for(int k=0;k<3;k++){
-    final int chosen=k;
-    Button target=button(names[k]);target.setTextSize(12);targetButtons[k]=target;
-    LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(0,dp(58),1f);
-    if(k>0)layout.leftMargin=dp(5);
-    targets.addView(target,layout);
-    AuroraDesign.action(target,k==translationTarget?0xff155a70:0xff1b2e46,
-     k==translationTarget?0xff2c4b7a:0xff242741,k==translationTarget?0xff86f4ed:0xff44647d);
-    target.setOnClickListener(v->{
-     translationTarget=chosen;
-     getPreferences(MODE_PRIVATE).edit().putInt("translation_target",chosen).apply();
-     for(int j=0;j<3;j++)AuroraDesign.action(targetButtons[j],
-      j==chosen?0xff155a70:0xff1b2e46,
-      j==chosen?0xff2c4b7a:0xff242741,j==chosen?0xff86f4ed:0xff44647d);
-     if(translationStatus!=null)translationStatus.setText("Destino: "+names[chosen]+". Tocá TRADUCIR.");
-    });
-   }
-   manualTranslationInput=new EditText(this);
-   manualTranslationInput.setSingleLine(false);
-   manualTranslationInput.setMinLines(2);
-   manualTranslationInput.setMaxLines(4);
-   manualTranslationInput.setTextSize(16f);
-   manualTranslationInput.setTextColor(Color.WHITE);
-   manualTranslationInput.setHintTextColor(0xffa9b9cd);
-   manualTranslationInput.setHint("Opcional: escribí una frase para probar el traductor sin usar el micrófono");
-   manualTranslationInput.setBackground(bg(0xff1b314a,0xff25244b));
-   manualTranslationInput.setPadding(dp(12),dp(12),dp(12),dp(12));
-   root.addView(manualTranslationInput,new LinearLayout.LayoutParams(-1,-2));
-   translateButton=button("🌐  TRADUCIR FRASE O TEXTO ESCRITO");
-   root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(62)));
-   translateButton.setOnClickListener(v->{
-    translateLast();
-    // Make the result visible when the phone's screen is small.
-    if(pageScroll!=null&&translationOriginal!=null){
-     pageScroll.post(()->pageScroll.smoothScrollTo(0,
-      Math.max(0,translationOriginal.getTop()-dp(36))));
-    }
-   });
-   translationOriginal=text("ORIGINAL: todavía no se reconocieron palabras.",14,0xffc5d9ee);
-   translationResult=text("TRADUCCIÓN: aquí aparecerá el texto.",23,Color.WHITE);
-   translationResult.setMinHeight(dp(108));
-   translationResult.setTextIsSelectable(true);
-   translationResult.setBackground(bg(0xff163a4e,0xff1d2246));
-   translationStatus=text("La primera traducción puede requerir Internet para descargar el idioma.",13,0xffb0d6ea);
-   root.addView(translationOriginal);
-   root.addView(translationResult,new LinearLayout.LayoutParams(-1,-2));
-   root.addView(translationStatus);
   }
   if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
    feedbackPanel=new LinearLayout(this);
@@ -353,6 +354,14 @@ public final class SenseActivity extends Activity {
   Button folder=button("📁  CARPETA DE REGISTROS");
   root.addView(folder);folder.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
   folder.setVisibility(screenMode==MODE_SPEECH?View.VISIBLE:View.GONE);
+  root.addView(AuroraDesign.overline(this,"HERRAMIENTAS OPCIONALES"));
+  root.addView(audioHealth);
+  root.addView(diagnostic);
+  if(screenMode==MODE_SPEECH){
+   Button testTranslation=button("PROBAR TRADUCTOR CON TEXTO ESCRITO");
+   root.addView(testTranslation);
+   testTranslation.setOnClickListener(v->showManualTranslationTest());
+  }
   TextView safety=text("Las detecciones son aproximadas. AURORA no sustituye las alarmas certificadas ni los dispositivos de emergencia.",13,0xffc3d6eb);
   root.addView(safety);
   updateModeVisibility();
