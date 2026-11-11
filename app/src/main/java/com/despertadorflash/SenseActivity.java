@@ -509,116 +509,168 @@ public final class SenseActivity extends Activity {
   }
  }
  private void releaseSpeech(){if(recognizer!=null){SpeechRecognizer old=recognizer;recognizer=null;old.destroy();}}
+ private final SoundLiveWindow soundLiveWindow=new SoundLiveWindow();
+ private Runnable soundDisplayTick;
+
+ private void updateLiveSoundDisplay(long now){
+  if(mode!=MODE_SOUND||!soundRunning)return;
+  java.util.List<SoundLiveWindow.Item> recent=soundLiveWindow.snapshot(now,4);
+  if(recent.isEmpty()){
+   result.setText("Escuchando…\nSin sonidos identificados ahora");
+   return;
+  }
+  StringBuilder lines=new StringBuilder();
+  for(SoundLiveWindow.Item item:recent){
+   if(lines.length()>0)lines.append("\n");
+   lines.append(item.label).append(" · IA ").append(item.score).append("/100");
+  }
+  result.setText(lines.toString());
+ }
+ private void stopSoundDisplayTick(){
+  if(soundDisplayTick!=null){main.removeCallbacks(soundDisplayTick);soundDisplayTick=null;}
+  soundLiveWindow.clear();
+ }
+ private void beginSoundDisplayTick(final int run){
+  stopSoundDisplayTick();
+  soundDisplayTick=new Runnable(){
+   @Override public void run(){
+    if(soundRunning&&mode==MODE_SOUND&&soundSession==run){
+     updateLiveSoundDisplay(SystemClock.elapsedRealtime());
+     main.postDelayed(this,1000L);
+    }
+   }
+  };
+  main.postDelayed(soundDisplayTick,1000L);
+ }
  private void startSounds(){
   soundRunning=true;
   final int run=++soundSession;
   foregroundSoundGate.reset();
+  beginSoundDisplayTick(run);
   state.setText("INICIANDO RECONOCIMIENTO LOCAL");
   result.setText("Preparando modelo YAMNet…");
-  detail.setText("Reconocimiento local aproximado. Las detecciones se guardan sin grabar audio.");
+  detail.setText("La pantalla actualiza sonidos recientes aunque no generen alertas. No se graba audio.");
   work.execute(()->{
-   AudioClassifier localClassifier=null;
-   AudioRecord localRecord=null;
-   final java.util.concurrent.atomic.AtomicLong lastResult=new java.util.concurrent.atomic.AtomicLong(0L);
-   try{
-    BaseOptions base=BaseOptions.builder().setModelAssetPath("yamnet.tflite").build();
-    AudioClassifierOptions settings=AudioClassifierOptions.builder().setBaseOptions(base)
-     .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(10).setScoreThreshold(.15f)
-     .setResultListener(r->{
-      if(!soundRunning||soundSession!=run||r==null)return;
-      lastResult.set(SystemClock.elapsedRealtime());
-      if(r.classificationResults().isEmpty()||r.classificationResults().get(0).classifications().isEmpty())return;
-      java.util.Map<String,Float> rawScores=new java.util.LinkedHashMap<>();
-      for(Category cat:r.classificationResults().get(0).classifications().get(0).categories()){
-       String raw=cat.categoryName();
-       Float previous=rawScores.get(raw);
-       if(previous==null||cat.score()>previous)rawScores.put(raw,cat.score());
-      }
-      java.util.Map<String,Float> strongest=SoundEvidence.fromRawScores(rawScores);
-      if(strongest.isEmpty())return;
-      main.post(()->{
-       if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)return;
-       int sensitivity=minConfidence<=22?0:minConfidence>=45?2:1;
-       java.util.List<String> announced=new java.util.ArrayList<>();
-       int maximumScore=0;
-       for(java.util.Map.Entry<String,Float> entry:strongest.entrySet()){
-        String found=entry.getKey();
-        int percent=Math.round(entry.getValue()*100f);
-        if(!foregroundSoundGate.accept(found,percent,sensitivity,SystemClock.elapsedRealtime()))continue;
-        announced.add(found);
-        maximumScore=Math.max(maximumScore,percent);
-        recordSoundEvent(found,percent);
+   int consecutiveFailures=0;
+   while(soundRunning&&soundSession==run&&mode==MODE_SOUND){
+    AudioClassifier localClassifier=null;
+    AudioRecord localRecord=null;
+    final java.util.concurrent.atomic.AtomicLong lastResult=new java.util.concurrent.atomic.AtomicLong(0L);
+    final java.util.concurrent.atomic.AtomicReference<String> classifierError=new java.util.concurrent.atomic.AtomicReference<>();
+    long started=SystemClock.elapsedRealtime();
+    try{
+     BaseOptions base=BaseOptions.builder().setModelAssetPath("yamnet.tflite").build();
+     AudioClassifierOptions settings=AudioClassifierOptions.builder().setBaseOptions(base)
+      .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(40).setScoreThreshold(.12f)
+      .setResultListener(r->{
+       if(!soundRunning||soundSession!=run||r==null)return;
+       lastResult.set(SystemClock.elapsedRealtime());
+       if(r.classificationResults().isEmpty()||r.classificationResults().get(0).classifications().isEmpty())return;
+       java.util.Map<String,Float> rawScores=new java.util.LinkedHashMap<>();
+       for(Category cat:r.classificationResults().get(0).classifications().get(0).categories()){
+        String raw=cat.categoryName();
+        Float previous=rawScores.get(raw);
+        if(previous==null||cat.score()>previous)rawScores.put(raw,cat.score());
        }
-       if(!announced.isEmpty()){
-        state.setText("ESCUCHANDO EL ENTORNO");
-        // Show all simultaneously confirmed sounds rather than only the last.
-        result.setText(android.text.TextUtils.join("\n",announced));
-        if(visual!=null){visual.setEnergy(maximumScore/100f);visual.setDetected(true);}
-        detail.setText("Reconocimiento aproximado · puntaje maximo IA "+
-         maximumScore+"/100 · sensibilidad ajustable");
+       final java.util.Map<String,Float> current=SoundEvidence.fromRawScores(rawScores);
+       main.post(()->{
+        if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)return;
+        long now=SystemClock.elapsedRealtime();
+        soundLiveWindow.observe(current,now);
+        updateLiveSoundDisplay(now);
+        int sensitivity=minConfidence<=22?0:minConfidence>=45?2:1;
+        int maxConfirmed=0;
+        for(java.util.Map.Entry<String,Float> event:current.entrySet()){
+         String label=event.getKey();
+         int score=Math.round(event.getValue()*100f);
+         if(!foregroundSoundGate.accept(label,score,sensitivity,now))continue;
+         maxConfirmed=Math.max(maxConfirmed,score);
+         recordSoundEvent(label,score);
+        }
+        if(maxConfirmed>0&&visual!=null){
+         visual.setEnergy(maxConfirmed/100f);
+         visual.setDetected(true);
+        }
+       });
+      })
+      .setErrorListener(error->{
+       classifierError.compareAndSet(null,error==null?"Error del clasificador":error.getMessage());
+      }).build();
+     localClassifier=AudioClassifier.createFromOptions(this,settings);
+     classifier=localClassifier;
+     localRecord=localClassifier.createAudioRecord(1,16000,16000);
+     audioRecord=localRecord;
+     AudioData data=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
+     if(!soundRunning||soundSession!=run)return;
+     localRecord.startRecording();
+     if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)
+      throw new IllegalStateException("Android no habilitó el micrófono");
+     started=SystemClock.elapsedRealtime();
+     main.post(()->{
+      if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
+       state.setText("ESCUCHANDO EL ENTORNO");
+       detail.setText("Sonidos en vivo. Los avisos sólo aparecen al confirmarse. No se guarda audio.");
+      }
+     });
+     int emptyReads=0;
+     while(soundRunning&&soundSession==run&&mode==MODE_SOUND){
+      if(classifierError.get()!=null)throw new IllegalStateException("El modelo perdió la conexión de audio");
+      int frames=data.load(localRecord);
+      if(frames>0){
+       localClassifier.classifyAsync(data,SystemClock.uptimeMillis());
+       emptyReads=0;
+      }else{
+       if(++emptyReads>=12)throw new IllegalStateException("Micrófono sin muestras");
+       SystemClock.sleep(120L);
+      }
+      long now=SystemClock.elapsedRealtime();
+      long last=lastResult.get();
+      if(SoundRecoveryPolicy.isStalled(last>0?last:started,now))
+       throw new IllegalStateException("El modelo dejó de responder");
+     }
+    }catch(Exception error){
+     if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)break;
+     android.util.Log.w("AURORA","Escucha interrumpida: recuperación de micrófono/modelo",error);
+     if(SystemClock.elapsedRealtime()-started>30000L)consecutiveFailures=0;
+     long delay=SoundRecoveryPolicy.delayAfterFailure(++consecutiveFailures);
+     if(delay<0){
+      final String reason=error.getMessage()==null?"Error persistente":error.getMessage();
+      main.post(()->{
+       if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
+        stopAll(false);
+        state.setText("ESCUCHA DETENIDA · ERROR");
+        result.setText("El detector no está escuchando");
+        detail.setText(reason+". Revisá permisos y tocá ESCUCHAR para reiniciar.");
        }
       });
-     })
-     .setErrorListener(error->main.post(()->{
+      break;
+     }
+     final int attempt=consecutiveFailures;
+     main.post(()->{
       if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
-       stopAll(false);
-       state.setText("RECONOCIMIENTO DETENIDO");
-       detail.setText("El modelo de sonidos se interrumpió. Tocá ESCUCHAR para volver a iniciarlo.");
+       soundLiveWindow.clear();
+       state.setText("RECONECTANDO EL DETECTOR");
+       result.setText("Reconectando micrófono…");
+       detail.setText("Interrupción detectada. Reintento "+attempt+" de 3.");
       }
-     })).build();
-    localClassifier=AudioClassifier.createFromOptions(this,settings);
-    classifier=localClassifier;
-    localRecord=localClassifier.createAudioRecord(1,16000,16000);
-    audioRecord=localRecord;
-    AudioData data=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
-    if(!soundRunning||soundSession!=run)return;
-    localRecord.startRecording();
-    if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)
-     throw new IllegalStateException("El micrófono no empezó a grabar");
-    final long started=SystemClock.elapsedRealtime();
-    main.post(()->{
-     if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
-      state.setText("ESCUCHANDO EL ENTORNO");
-      result.setText("Buscando sonidos…");
+     });
+     SystemClock.sleep(delay);
+    }finally{
+     if(localRecord!=null){
+      try{localRecord.stop();}catch(Exception ignored){}
+      try{localRecord.release();}catch(Exception ignored){}
      }
-    });
-    int emptyReads=0;
-    while(soundRunning&&soundSession==run&&mode==MODE_SOUND){
-     int frames=data.load(localRecord);
-     if(frames>0){
-      localClassifier.classifyAsync(data,SystemClock.uptimeMillis());
-      emptyReads=0;
-     }else{
-      if(++emptyReads>=12)throw new IllegalStateException("Micrófono sin muestras");
-      SystemClock.sleep(120);
-     }
-     long now=SystemClock.elapsedRealtime();
-     long last=lastResult.get();
-     if(now-(last>0?last:started)>90000L)
-      throw new IllegalStateException("El modelo no devuelve resultados");
+     if(localClassifier!=null){try{localClassifier.close();}catch(Exception ignored){}}
+     if(audioRecord==localRecord)audioRecord=null;
+     if(classifier==localClassifier)classifier=null;
     }
-   }catch(Exception e){
-    android.util.Log.e("AURORA","Fallo en escucha local",e);
-    main.post(()->{
-     if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
-      stopAll(false);
-      state.setText("RECONOCIMIENTO DETENIDO");
-      result.setText("La escucha se interrumpió");
-      detail.setText("Android detuvo el micrófono o el modelo. Tocá ESCUCHAR para reintentar.");
-     }
-    });
-   }finally{
-    if(localRecord!=null){try{localRecord.stop();}catch(Exception ignored){}localRecord.release();}
-    if(localClassifier!=null)localClassifier.close();
-    if(audioRecord==localRecord)audioRecord=null;
-    if(classifier==localClassifier)classifier=null;
    }
   });
  }
  private void stopAll(boolean show){
   cancelSpeechRetry();speechRetries.reset();
   soundSession++;
-  mode=MODE_NONE;soundRunning=false;
+  mode=MODE_NONE;soundRunning=false;stopSoundDisplayTick();
   if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
   finishHistory();
   releaseSpeech();
