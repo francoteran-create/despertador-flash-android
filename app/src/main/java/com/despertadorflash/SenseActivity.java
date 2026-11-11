@@ -77,6 +77,7 @@ public final class SenseActivity extends Activity {
  private Button speechButton, soundsButton, translateButton;
  private TextView translationResult, translationStatus, translationOriginal;
  private EditText manualTranslationInput;
+ private volatile String lastTranslationFailure="ninguno";
  private String partialTranscript="";
  private int translationTarget=-1, translationGeneration=0;
  private Spinner languagePicker;
@@ -480,6 +481,7 @@ public final class SenseActivity extends Activity {
   report.append("Frases completas recibidas: ").append(speechFinalResults).append("\n");
   report.append("Frases parciales recibidas: ").append(speechPartialResults).append("\n");
   report.append("Último código error de voz: ").append(lastSpeechError).append("\n");
+  report.append("Último fallo de traducción: ").append(lastTranslationFailure).append("\n");
   if(lastSpeechError>0)report.append("Detalle de voz: ")
    .append(SpeechRetryController.explanation(lastSpeechError)).append("\n");
   report.append(captureStats.report(SystemClock.elapsedRealtime())).append("\n");
@@ -550,6 +552,7 @@ public final class SenseActivity extends Activity {
    return;
   }
   final int request=++translationGeneration;
+  lastTranslationFailure="ninguno";
   if(translator!=null){translator.close();translator=null;}
   TranslatorOptions options=new TranslatorOptions.Builder()
    .setSourceLanguage(source).setTargetLanguage(destination).build();
@@ -558,6 +561,12 @@ public final class SenseActivity extends Activity {
   translationResult.setText("Preparando traducción…");
   translationMessage("Modelo "+source+" → "+destination+
    ". La primera vez puede necesitar descargar datos con Internet.");
+  main.postDelayed(()->{
+   if(request!=translationGeneration||translationResult==null||isFinishing()||isDestroyed())return;
+   String stateNow=translationResult.getText().toString();
+   if(stateNow.equals("Preparando traducción…")||stateNow.equals("Traduciendo…"))
+    translationMessage("Aún no llegó una respuesta después de 30 s. Revisá Internet o el servicio ML Kit; podés copiar el diagnóstico.");
+  },30000L);
   selectedClient.downloadModelIfNeeded()
    .addOnSuccessListener(ready->{
     if(request!=translationGeneration||isFinishing()||isDestroyed())return;
@@ -576,6 +585,7 @@ public final class SenseActivity extends Activity {
      })
      .addOnFailureListener(error->{
       if(request!=translationGeneration||isFinishing()||isDestroyed())return;
+      lastTranslationFailure="TRADUCTOR "+error.getClass().getSimpleName();
       translationResult.setText("NO SE PUDO TRADUCIR");
       translationMessage("Error del traductor: "+error.getMessage()+
        ". Comprobá conexión y volvé a intentar.");
@@ -583,6 +593,7 @@ public final class SenseActivity extends Activity {
    })
    .addOnFailureListener(error->{
     if(request!=translationGeneration||isFinishing()||isDestroyed())return;
+    lastTranslationFailure="DESCARGA "+error.getClass().getSimpleName();
     translationResult.setText("FALTA MODELO DE IDIOMA");
     translationMessage("Android no pudo descargar el modelo de traducción: "+
      error.getMessage()+". Conectate a Internet y volvé a tocar TRADUCIR.");
