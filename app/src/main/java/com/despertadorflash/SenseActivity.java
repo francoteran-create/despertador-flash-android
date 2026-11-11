@@ -338,7 +338,7 @@ public final class SenseActivity extends Activity {
   eventsView=new LinearLayout(this);eventsView.setOrientation(LinearLayout.VERTICAL);
   eventsView.setPadding(dp(8),dp(7),dp(8),dp(8));
   eventsScroll.addView(eventsView);
-  root.addView(eventsScroll,new LinearLayout.LayoutParams(-1,dp(205)));
+  root.addView(eventsScroll,new LinearLayout.LayoutParams(-1,dp(screenMode==MODE_SOUND?300:205)));
   TextView empty=text(screenMode==MODE_SOUND?"Los últimos 30 sonidos detectados aparecen aquí.":"Las frases de la conversación aparecen aquí.",15,0xffa3b8d2);
   eventsView.addView(empty);
   File[] files=ConversationRecordFilter.conversations(history.list());lastSaved=files.length>0?files[0]:null;
@@ -379,6 +379,7 @@ public final class SenseActivity extends Activity {
    }
   }
   eventCount=recent.size();
+  if(eventsScroll!=null)eventsScroll.post(()->eventsScroll.scrollTo(0,0));
  }
  private void addTimeline(String content){
   if(screenMode==MODE_SOUND||eventsView==null)return;
