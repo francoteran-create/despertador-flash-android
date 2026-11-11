@@ -129,6 +129,20 @@ publica el archivo como artefacto de GitHub Actions.
 Para distribuir: pruebas físicas, privacidad, firma de release, validación
 con usuarios sordos e hipoacúsicos y métricas de sonido verificadas.
 
+## Entrega de la beta 4.3 para comprobar en el S9+
+Esta version se identifica como AURORA 4.3 BETA, con paquete
+`com.despertadorflash.beta43`, diferente de la beta anterior y de la
+original. Para instalar en Samsung Galaxy S9+ usar la APK ARM64 del
+ZIP MASTER. No desinstalar ninguna instalacion anterior, y no usar dos
+microfonos a la vez. En la primera prueba verificar si SONIDOS cambia
+ante eventos nuevos y borra los viejos, y si TRADUCCION muestra
+ORIGINAL, RESULTADO y ESTADO, incluso al fallar la descarga de ML Kit.
+
+Los resultados de pruebas en telefono, calidad con audio real y
+disponibilidad de modelos de traduccion en cada dispositivo estan
+pendientes. No se debe declarar AURORA 4.3 comercial ni detector de
+emergencias certificado.
+
 ## Retomar desde otro chat
 
 Abrir este repositorio y el último ZIP MASTER. Verificar el commit del
