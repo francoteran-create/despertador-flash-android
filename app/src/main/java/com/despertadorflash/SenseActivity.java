@@ -446,18 +446,71 @@ public final class SenseActivity extends Activity {
   lastTranscript=phrase;partialTranscript="";
   getSharedPreferences("aurora",0).edit().putString("sense_last_transcript",phrase).apply();
  }
+ private String targetLanguage(int selected){
+  return selected==0?TranslateLanguage.SPANISH:
+   selected==2?TranslateLanguage.PORTUGUESE:TranslateLanguage.ENGLISH;
+ }
+ private void translationMessage(String message){
+  if(translationStatus!=null)translationStatus.setText(message);
+ }
  private void translateLast(){
-  String phrase=lastTranscript.trim();if(phrase.isEmpty()){detail.setText("Primero transcribí una conversación para poder traducirla.");return;}
+  // Partial live words can be translated on explicit request, but do not
+  // silently pass an empty old final phrase if only partial words exist.
+  final String partial=partialTranscript.trim();
+  final String phrase=!partial.isEmpty()?partial:lastTranscript.trim();
+  if(translationResult==null)return;
+  if(phrase.isEmpty()){
+   translationOriginal.setText("ORIGINAL: todavía no hay palabras transcritas.");
+   translationResult.setText("TRADUCCIÓN PENDIENTE");
+   translationMessage("Primero hablá en CONVERSACIÓN. Cuando aparezcan palabras, tocá TRADUCIR.");
+   return;
+  }
+  final String source=targetLanguage(languageSelection);
+  final String destination=targetLanguage(translationTarget);
+  translationOriginal.setText("ORIGINAL: "+phrase+(partial.isEmpty()?"":" (frase parcial)"));
+  if(source.equals(destination)){
+   translationResult.setText("Elegí otro idioma de destino.");
+   translationMessage("El idioma de origen y el destino no pueden ser iguales.");
+   return;
+  }
+  final int request=++translationGeneration;
   if(translator!=null){translator.close();translator=null;}
-  String input=recognizedLanguage();String src=input.startsWith("en")?TranslateLanguage.ENGLISH:input.startsWith("pt")?TranslateLanguage.PORTUGUESE:TranslateLanguage.SPANISH;
-  String target=src.equals(TranslateLanguage.SPANISH)?TranslateLanguage.ENGLISH:TranslateLanguage.SPANISH;
-  TranslatorOptions options=new TranslatorOptions.Builder().setSourceLanguage(src).setTargetLanguage(target).build();
-  translator=Translation.getClient(options);final Translator client=translator;
-  detail.setText("Preparando traducción… El modelo puede descargarse la primera vez.");
-  client.downloadModelIfNeeded().addOnSuccessListener(unused->client.translate(phrase)
-   .addOnSuccessListener(translated->{result.setText(translated);detail.setText("Texto traducido "+src+" → "+target+". Original: "+phrase);})
-   .addOnFailureListener(e->detail.setText("No se pudo traducir: "+e.getMessage())))
-   .addOnFailureListener(e->detail.setText("No se pudo descargar el modelo de traducción: "+e.getMessage()));
+  TranslatorOptions options=new TranslatorOptions.Builder()
+   .setSourceLanguage(source).setTargetLanguage(destination).build();
+  translator=Translation.getClient(options);
+  final Translator selectedClient=translator;
+  translationResult.setText("Preparando traducción…");
+  translationMessage("Modelo "+source+" → "+destination+
+   ". La primera vez puede necesitar descargar datos con Internet.");
+  selectedClient.downloadModelIfNeeded()
+   .addOnSuccessListener(ready->{
+    if(request!=translationGeneration||isFinishing()||isDestroyed())return;
+    translationResult.setText("Traduciendo…");
+    translationMessage("Modelo disponible. Procesando la frase.");
+    selectedClient.translate(phrase)
+     .addOnSuccessListener(translated->{
+      if(request!=translationGeneration||isFinishing()||isDestroyed())return;
+      if(translated==null||translated.trim().isEmpty()){
+       translationResult.setText("No se obtuvo texto traducido.");
+       translationMessage("El traductor respondió sin palabras. Probá otra frase.");
+      }else{
+       translationResult.setText(translated);
+       translationMessage("Traducción lista. El original queda arriba y podés copiar el texto.");
+      }
+     })
+     .addOnFailureListener(error->{
+      if(request!=translationGeneration||isFinishing()||isDestroyed())return;
+      translationResult.setText("NO SE PUDO TRADUCIR");
+      translationMessage("Error del traductor: "+error.getMessage()+
+       ". Comprobá conexión y volvé a intentar.");
+     });
+   })
+   .addOnFailureListener(error->{
+    if(request!=translationGeneration||isFinishing()||isDestroyed())return;
+    translationResult.setText("FALTA MODELO DE IDIOMA");
+    translationMessage("Android no pudo descargar el modelo de traducción: "+
+     error.getMessage()+". Conectate a Internet y volvé a tocar TRADUCIR.");
+   });
  }
  private void startSpeech(){
   if(mode!=MODE_SPEECH||recognizer!=null)return;
