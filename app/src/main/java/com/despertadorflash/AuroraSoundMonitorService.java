@@ -32,6 +32,7 @@ public final class AuroraSoundMonitorService extends Service {
  private volatile AudioRecord recorder;
  private volatile AudioClassifier classifier;
  private final SoundEventGate gate=new SoundEventGate();
+ private SoundEventFeedback soundFeedback;
  private volatile long lastClassifierCallbackElapsed=0L;
  private volatile long lastHeartbeatAt=0L;
  private long lastAlertsCheckAt=0L;
@@ -65,6 +66,7 @@ public final class AuroraSoundMonitorService extends Service {
    getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"Android no permitió activar el micrófono en segundo plano").apply();
    Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;
   }
+  soundFeedback=new SoundEventFeedback(this);
   listening=true;sessionId++;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
   final long run=sessionId;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
@@ -247,11 +249,15 @@ public final class AuroraSoundMonitorService extends Service {
     .setContentText(found+" · puntaje IA "+percent+"/100").setContentIntent(tap)
     .setCategory(Notification.CATEGORY_STATUS).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PUBLIC)
     .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
-   try{nm.notify(SoundAlertPreferences.notificationTag(group,found),SoundAlertPreferences.notificationId(group),b.build());}
-   catch(SecurityException ignored){}
+   try{
+    nm.notify(SoundAlertPreferences.notificationTag(group,found),SoundAlertPreferences.notificationId(group),b.build());
+    // Android channel handles the vibration in background; optional torch only here.
+    if(soundFeedback!=null)soundFeedback.onConfirmed(found,false);
+   }catch(SecurityException ignored){}
   });
  }
  private synchronized void shutdown(){
+  if(soundFeedback!=null){soundFeedback.stop();soundFeedback=null;}
   if(!listening){getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();return;}
   listening=false;sessionId++;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
