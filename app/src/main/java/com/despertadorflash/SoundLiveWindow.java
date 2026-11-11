@@ -55,10 +55,17 @@ public final class SoundLiveWindow {
    output.add(new Item(e.getKey(),Math.round(o.score*100f),Math.max(0L,now-o.seen)));
   }
   // Show what was heard most recently. Do not pin the historically loudest event.
-  Collections.sort(output,Comparator.comparingLong((Item x)->x.ageMs)
+  // Ongoing music, wind and water must not visually obscure a brief
+  // doorbell or impact just because the background is louder.
+  Collections.sort(output,Comparator.comparingInt((Item x)->isAmbient(x.label)?1:0)
+   .thenComparingLong(x->x.ageMs)
    .thenComparing((Item x)->-x.score).thenComparing(x->x.label));
   if(output.size()>limit)return new ArrayList<>(output.subList(0,limit));
   return output;
+ }
+ private static boolean isAmbient(String label){
+  return label.equals("POSIBLE MÚSICA")||label.equals("POSIBLE VIENTO")||
+   label.equals("POSIBLE AGUA");
  }
  private void prune(long now){
   recent.entrySet().removeIf(e->now<e.getValue().seen||now-e.getValue().seen>LIVE_MS);
