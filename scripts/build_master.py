@@ -92,15 +92,15 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
         "1c0f41cbd9f44a798890afdfd23103db8d7ab9e9. Se retiro el "
         "personaje animado de 3.x. Falta verificar fidelidad visual "
         "y funcionamiento en telefono real.")
-    add("Mantener separados escuchar sonidos, transcribir conversacion y "
-        "traducir. Guardar registros al detener la sesion segun la "
-        "politica vigente y sin almacenar audio salvo autorizacion.")
+    add("Mantener separados escuchar sonidos y transcribir conversacion. "
+        "SONIDOS: lista local de 30 eventos sin TXT ni PDF. "
+        "CONVERSACION: guardar transcripciones al detener o salir, "
+        "sin registrar audio bruto.")
     add("VERIFICACION VOLUNTARIA DE EVENTOS", "AuroraSection")
-    add("Un modo de prueba opcional permite marcar detecciones como ACERTO "
-        "o NO COINCIDE y registrar sonidos omitidos manualmente. Las "
-        "marcas se guardan en TXT sin grabar audio. "
-        "scripts/evaluate_sound_feedback.py resume solo casos evaluados; "
-        "NO mide precision ni recall representativos.")
+    add("Un modo opcional permite marcar ACERTO o NO COINCIDE y omisiones "
+        "en pantalla, sin crear archivos. El analizador historico "
+        "scripts/evaluate_sound_feedback.py sirve para TXT heredados "
+        "de pruebas anteriores, no calcula precision real.")
     add("Las alertas simultaneas de una misma categoria usan etiquetas "
         "independientes para no reemplazarse entre si. Al desactivar "
         "una categoria se limpian sus avisos y permanece el indicador "
@@ -112,9 +112,9 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Ajustes: exportar e importar TXT con alarmas y preferencias, "
         "checksum SHA-256 y confirmacion antes de restaurar. "
         "Excluye datos personales, foto, registros, transcripciones y audio.")
-    add("Registros: copiar TXT a carpeta seleccionada por usuario y "
-        "comprobar que su hash SHA-256 coincide con el original, "
-        "sin sobrescribir copias antiguas diferentes.")
+    add("Solo CONVERSACIONES: copiar TXT a carpeta elegida y verificar "
+        "SHA-256. Los sonidos se muestran en lista dentro de la app, "
+        "sin nuevos archivos de sonido.")
     add("AURORA BETA 4.2 utiliza paquete com.despertadorflash.beta, "
         "distinto del original com.despertadorflash: ambas apps pueden "
         "coexistir sin desinstalar la AURORA original. "
@@ -135,9 +135,9 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Resumir sonidos y conversaciones permite leer el formato actual "
         "de los registros. Guardar sesiones internas sin elegir carpeta "
         "externa no debe generar un falso error.")
-    add("La BETA 4.4 instala com.despertadorflash.beta44, separada de "
-        "AURORA original y de la BETA 4.2. No se comparten datos ni "
-        "se deben iniciar dos microfonos al mismo tiempo.")
+    add("La BETA 4.5 instala com.despertadorflash.beta45, separada de "
+        "la original y de las betas anteriores. No se comparten datos; "
+        "no iniciar dos micrófonos simultaneamente.")
     add("DIAGNOSTICO REAL DE FALLAS - 4.4", "AuroraSection")
     add("Se agregaron INTERNET y ACCESS_NETWORK_STATE: faltaba el permiso "
         "INTERNET en la beta anterior. ML Kit requiere descargar sus modelos "
@@ -155,6 +155,22 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Aviso de privacidad: Android SpeechRecognizer puede utilizar "
         "un proveedor remoto; no se garantiza transcripcion continua. "
         "Revisar docs/AURORA_44_DIAGNOSTICO_REAL.md.")
+    add("CAMBIO DE ALMACENAMIENTO Y VISTA 4.5", "AuroraSection")
+    add("SONIDOS: hasta 30 eventos confirmados con fecha/hora, "
+        "ordenados del mas reciente al mas antiguo. El evento 31 "
+        "reemplaza al mas viejo. La lista se mantiene solo dentro "
+        "de la app y no genera TXT ni PDF.")
+    add("Hay un boton BORRAR LISTA que pide confirmacion y solo "
+        "limpia eventos de sonidos, no toca conversaciones.")
+    add("El monitor de fondo y el modulo SONIDOS alimentan una misma "
+        "lista. El asistente puede consultar esos eventos sin archivos.")
+    add("Las CONVERSACIONES si se guardan al detener y se pueden "
+        "releer o exportar. La carpeta de registros se centra "
+        "en estas transcripciones y ofrece acceso opcional "
+        "a archivos antiguos de sonidos sin eliminarlos.")
+    add("Pruebas JUnit verifican limite de 30 eventos, orden, "
+        "sonidos simultaneos, separacion de conversaciones y "
+        "consulta de resumen desde la lista.")
     add("LIMITACIONES Y RIESGOS", "AuroraSection")
     add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
         "de certeza ni permiten garantizar identificacion perfecta.")
@@ -210,10 +226,11 @@ def main() -> None:
         "NO VERSION COMERCIAL. No se han validado pruebas en telefono "
         "ni metricas de precision con audios reales.\n"
         "La portada se recupero del codigo historico 2.8; falta validacion en el telefono.\n"
-        "Paquete de instalacion: com.despertadorflash.beta44; no desinstalar las AURORA anteriores.\n"
+        "Paquete de instalacion: com.despertadorflash.beta45; no desinstalar las AURORA anteriores.\n"
         "ESCUCHA: panel de sonidos recientes y reconexion automatica acotada.\n"
         "TRADUCCION: panel independiente, selector de idioma, errores visibles.\n"
-        "Desde Ajustes se pueden respaldar alarmas/preferencias y desde Registros los TXT.\n"
+        "SONIDOS: ultimos 30 eventos en app, sin TXT/PDF. CONVERSACIONES: guardado y respaldos TXT.\n"
+        "Desde Ajustes se pueden respaldar alarmas/preferencias y desde CONVERSACIONES los TXT.\n"
     )
     with ZipFile(target, "w", compression=ZIP_DEFLATED, compresslevel=6) as out:
         for rel in rel_paths:
@@ -240,10 +257,15 @@ def main() -> None:
             "approved_ui_reference": "AURORA 2.8",
             "approved_ui_home_source_restored": True,
             "approved_ui_verified_on_device": False,
-            "debug_application_id": "com.despertadorflash.beta44",
+            "debug_application_id": "com.despertadorflash.beta45",
             "can_install_alongside_original": True,
             "settings_backup_txt": "export_and_import_with_sha256_check",
-            "record_backup": "user_folder_copy_verified_sha256",
+            "record_backup": "conversation_txt_only_verified_sha256",
+            "recent_sound_event_limit": 30,
+            "sound_event_storage": "app_preferences_no_sound_txt_or_pdf",
+            "sound_files_created": False,
+            "conversation_files_created": True,
+            "old_sound_files_preserved": True,
             "live_sound_window_ms": 3500,
             "sound_classifier_max_results": 40,
             "sound_recovery": "max_three_attempts",
