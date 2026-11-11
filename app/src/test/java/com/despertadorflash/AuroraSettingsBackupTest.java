@@ -13,12 +13,15 @@ public class AuroraSettingsBackupTest {
   saved.put("created4",true);saved.put("on4",false);
   saved.put("monitor_alert_voices",true);saved.put("monitor_sensitivity",2);
   saved.put("torch_alert",false);
+  saved.put("monitor_sound_flash",true);saved.put("monitor_sound_vibration",false);
   String encoded=AuroraSettingsBackup.serialize(saved);
   Map<String,Object> decoded=AuroraSettingsBackup.parse(encoded);
   assertEquals(2,AuroraSettingsBackup.configuredAlarmCount(decoded));
   assertEquals(6,decoded.get("h0"));assertEquals(35,decoded.get("m0"));
   assertEquals(85,decoded.get("days0"));
   assertEquals(false,decoded.get("torch_alert"));
+  assertEquals(true,decoded.get("monitor_sound_flash"));
+  assertEquals(false,decoded.get("monitor_sound_vibration"));
   assertEquals(true,decoded.get("monitor_alert_voices"));
   assertEquals(encoded,AuroraSettingsBackup.serialize(decoded));
  }
@@ -38,10 +41,31 @@ public class AuroraSettingsBackupTest {
   String valid=AuroraSettingsBackup.serialize(new LinkedHashMap<>());
   expectInvalid(valid.replace("h0=7","h0=8"));
   expectInvalid(valid.substring(0,valid.length()-16));
-  expectInvalid(valid.replace("AURORA_CONFIGURACION_V1","AURORA_CONFIGURACION_V2"));
+  expectInvalid(valid.replace("AURORA_CONFIGURACION_V2","AURORA_CONFIGURACION_V3"));
   expectInvalid(valid.replace("m0=0","m0=90"));
   expectInvalid(valid.replace("days0=127","days0=200"));
   expectInvalid(valid.replace("on0=false","on0=yes"));
+ }
+ @Test public void importsValidV1BackupsWithoutTurningOnNewFlash(){
+  String current=AuroraSettingsBackup.serialize(new LinkedHashMap<>());
+  String legacyBody=current.substring(0,current.indexOf("SHA256="))
+    .replace("AURORA_CONFIGURACION_V2","AURORA_CONFIGURACION_V1")
+    .replace("monitor_sound_flash=false\n","")
+    .replace("monitor_sound_vibration=true\n","");
+  String hash;
+  try{
+   byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(
+    legacyBody.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+   StringBuilder hex=new StringBuilder();
+   for(byte b:digest)hex.append(String.format(java.util.Locale.ROOT,"%02x",b&0xff));
+   hash=hex.toString();
+  }catch(Exception ex){throw new AssertionError(ex);}
+  String legacy=legacyBody+"SHA256="+hash+"\n";
+  Map<String,Object> imported=AuroraSettingsBackup.parse(legacy);
+  assertEquals(false,imported.get("monitor_sound_flash"));
+  assertEquals(true,imported.get("monitor_sound_vibration"));
+  assertTrue(AuroraSettingsBackup.serialize(imported).startsWith("AURORA_CONFIGURACION_V2\n"));
+  expectInvalid(legacy.replace("h0=7","h0=8"));
  }
  @Test public void refusesOutOfRangeValuesBeforeExport(){
   Map<String,Object> bad=new LinkedHashMap<>();
