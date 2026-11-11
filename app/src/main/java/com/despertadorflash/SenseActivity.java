@@ -653,6 +653,7 @@ public final class SenseActivity extends Activity {
     final java.util.concurrent.atomic.AtomicLong lastResult=new java.util.concurrent.atomic.AtomicLong(0L);
     final java.util.concurrent.atomic.AtomicReference<String> classifierError=new java.util.concurrent.atomic.AtomicReference<>();
     long started=SystemClock.elapsedRealtime();
+    long recoveryDelay=0L;
     try{
      BaseOptions base=BaseOptions.builder().setModelAssetPath("yamnet.tflite").build();
      AudioClassifierOptions settings=AudioClassifierOptions.builder().setBaseOptions(base)
@@ -727,8 +728,8 @@ public final class SenseActivity extends Activity {
      if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)break;
      android.util.Log.w("AURORA","Escucha interrumpida: recuperación de micrófono/modelo",error);
      if(SystemClock.elapsedRealtime()-started>30000L)consecutiveFailures=0;
-     long delay=SoundRecoveryPolicy.delayAfterFailure(++consecutiveFailures);
-     if(delay<0){
+     recoveryDelay=SoundRecoveryPolicy.delayAfterFailure(++consecutiveFailures);
+     if(recoveryDelay<0){
       final String reason=error.getMessage()==null?"Error persistente":error.getMessage();
       main.post(()->{
        if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
@@ -749,7 +750,6 @@ public final class SenseActivity extends Activity {
        detail.setText("Interrupción detectada. Reintento "+attempt+" de 3.");
       }
      });
-     SystemClock.sleep(delay);
     }finally{
      if(localRecord!=null){
       try{localRecord.stop();}catch(Exception ignored){}
@@ -759,6 +759,8 @@ public final class SenseActivity extends Activity {
      if(audioRecord==localRecord)audioRecord=null;
      if(classifier==localClassifier)classifier=null;
     }
+    // The old AudioRecord must be released BEFORE waiting to reconnect.
+    if(recoveryDelay>0L)SystemClock.sleep(recoveryDelay);
    }
   });
  }
