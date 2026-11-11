@@ -47,9 +47,15 @@ jobs:
           for apk in "${apks[@]}"; do
             echo "Archivo: $apk"
             "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | head -n 12
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta43'" > /dev/null
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.3 BETA'" > /dev/null
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta43.photos" > /dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta44'" > /dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.4 BETA'" > /dev/null
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta44.photos" > /dev/null
+          done
+      - name: Verificar permisos de conexión y micrófono en ambas APK
+        run: |
+          for apk in app/build/outputs/apk/debug/*.apk; do
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.INTERNET"
+            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.RECORD_AUDIO"
           done
       - name: Verificar firmas y tamaños de las dos APKs
         run: |
