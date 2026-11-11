@@ -365,8 +365,12 @@ public final class SenseActivity extends Activity {
     File saved=closing.finish();
     if(saved==null)return;
     String copyError=null;
-    try{new SavedFolderManager(this).copyOne(saved);}
-    catch(IOException error){copyError=error.getMessage();}
+    try{
+     SavedFolderManager copies=new SavedFolderManager(this);
+     // Saving in AURORA's private history is already successful.
+     // External copying is OPTIONAL; no selected folder is not an error.
+     if(copies.selectedFolder()!=null)copies.copyOne(saved);
+    }catch(IOException error){copyError=error.getMessage();}
     final String warning=copyError;
     main.post(()->{
      if(isFinishing()||isDestroyed()||generation!=historyGeneration)return;
