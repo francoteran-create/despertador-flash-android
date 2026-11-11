@@ -71,6 +71,7 @@ public final class SenseActivity extends Activity {
  private AuroraVisualEngineView visual;
  private Button speechButton, soundsButton, translateButton;
  private TextView translationResult, translationStatus, translationOriginal;
+ private EditText manualTranslationInput;
  private String partialTranscript="";
  private int translationTarget=-1, translationGeneration=0;
  private Spinner languagePicker;
@@ -262,11 +263,23 @@ public final class SenseActivity extends Activity {
      if(translationStatus!=null)translationStatus.setText("Destino: "+names[chosen]+". Tocá TRADUCIR.");
     });
    }
-   translateButton=button("🌐  TRADUCIR LO QUE SE DIJO");
+   manualTranslationInput=new EditText(this);
+   manualTranslationInput.setSingleLine(false);
+   manualTranslationInput.setMinLines(2);
+   manualTranslationInput.setMaxLines(4);
+   manualTranslationInput.setTextSize(16f);
+   manualTranslationInput.setTextColor(Color.WHITE);
+   manualTranslationInput.setHintTextColor(0xffa9b9cd);
+   manualTranslationInput.setHint("Opcional: escribí una frase para probar el traductor sin usar el micrófono");
+   manualTranslationInput.setBackground(bg(0xff1b314a,0xff25244b));
+   manualTranslationInput.setPadding(dp(12),dp(12),dp(12),dp(12));
+   root.addView(manualTranslationInput,new LinearLayout.LayoutParams(-1,-2));
+   translateButton=button("🌐  TRADUCIR FRASE O TEXTO ESCRITO");
    root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(62)));
    translateButton.setOnClickListener(v->translateLast());
    translationOriginal=text("ORIGINAL: todavía no se reconocieron palabras.",14,0xffc5d9ee);
    translationResult=text("TRADUCCIÓN: aquí aparecerá el texto.",23,Color.WHITE);
+   translationResult.setMinHeight(dp(108));
    translationResult.setTextIsSelectable(true);
    translationResult.setBackground(bg(0xff163a4e,0xff1d2246));
    translationStatus=text("La primera traducción puede requerir Internet para descargar el idioma.",13,0xffb0d6ea);
@@ -460,18 +473,21 @@ public final class SenseActivity extends Activity {
  private void translateLast(){
   // Partial live words can be translated on explicit request, but do not
   // silently pass an empty old final phrase if only partial words exist.
+  // Test path isolates ML Kit from Android SpeechRecognizer: the user can
+  // type a phrase and verify translation even when voice recognition fails.
+  final String typed=manualTranslationInput==null?"":manualTranslationInput.getText().toString().trim();
   final String partial=partialTranscript.trim();
-  final String phrase=!partial.isEmpty()?partial:lastTranscript.trim();
+  final String phrase=!typed.isEmpty()?typed:!partial.isEmpty()?partial:lastTranscript.trim();
   if(translationResult==null)return;
   if(phrase.isEmpty()){
-   translationOriginal.setText("ORIGINAL: todavía no hay palabras transcritas.");
+   translationOriginal.setText("ORIGINAL: todavía no hay texto disponible.");
    translationResult.setText("TRADUCCIÓN PENDIENTE");
-   translationMessage("Primero hablá en CONVERSACIÓN. Cuando aparezcan palabras, tocá TRADUCIR.");
+   translationMessage("Decí una frase con el micrófono o escribila en el recuadro de prueba y tocá TRADUCIR.");
    return;
   }
   final String source=targetLanguage(languageSelection);
   final String destination=targetLanguage(translationTarget);
-  translationOriginal.setText("ORIGINAL: "+phrase+(partial.isEmpty()?"":" (frase parcial)"));
+  translationOriginal.setText("ORIGINAL: "+phrase+(typed.isEmpty()&&!partial.isEmpty()?" (frase parcial)":""));
   if(source.equals(destination)){
    translationResult.setText("Elegí otro idioma de destino.");
    translationMessage("El idioma de origen y el destino no pueden ser iguales.");
