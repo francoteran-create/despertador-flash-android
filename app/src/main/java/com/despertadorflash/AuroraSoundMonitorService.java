@@ -35,8 +35,7 @@ public final class AuroraSoundMonitorService extends Service {
  private volatile long lastClassifierCallbackElapsed=0L;
  private volatile long lastHeartbeatAt=0L;
  private long lastAlertsCheckAt=0L;
- private volatile SenseHistory history;
- @Override public void onCreate(){super.onCreate();history=new SenseHistory(this);createChannels();
+ @Override public void onCreate(){super.onCreate();createChannels();
   // Reset any stale status from a previous process termination; no automatic restart.
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
  }
@@ -68,7 +67,6 @@ public final class AuroraSoundMonitorService extends Service {
   }
   listening=true;sessionId++;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
   final long run=sessionId;
-  history=null;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
    .putLong(KEY_STARTED,System.currentTimeMillis()).putLong(KEY_HEARTBEAT,0L).apply();
   // Histories and notifications are serialized on a different thread from audio.
