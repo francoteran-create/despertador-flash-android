@@ -120,7 +120,7 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
         "coexistir sin desinstalar la AURORA original. "
         "Los datos NO se comparten. Vigilar alarmas duplicadas. "
         "Las APK debug pueden tener firmas efimeras entre compilaciones.")
-    add("CORRECCIONES 4.3 - ESCUCHA Y TRADUCCION", "AuroraSection")
+    add("CORRECCIONES HEREDADAS 4.3 - ESCUCHA Y TRADUCCION", "AuroraSection")
     add("La vista SONIDOS muestra hasta cuatro hipotesis recientes; no "
         "se queda mostrando indefinidamente el ultimo sonido confirmado. "
         "La ventana caduca tras 3,5 segundos y no crea alertas falsas.")
@@ -135,9 +135,26 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Resumir sonidos y conversaciones permite leer el formato actual "
         "de los registros. Guardar sesiones internas sin elegir carpeta "
         "externa no debe generar un falso error.")
-    add("La BETA 4.3 instala com.despertadorflash.beta43, separada de "
+    add("La BETA 4.4 instala com.despertadorflash.beta44, separada de "
         "AURORA original y de la BETA 4.2. No se comparten datos ni "
         "se deben iniciar dos microfonos al mismo tiempo.")
+    add("DIAGNOSTICO REAL DE FALLAS - 4.4", "AuroraSection")
+    add("Se agregaron INTERNET y ACCESS_NETWORK_STATE: faltaba el permiso "
+        "INTERNET en la beta anterior. ML Kit requiere descargar sus modelos "
+        "de traduccion la primera vez, y algunos reconocedores Android "
+        "de voz necesitan red. No equivale a validar el funcionamiento.")
+    add("Sonidos: probar bloques de audio de 500 ms, junto con prioridad "
+        "visual de eventos puntuales antes que ruido de fondo musical. "
+        "El modelo YAMNet no garantiza identificar sonidos simultaneos.")
+    add("Pulsar COPIAR DIAGNOSTICO (SIN AUDIO) para conocer muestras, "
+        "respuestas IA, ultima respuesta, reconexiones, codigos de voz "
+        "y categoria de error de traduccion, sin frases ni audio.")
+    add("TRADUCCION: ahora admite escribir una frase de prueba y "
+        "traducirla sin microfono. Permite separar un fallo de Android "
+        "SpeechRecognizer de uno de ML Kit. Avisa si no responde tras 30 s.")
+    add("Aviso de privacidad: Android SpeechRecognizer puede utilizar "
+        "un proveedor remoto; no se garantiza transcripcion continua. "
+        "Revisar docs/AURORA_44_DIAGNOSTICO_REAL.md.")
     add("LIMITACIONES Y RIESGOS", "AuroraSection")
     add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
         "de certeza ni permiten garantizar identificacion perfecta.")
@@ -193,7 +210,7 @@ def main() -> None:
         "NO VERSION COMERCIAL. No se han validado pruebas en telefono "
         "ni metricas de precision con audios reales.\n"
         "La portada se recupero del codigo historico 2.8; falta validacion en el telefono.\n"
-        "Paquete de instalacion: com.despertadorflash.beta43; no desinstalar la AURORA original ni BETA 4.2.\n"
+        "Paquete de instalacion: com.despertadorflash.beta44; no desinstalar las AURORA anteriores.\n"
         "ESCUCHA: panel de sonidos recientes y reconexion automatica acotada.\n"
         "TRADUCCION: panel independiente, selector de idioma, errores visibles.\n"
         "Desde Ajustes se pueden respaldar alarmas/preferencias y desde Registros los TXT.\n"
@@ -223,7 +240,7 @@ def main() -> None:
             "approved_ui_reference": "AURORA 2.8",
             "approved_ui_home_source_restored": True,
             "approved_ui_verified_on_device": False,
-            "debug_application_id": "com.despertadorflash.beta43",
+            "debug_application_id": "com.despertadorflash.beta44",
             "can_install_alongside_original": True,
             "settings_backup_txt": "export_and_import_with_sha256_check",
             "record_backup": "user_folder_copy_verified_sha256",
@@ -232,6 +249,11 @@ def main() -> None:
             "sound_recovery": "max_three_attempts",
             "translation_visible_panel": True,
             "translation_target_languages": ["es", "en", "pt"],
+            "internet_permission": True,
+            "speech_recognizer_continuous": False,
+            "sound_audio_block_ms": 500,
+            "diagnostics_no_audio": True,
+            "typed_translation_test": True,
             "apks_signed_for_production": False,
             "files_sha256": checksums,
         }
