@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.5-sound-list-beta, versionCode 45), revisión en PR #1.
+  (4.6-sound-feedback-beta, versionCode 46), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -49,10 +49,10 @@ para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
 ## Instalación de la beta y seguridad de los datos
-La version 4.5 BETA usa el paquete independiente
-`com.despertadorflash.beta45`, nombre visible `AURORA 4.5 BETA`.
+La version 4.6 BETA usa el paquete independiente
+`com.despertadorflash.beta46`, nombre visible `AURORA 4.6 BETA`.
 La app original es `com.despertadorflash`, y las betas previas
-(4.2, 4.3 y 4.4) tienen identificadores distintos. Se instala en paralelo
+(4.2, 4.3, 4.4 y 4.5) tienen identificadores distintos. Se instala en paralelo
 **sin desinstalar las anteriores**, y NO migra sus alarmas o datos de
 forma automatica. No mantener dos escuchas de microfono activas ni
 activar alarmas duplicadas.
@@ -61,12 +61,12 @@ No ejecutar ambos detectores de microfono a la vez: detener la escucha
 en la AURORA original antes de probar la beta (Android puede bloquear
 el acceso simultaneo al microfono).
 
-Instrucciones de esta beta: `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
+Instrucciones de esta beta: `docs/AURORA_46_AVISOS_SONOROS.md` y `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
 
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.5 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.6 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -84,7 +84,7 @@ se respaldan por TXT, con hash verificado. Se conservan antiguos archivos
 SONIDOS de otras versiones sin borrarlos: pueden verse activando
 `Mostrar archivos antiguos de sonidos`. No se crean nuevos archivos de sonidos.
 
-La beta 4.5 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.6 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Correcciones criticas 4.3: escucha y traduccion
@@ -168,6 +168,25 @@ Ver documentación: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
 
 Especificación completa: `docs/AURORA_45_SONIDOS_30.md`.
 
+## Mejoras 4.6 — vibración y flash por sonidos confirmados
+- **SONIDOS en pantalla:** avisos de vibración al confirmar una categoría
+  habilitada. El sonido queda visible en la lista de 30 incluso sin aviso.
+- **Escucha en segundo plano:** las notificaciones de Android siguen
+  realizando la vibración, sin duplicar la vibración desde la app.
+- **Flash LED opcional:** desactivado de fábrica. Requiere permiso de
+  Cámara y confirmación informada sobre fotosensibilidad; se detiene
+  al finalizar la escucha. Máximo 2,6 s por aviso, con enfriamiento
+  de 12 s entre flashes para no parpadear continuamente.
+- Una nueva clase `SoundFeedbackPolicy` evita avisos por múltiples
+  clasificaciones seguidas; `SoundEventFeedback` controla vibración
+  y linterna. Incluye pruebas JUnit.
+- **Prueba sin micrófono** en Ajustes para verificar vibración/flash sin
+  añadir un evento falso a la lista de sonidos.
+- No se tocaron las alarmas ni la estética principal 2.8.
+- **Faltan pruebas físicas** del flash y vibración en el Galaxy S9+.
+
+Detalles y protocolo: `docs/AURORA_46_AVISOS_SONOROS.md`.
+
 ## Entrega oficial: un único ZIP MASTER
 
 Al ejecutar manualmente el workflow `.github/workflows/android-apk.yml`,
@@ -187,15 +206,15 @@ publica el archivo como artefacto de GitHub Actions.
 Para distribuir: pruebas físicas, privacidad, firma de release, validación
 con usuarios sordos e hipoacúsicos y métricas de sonido verificadas.
 
-## Entrega beta 4.5 para Galaxy S9+
+## Entrega beta 4.6 para Galaxy S9+
 Elegir APK ARM64 del ZIP MASTER. En Android debe aparecer
-`AURORA 4.5 BETA`, con datos propios. Probar texto manual,
+`AURORA 4.6 BETA`, con datos propios. Probar texto manual,
 habla y sonidos por separado y copiar diagnóstico si falla.
 La compilación y tests NO equivalen a validación física.
 
-## Verificacion de beta 4.5 (NO declarada estable)
+## Verificacion de beta 4.6 (NO declarada estable)
 Cambios y tests JUnit verificados con GitHub Actions. El paquete instala
-`AURORA 4.5 BETA` en paralelo con las versiones previas. Pruebas de
+`AURORA 4.6 BETA` en paralelo con las versiones previas. Pruebas de
 YAMNet real, calidad de voz, idioma/modelo de traduccion y consumo
 del Galaxy S9+ siguen PENDIENTES. Entrega para diagnostico reproducible,
 no para prometer que ya se resolvio la incidencia reportada. No
@@ -213,6 +232,13 @@ de sonidos no crea documentos. Los antiguos TXT se preservan.
 **Aún pendiente:** probar en Galaxy S9+ la interfaz y eventos
 reales, vibracion/flash, el comportamiento en segundo plano,
 consumo de bateria y traduccion. La beta no se fusiona a main.
+
+## Estado de entrega 4.6
+Se incluye el modulo de alertas vibracion/flash opcional que se
+activa por los eventos confirmados, sin grabar audio.
+Se preserva la lista local de 30 sonidos y el guardado de
+conversaciones. La app 4.6 usa `com.despertadorflash.beta46`.
+Verificar CI y pruebas de Galaxy S9+ antes de declararla estable.
 
 ## Retomar desde otro chat
 
