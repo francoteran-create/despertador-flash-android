@@ -263,7 +263,7 @@ public class MainActivity extends Activity {
    try{
     java.io.File saved=homeSpeechHistory.finish();
     if(saved!=null){
-     try{new SavedFolderManager(this).copyOne(saved);}catch(java.io.IOException copyError){android.util.Log.w("Aurora","No se pudo copiar el archivo a carpeta elegida",copyError);}
+     try{SavedFolderManager copies=new SavedFolderManager(this);if(copies.selectedFolder()!=null)copies.copyOne(saved);}catch(java.io.IOException copyError){android.util.Log.w("Aurora","No se pudo copiar el archivo a carpeta elegida",copyError);}
      if(wasListening&&homeSpeechStatus!=null)homeSpeechStatus.setText("Guardado: "+SenseHistory.readableName(saved));
     }
    }catch(java.io.IOException e){
