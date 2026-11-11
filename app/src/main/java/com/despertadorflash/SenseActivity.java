@@ -236,14 +236,13 @@ public final class SenseActivity extends Activity {
     new android.app.AlertDialog.Builder(this)
      .setTitle("¿Qué sonido no detectó AURORA?")
      .setItems(categories,(d,which)->{
-      if(history==null||!history.hasActive()){
+      if(mode!=MODE_SOUND){
        Toast.makeText(this,"Iniciá la escucha para registrar una omisión",Toast.LENGTH_SHORT).show();
        return;
       }
-      final SenseHistory saved=history;
       String line="OMISIÓN MANUAL · "+categories[which]+" · informado por la persona que prueba";
       addTimeline(line);
-      historyWorker.execute(()->saved.event(line));
+      // This manual observation is screen-only; no sound TXT.
      })
      .setNegativeButton("Cancelar",null).show();
    });
@@ -382,9 +381,8 @@ public final class SenseActivity extends Activity {
   no.setOnClickListener(v->saveSoundFeedback(label,score,false,yes,no));
  }
  private void saveSoundFeedback(String label,int score,boolean correct,Button yes,Button no){
-  final SenseHistory saved=history;
-  if(saved==null||!saved.hasActive()){
-   Toast.makeText(this,"La sesión terminó: ya no se puede evaluar este sonido",Toast.LENGTH_SHORT).show();
+  if(mode!=MODE_SOUND){
+   Toast.makeText(this,"Iniciá la escucha para evaluar este sonido",Toast.LENGTH_SHORT).show();
    return;
   }
   yes.setEnabled(false);no.setEnabled(false);
@@ -392,7 +390,7 @@ public final class SenseActivity extends Activity {
   // This is user feedback, not an independently measured accuracy metric.
   String entry="VALIDACIÓN MANUAL · "+verdict+" · "+label+" · puntaje IA "+score+"/100";
   addTimeline(entry);
-  Toast.makeText(this,"Respuesta guardada en el registro",Toast.LENGTH_SHORT).show();
+  Toast.makeText(this,"Evaluación mostrada en pantalla",Toast.LENGTH_SHORT).show();
  }
  private void beginHistory(String type){
   eventCount=0;eventsView.removeAllViews();lastSoundLabel="";lastSoundTime=0;
