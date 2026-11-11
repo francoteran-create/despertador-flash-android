@@ -166,6 +166,15 @@ Elegir APK ARM64 del ZIP MASTER. En Android debe aparecer
 habla y sonidos por separado y copiar diagnóstico si falla.
 La compilación y tests NO equivalen a validación física.
 
+## Verificacion de beta 4.4 (NO declarada estable)
+Cambios y tests JUnit verificados con GitHub Actions. El paquete instala
+`AURORA 4.4 BETA` en paralelo con las versiones previas. Pruebas de
+YAMNet real, calidad de voz, idioma/modelo de traduccion y consumo
+del Galaxy S9+ siguen PENDIENTES. Entrega para diagnostico reproducible,
+no para prometer que ya se resolvio la incidencia reportada. No
+fusionar en `main` hasta validar. Proxima evaluacion: issue #3,
+motor de voz realmente continuo.
+
 ## Retomar desde otro chat
 
 Abrir este repositorio y el último ZIP MASTER. Verificar el commit del
