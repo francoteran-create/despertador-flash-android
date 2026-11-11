@@ -307,34 +307,51 @@ public final class SenseActivity extends Activity {
    root.addView(translationResult,new LinearLayout.LayoutParams(-1,-2));
    root.addView(translationStatus);
   }
-  root.addView(AuroraDesign.overline(this,"HISTORIAL DE ESTA SESIÓN"));
+  root.addView(AuroraDesign.overline(this,screenMode==MODE_SOUND?"ÚLTIMOS 30 SONIDOS":"HISTORIAL DE ESTA CONVERSACIÓN"));
   eventsScroll=new ScrollView(this);eventsScroll.setFillViewport(false);
   eventsScroll.setBackground(bg(0xff122b3c,0xff171b35));
   eventsView=new LinearLayout(this);eventsView.setOrientation(LinearLayout.VERTICAL);
   eventsView.setPadding(dp(8),dp(7),dp(8),dp(8));
   eventsScroll.addView(eventsView);
   root.addView(eventsScroll,new LinearLayout.LayoutParams(-1,dp(205)));
-  TextView empty=text("Las detecciones y frases aparecen acá, sin borrar las anteriores.",15,0xffa3b8d2);
+  TextView empty=text(screenMode==MODE_SOUND?"Los últimos 30 sonidos detectados aparecen aquí.":"Las frases de la conversación aparecen aquí.",15,0xffa3b8d2);
   eventsView.addView(empty);
   File[] files=history.list();lastSaved=files.length>0?files[0]:null;
+  if(screenMode==MODE_SOUND)showRecentSounds();
   openSaved=button("ABRIR ÚLTIMO ARCHIVO");
   root.addView(openSaved);openSaved.setOnClickListener(v->showFile(lastSaved));
-  openSaved.setVisibility(lastSaved!=null?View.VISIBLE:View.GONE);
+  openSaved.setVisibility(screenMode==MODE_SPEECH&&lastSaved!=null?View.VISIBLE:View.GONE);
   Button assistant=button("ASISTENTE AURORA · FOTO Y SONIDOS");
   root.addView(assistant);
   assistant.setOnClickListener(v->startActivity(new Intent(this,AuroraAssistActivity.class)));
   Button folder=button("📁  CARPETA DE REGISTROS");
   root.addView(folder);folder.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
+  folder.setVisibility(screenMode==MODE_SPEECH?View.VISIBLE:View.GONE);
   TextView safety=text("Las detecciones son aproximadas. AURORA no sustituye las alarmas certificadas ni los dispositivos de emergencia.",13,0xffc3d6eb);
   root.addView(safety);
   updateModeVisibility();
+ }
+ private void showRecentSounds(){
+  if(screenMode!=MODE_SOUND||eventsView==null)return;
+  eventsView.removeAllViews();
+  java.util.List<String> recent=RecentSoundEvents.list(this);
+  if(recent.isEmpty()){
+   eventsView.addView(text("Todavía no hay sonidos confirmados.",15,0xffa3b8d2));
+  }else{
+   for(String item:recent){
+    TextView row=text(item,17,0xffe7f6ff);
+    row.setPadding(dp(8),dp(7),dp(8),dp(7));
+    eventsView.addView(row);
+   }
+  }
+  eventCount=recent.size();
  }
  private void addTimeline(String content){
   if(eventsView==null)return;
   if(eventCount==0)eventsView.removeAllViews();
   // Keep UI responsive after long monitoring sessions. The saved journal
   // still retains the complete session up to its separate storage limit.
-  while(eventsView.getChildCount()>=90)eventsView.removeViewAt(0);
+  while(eventsView.getChildCount()>=(screenMode==MODE_SOUND?RecentSoundEvents.LIMIT:90))eventsView.removeViewAt(0);
   TextView item=text(content,17,0xffe7f6ff);
   item.setBackground(bg(eventCount%2==0?0xff183d52:0xff252e56,0xff12253b));
   LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.setMargins(0,dp(3),0,dp(3));
@@ -346,7 +363,8 @@ public final class SenseActivity extends Activity {
   * get independent controls. No audio is recorded or retained.
   */
  private void recordSoundEvent(String label,int score){
-  recordEvent(label+" · puntaje IA "+score+"/100");
+  RecentSoundEvents.add(this,label,score);
+  showRecentSounds();
   if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||eventsView==null)return;
   LinearLayout feedback=new LinearLayout(this);
   feedback.setOrientation(LinearLayout.HORIZONTAL);
@@ -373,13 +391,19 @@ public final class SenseActivity extends Activity {
   String verdict=correct?"ACERTÓ":"NO COINCIDE";
   // This is user feedback, not an independently measured accuracy metric.
   String entry="VALIDACIÓN MANUAL · "+verdict+" · "+label+" · puntaje IA "+score+"/100";
-  historyWorker.execute(()->saved.event(entry));
+  addTimeline(entry);
   Toast.makeText(this,"Respuesta guardada en el registro",Toast.LENGTH_SHORT).show();
  }
  private void beginHistory(String type){
   eventCount=0;eventsView.removeAllViews();lastSoundLabel="";lastSoundTime=0;
   candidateSound="";candidateHits=0;candidateSince=0;
   historyGeneration++;
+  if(screenMode==MODE_SOUND){
+   history=null;
+   showRecentSounds();
+   detail.setText("Últimos 30 sonidos en la app. No se generan archivos de sonidos.");
+   return;
+  }
   history=new SenseHistory(this);
   history.begin(type);
   TextView placeholder=text("Escuchando… Las detecciones se agregarán aquí.",15,0xffa3b8d2);
@@ -388,6 +412,7 @@ public final class SenseActivity extends Activity {
  }
  private void recordEvent(String observation){
   addTimeline(observation);
+  if(screenMode==MODE_SOUND)return;
   final SenseHistory captured=history;
   if(captured!=null&&captured.hasActive())historyWorker.execute(()->captured.event(observation));
  }
