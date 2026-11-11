@@ -63,6 +63,7 @@ public final class SenseActivity extends Activity {
  }
 
  private volatile boolean soundRunning=false;
+ private volatile boolean soundReconnecting=false;
  private AudioRecord audioRecord;
  private AudioClassifier classifier;
  private int mode=MODE_NONE, requestedMode=MODE_NONE, screenMode=MODE_SPEECH;
@@ -706,6 +707,10 @@ public final class SenseActivity extends Activity {
 
  private void updateLiveSoundDisplay(long now){
   if(mode!=MODE_SOUND||!soundRunning)return;
+  if(soundReconnecting){
+   result.setText("RECONECTANDO EL MICRÓFONO…\nNo se están detectando sonidos durante la reconexión");
+   return;
+  }
   java.util.List<SoundLiveWindow.Item> recent=soundLiveWindow.snapshot(now,4);
   if(recent.isEmpty()){
    result.setText("Escuchando…\nSin sonidos identificados ahora");
@@ -744,6 +749,7 @@ public final class SenseActivity extends Activity {
  }
  private void startSounds(){
   soundRunning=true;
+  soundReconnecting=false;
   captureStats.begin(SystemClock.elapsedRealtime());
   final int run=++soundSession;
   foregroundSoundGate.reset();
@@ -808,6 +814,7 @@ public final class SenseActivity extends Activity {
      localRecord.startRecording();
      if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)
       throw new IllegalStateException("Android no habilitó el micrófono");
+     soundReconnecting=false;
      started=SystemClock.elapsedRealtime();
      main.post(()->{
       if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
@@ -836,6 +843,7 @@ public final class SenseActivity extends Activity {
      if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)break;
      android.util.Log.w("AURORA","Escucha interrumpida: recuperación de micrófono/modelo",error);
      captureStats.recovering(error.getClass().getSimpleName()+": "+error.getMessage());
+     soundReconnecting=true;
      if(SystemClock.elapsedRealtime()-started>30000L)consecutiveFailures=0;
      recoveryDelay=SoundRecoveryPolicy.delayAfterFailure(++consecutiveFailures);
      if(recoveryDelay<0){
@@ -877,7 +885,7 @@ public final class SenseActivity extends Activity {
  private void stopAll(boolean show){
   cancelSpeechRetry();speechRetries.reset();
   soundSession++;
-  mode=MODE_NONE;soundRunning=false;stopSoundDisplayTick();
+  mode=MODE_NONE;soundRunning=false;soundReconnecting=false;stopSoundDisplayTick();
   if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
   finishHistory();
   releaseSpeech();
