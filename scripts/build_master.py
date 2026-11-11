@@ -109,9 +109,9 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Modo Precisa: dos observaciones separadas obligatorias para sonidos "
         "comunes, incluso ante un puntaje alto; las sirenas y alarmas de "
         "incendio tienen una via rapida que NO equivale a deteccion certificada.")
-    add("Ajustes: exportar e importar TXT con alarmas y preferencias, "
-        "checksum SHA-256 y confirmacion antes de restaurar. "
-        "Excluye datos personales, foto, registros, transcripciones y audio.")
+    add("Ajustes: exportar TXT V2 con alarmas, vibracion y flash, "
+        "checksum SHA-256. Se puede restaurar V1 sin encender flash "
+        "de sonidos por accidente. Excluye perfiles, audios y conversaciones.")
     add("Solo CONVERSACIONES: copiar TXT a carpeta elegida y verificar "
         "SHA-256. Los sonidos se muestran en lista dentro de la app, "
         "sin nuevos archivos de sonido.")
@@ -272,7 +272,8 @@ def main() -> None:
             "approved_ui_verified_on_device": False,
             "debug_application_id": "com.despertadorflash.beta46",
             "can_install_alongside_original": True,
-            "settings_backup_txt": "export_and_import_with_sha256_check",
+            "settings_backup_txt": "v2_accepts_v1_with_sha256_check",
+            "sound_feedback_settings_in_backup": True,
             "record_backup": "conversation_txt_only_verified_sha256",
             "recent_sound_event_limit": 30,
             "sound_feedback_vibration_foreground": True,
