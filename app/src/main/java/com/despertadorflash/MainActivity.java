@@ -599,10 +599,10 @@ public class MainActivity extends Activity {
   validation.setOnCheckedChangeListener((v,enabled)->
    prefs.edit().putBoolean("sense_feedback_mode",enabled).apply());
   root.addView(txt("Modo de prueba voluntario: permite marcar aciertos o errores por sonido en la pantalla SONIDOS. "
-   +"Se guardan solo las etiquetas y tus respuestas, nunca el audio. Desactivado de forma predeterminada.",13));
+   +"Las respuestas de prueba se muestran solo en pantalla, sin crear archivos de sonidos ni guardar audio. Desactivado de forma predeterminada.",13));
   root.addView(section("COPIA DE SEGURIDAD DE CONFIGURACIÓN"));
   root.addView(txt("Guardá tus alarmas, horarios y preferencias en un TXT que podrás restaurar en AURORA. "
-   +"No incluye fotos de perfil, conversaciones ni registros de sonidos. Estos últimos se respaldan desde REGISTROS.",14));
+   +"No incluye fotos ni conversaciones. Los sonidos se conservan únicamente como lista de los últimos 30 eventos dentro de la app; no se exportan como archivos.",14));
   Button backup=btn("GUARDAR ALARMAS Y AJUSTES EN UN ARCHIVO");
   root.addView(backup);
   backup.setOnClickListener(v->exportSettings());
@@ -610,7 +610,7 @@ public class MainActivity extends Activity {
   root.addView(restore);
   restore.setOnClickListener(v->importSettings());
   root.addView(txt("Importar reemplaza las alarmas y ajustes actuales. No recupera datos eliminados de versiones antiguas; "
-   +"guardá antes los registros desde su propia carpeta.",13));
+   +"guardá antes las conversaciones desde la carpeta CONVERSACIONES GUARDADAS.",13));
   root.addView(section("SENSIBILIDAD DE ALERTAS"));
   final String[] levels={"ALTA","EQUILIBRADA","PRECISA"};
   android.widget.RadioGroup rg=new android.widget.RadioGroup(this);rg.setOrientation(0);
