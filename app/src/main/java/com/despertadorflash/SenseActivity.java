@@ -67,6 +67,7 @@ public final class SenseActivity extends Activity {
  private AudioClassifier classifier;
  private int mode=MODE_NONE, requestedMode=MODE_NONE, screenMode=MODE_SPEECH;
  private LinearLayout root;
+ private ScrollView pageScroll;
  private final SoundCaptureTelemetry captureStats=new SoundCaptureTelemetry();
  private volatile int lastSpeechError=-1;
  private volatile int speechFinalResults=0,speechPartialResults=0;
@@ -114,6 +115,7 @@ public final class SenseActivity extends Activity {
  }
  private void draw(){
   ScrollView scroll=new ScrollView(this);
+  pageScroll=scroll;
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
   root.setPadding(dp(17),dp(14),dp(17),dp(25));
   root.setBackground(new AuroraSkyDrawable());scroll.addView(root);setContentView(scroll);
@@ -285,7 +287,14 @@ public final class SenseActivity extends Activity {
    root.addView(manualTranslationInput,new LinearLayout.LayoutParams(-1,-2));
    translateButton=button("🌐  TRADUCIR FRASE O TEXTO ESCRITO");
    root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(62)));
-   translateButton.setOnClickListener(v->translateLast());
+   translateButton.setOnClickListener(v->{
+    translateLast();
+    // Make the result visible when the phone's screen is small.
+    if(pageScroll!=null&&translationOriginal!=null){
+     pageScroll.post(()->pageScroll.smoothScrollTo(0,
+      Math.max(0,translationOriginal.getTop()-dp(36))));
+    }
+   });
    translationOriginal=text("ORIGINAL: todavía no se reconocieron palabras.",14,0xffc5d9ee);
    translationResult=text("TRADUCCIÓN: aquí aparecerá el texto.",23,Color.WHITE);
    translationResult.setMinHeight(dp(108));
@@ -321,6 +330,9 @@ public final class SenseActivity extends Activity {
  private void addTimeline(String content){
   if(eventsView==null)return;
   if(eventCount==0)eventsView.removeAllViews();
+  // Keep UI responsive after long monitoring sessions. The saved journal
+  // still retains the complete session up to its separate storage limit.
+  while(eventsView.getChildCount()>=90)eventsView.removeViewAt(0);
   TextView item=text(content,17,0xffe7f6ff);
   item.setBackground(bg(eventCount%2==0?0xff183d52:0xff252e56,0xff12253b));
   LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.setMargins(0,dp(3),0,dp(3));
