@@ -242,6 +242,15 @@ Se preserva la lista local de 30 sonidos y el guardado de
 conversaciones. La app 4.6 usa `com.despertadorflash.beta46`.
 Verificar CI y pruebas de Galaxy S9+ antes de declararla estable.
 
+## Bloque de entrega 4.6 consolidado
+Código de alertas físicas, pruebas de confirmación/repetición,
+conservación de 30 sonidos, transcripciones y respaldo de ajustes V2
+con lectura de V1 quedan documentados en esta rama.
+
+**No aprobado como versión estable:** faltan pruebas físicas de
+Galaxy S9+, precisión del detector, vibración/linterna bajo permisos
+reales y continuidad de transcripción/traducción.
+
 ## Retomar desde otro chat
 
 Abrir este repositorio y el último ZIP MASTER. Verificar el commit del
