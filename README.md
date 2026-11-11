@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.2-sense-backup-beta, versionCode 42), revisión en PR #1.
+  (4.3-sense-live-translate-beta, versionCode 43), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -48,11 +48,11 @@ para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
 ## Instalación de la beta y seguridad de los datos
-La version 4.2 BETA se compila con el identificador Android
-`com.despertadorflash.beta` y nombre visible `AURORA BETA`. La
-AURORA original utiliza `com.despertadorflash`. Por tanto, la APK
-debug 4.2 puede instalarse **EN PARALELO** a la original, sin
-desinstalarla ni reemplazar sus datos. Los datos de ambas instalaciones
+La version 4.3 BETA se compila con el identificador Android
+`com.despertadorflash.beta43` y nombre visible `AURORA 4.3 BETA`.
+La AURORA original utiliza `com.despertadorflash` y la anterior 4.2
+beta utiliza `com.despertadorflash.beta`. Pueden coexistir en el telefono;
+**no desinstales ninguna para probar la 4.3**. Sus datos no se comparten. Los datos de ambas instalaciones
 estan aislados; no se copian automaticamente y las alarmas de cada app
 son independientes. Comprobar que no queden alarmas duplicadas activas.
 
@@ -65,7 +65,7 @@ Instrucciones detalladas: `docs/AURORA_BETA_42_INSTALACION.md`.
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.2 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.3 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -82,8 +82,33 @@ VERIFICAR TODOS LOS REGISTROS`. Las copias TXT se verifican por hash,
 no sobrescriben archivos previos distintos y se procesan sin bloquear
 la interfaz. Estos respaldos se guardan en la carpeta elegida.
 
-La beta 4.2 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.3 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
+
+## Correcciones criticas 4.3: escucha y traduccion
+- La pantalla SONIDOS muestra hasta cuatro hipotesis de sonido recientes,
+  actualiza cuando cambia el entorno y limpia resultados vencidos a los
+  3,5 segundos. El historial solo agrega sonidos confirmados.
+- Ambos detectores YAMNet examinan hasta 40 categorias con umbral inicial
+  reducido. El clasificador no se limita a una sola clase dominante.
+- Si falla el micrófono o el clasificador, se liberan recursos y se
+  permiten hasta tres reconexiones con backoff. La interfaz o notificacion
+  indica RECONECTANDO y no da a entender que protege durante ese lapso.
+  Tras errores persistentes informa claramente ESCUCHA DETENIDA.
+- En CONVERSACION, la transcripcion y la TRADUCCION son dos paneles
+  independientes. El usuario elige Espanol, Ingles o Portugues de destino.
+  Puede traducir una frase final o parcial reconocida, con estado de
+  descarga del modelo, progreso y errores visibles. La primera descarga
+  de ML Kit puede requerir Internet.
+- Se corrigieron resumenes de sonidos y consultas de conversaciones
+  que buscaban el formato de registros antiguo y podian devolver vacío.
+- Si no se eligio carpeta externa, guardar el historial interno NO
+  genera un falso mensaje de error de copia.
+- La pausa entre sesiones de Android SpeechRecognizer aumenta; aun puede
+  haber cortes propios del servicio de Android, que no es una escucha
+  ininterrumpida garantizada.
+
+Detalles tecnicos y plan de prueba: `docs/AURORA_43_CORRECCIONES.md`.
 
 ## Entrega oficial: un único ZIP MASTER
 
