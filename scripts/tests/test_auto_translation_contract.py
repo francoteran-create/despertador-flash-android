@@ -37,7 +37,6 @@ class AutoTranslationContract(unittest.TestCase):
         self.assertIn("translationModelDownloading",self.sense)
         self.assertIn("translationModelReady",self.sense)
         self.assertIn("runTranslation(translationGeneration,pendingTranslationPhrase,client)",self.sense)
-        self.assertIn("selectedClient",self.sense) if False else None
 
     def test_main_page_links_to_single_translation_flow(self):
         self.assertIn('homeSpeechToggle.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH))',self.home)
