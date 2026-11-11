@@ -171,6 +171,19 @@ def pdf_report(commit: str, version: str, apks: list[Path]) -> bytes:
     add("Pruebas JUnit verifican limite de 30 eventos, orden, "
         "sonidos simultaneos, separacion de conversaciones y "
         "consulta de resumen desde la lista.")
+    add("AVISOS VIBRATORIOS Y FLASH OPCIONAL - 4.6", "AuroraSection")
+    add("Al confirmar un sonido de una categoria habilitada, "
+        "la pantalla puede vibrar brevemente. En segundo plano "
+        "la vibracion pertenece al canal de notificaciones Android.")
+    add("Flash LED para sonidos: APAGADO por defecto, requiere permiso "
+        "CAMERA y confirmacion informada. Pulso de hasta 2,6 segundos, "
+        "con espera minima de 12 segundos entre pulsos para evitar "
+        "destellos constantes. Se cancela al detener el monitor.")
+    add("En Ajustes existe PROBAR ALERTA DE SONIDO SIN MICROFONO. "
+        "No simula una deteccion ni agrega un falso evento al historial.")
+    add("Las funciones de alertas fisicas requieren prueba en Galaxy S9+: "
+        "pantalla bloqueada, permisos, bateria, camara ocupada y alarmas.")
+    add("Ver docs/AURORA_46_AVISOS_SONOROS.md.")
     add("LIMITACIONES Y RIESGOS", "AuroraSection")
     add("YAMNet entrega puntuaciones no calibradas: no son porcentajes "
         "de certeza ni permiten garantizar identificacion perfecta.")
@@ -226,7 +239,7 @@ def main() -> None:
         "NO VERSION COMERCIAL. No se han validado pruebas en telefono "
         "ni metricas de precision con audios reales.\n"
         "La portada se recupero del codigo historico 2.8; falta validacion en el telefono.\n"
-        "Paquete de instalacion: com.despertadorflash.beta45; no desinstalar las AURORA anteriores.\n"
+        "Paquete de instalacion: com.despertadorflash.beta46; no desinstalar las AURORA anteriores.\n"
         "ESCUCHA: panel de sonidos recientes y reconexion automatica acotada.\n"
         "TRADUCCION: panel independiente, selector de idioma, errores visibles.\n"
         "SONIDOS: ultimos 30 eventos en app, sin TXT/PDF. CONVERSACIONES: guardado y respaldos TXT.\n"
@@ -257,11 +270,16 @@ def main() -> None:
             "approved_ui_reference": "AURORA 2.8",
             "approved_ui_home_source_restored": True,
             "approved_ui_verified_on_device": False,
-            "debug_application_id": "com.despertadorflash.beta45",
+            "debug_application_id": "com.despertadorflash.beta46",
             "can_install_alongside_original": True,
             "settings_backup_txt": "export_and_import_with_sha256_check",
             "record_backup": "conversation_txt_only_verified_sha256",
             "recent_sound_event_limit": 30,
+            "sound_feedback_vibration_foreground": True,
+            "sound_feedback_flash_opt_in_default_off": True,
+            "sound_feedback_flash_duration_ms": 2600,
+            "sound_feedback_flash_cooldown_ms": 12000,
+            "sound_feedback_physical_test": "pending",
             "sound_event_storage": "app_preferences_no_sound_txt_or_pdf",
             "sound_files_created": False,
             "conversation_files_created": True,
