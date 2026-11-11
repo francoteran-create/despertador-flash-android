@@ -10,9 +10,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-/** Last 30 confirmed sound events. Stored only in app preferences, never as exported TXT/PDF. */
+/**
+ * Small in-app ring history. No environmental audio, TXT or PDF is created.
+ * Each confirmed event is stored as a label and time, newest first.
+ */
 public final class RecentSoundEvents {
- public static final int LIMIT=30;
+ public static final int LIMIT=SoundTimeline.LIMIT;
  private static final String PREF="aurora_recent_sounds";
  private static final String KEY="events";
  private RecentSoundEvents(){}
@@ -20,38 +23,52 @@ public final class RecentSoundEvents {
  public static synchronized void add(Context context,String label,int score){
   if(label==null||label.trim().isEmpty())return;
   SharedPreferences pref=context.getSharedPreferences(PREF,Context.MODE_PRIVATE);
-  JSONArray previous=readArray(pref.getString(KEY,"[]"));
-  JSONArray next=new JSONArray();
-  JSONObject event=new JSONObject();
+  List<SoundTimeline.Entry> existing=fromJson(pref.getString(KEY,"[]"));
+  List<SoundTimeline.Entry> recent=SoundTimeline.append(existing,label,score,System.currentTimeMillis());
+  JSONArray stored=new JSONArray();
   try{
-   event.put("label",label.trim());
-   event.put("score",Math.max(0,Math.min(100,score)));
-   event.put("time",System.currentTimeMillis());
-   next.put(event);
-   for(int i=0;i<previous.length()&&next.length()<LIMIT;i++){
-    JSONObject old=previous.optJSONObject(i);
-    if(old!=null)next.put(old);
+   for(SoundTimeline.Entry entry:recent){
+    JSONObject record=new JSONObject();
+    record.put("label",entry.label);
+    record.put("score",entry.score);
+    record.put("time",entry.timestamp);
+    stored.put(record);
    }
-   pref.edit().putString(KEY,next.toString()).apply();
-  }catch(Exception ignored){}
+   pref.edit().putString(KEY,stored.toString()).apply();
+  }catch(Exception e){android.util.Log.e("AURORA","No se pudo guardar lista interna de sonidos",e);}
  }
+
+ public static synchronized List<SoundTimeline.Entry> snapshot(Context context){
+  return SoundTimeline.normalized(fromJson(context.getSharedPreferences(
+   PREF,Context.MODE_PRIVATE).getString(KEY,"[]")));
+ }
+
  public static synchronized List<String> list(Context context){
-  JSONArray items=readArray(context.getSharedPreferences(PREF,Context.MODE_PRIVATE).getString(KEY,"[]"));
-  List<String> result=new ArrayList<>();
-  SimpleDateFormat format=new SimpleDateFormat("HH:mm:ss",Locale.getDefault());
-  for(int i=0;i<items.length()&&result.size()<LIMIT;i++){
-   JSONObject item=items.optJSONObject(i);
-   if(item==null)continue;
-   String label=item.optString("label","");
-   if(label.isEmpty())continue;
-   result.add(format.format(new Date(item.optLong("time",0)))+" · "+label);
+  List<String> rows=new ArrayList<>();
+  SimpleDateFormat clock=new SimpleDateFormat("HH:mm:ss",Locale.getDefault());
+  for(SoundTimeline.Entry entry:snapshot(context)){
+   rows.add(clock.format(new Date(entry.timestamp))+" · "+entry.label);
   }
-  return result;
+  return rows;
  }
+
  public static synchronized void clear(Context context){
   context.getSharedPreferences(PREF,Context.MODE_PRIVATE).edit().remove(KEY).apply();
  }
- private static JSONArray readArray(String raw){
-  try{return new JSONArray(raw);}catch(Exception ignored){return new JSONArray();}
+
+ private static List<SoundTimeline.Entry> fromJson(String text){
+  List<SoundTimeline.Entry> existing=new ArrayList<>();
+  try{
+   JSONArray saved=new JSONArray(text);
+   for(int i=0;i<saved.length()&&existing.size()<LIMIT;i++){
+    JSONObject row=saved.optJSONObject(i);
+    if(row==null)continue;
+    try{
+     existing.add(new SoundTimeline.Entry(row.optString("label",""),
+      row.optInt("score",0),row.optLong("time",0L)));
+    }catch(IllegalArgumentException ignored){}
+   }
+  }catch(Exception ignored){}
+  return existing;
  }
 }
