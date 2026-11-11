@@ -2,6 +2,18 @@ package com.despertadorflash;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class SoundDigestTest {
+ @Test public void summarizesCurrentThirtyEventsWithoutAccessingSoundFiles(){
+  java.util.List<SoundTimeline.Entry> records=new java.util.ArrayList<>();
+  records=SoundTimeline.append(records,"POSIBLE LADRIDO",68,1000);
+  records=SoundTimeline.append(records,"POSIBLE TIMBRE DE PUERTA",44,1500);
+  records=SoundTimeline.append(records,"POSIBLE LADRIDO",71,2000);
+  String summary=SoundDigest.summarizeRecent(records);
+  assertTrue(summary.contains("Eventos observados: 3"));
+  assertTrue(summary.contains("POSIBLE LADRIDO: 2"));
+  assertTrue(summary.contains("POSIBLE TIMBRE DE PUERTA: 1"));
+  assertTrue(summary.contains("Más reciente: POSIBLE LADRIDO"));
+  assertTrue(SoundDigest.summarizeRecent(new java.util.ArrayList<>()).contains("no hay sonidos confirmados"));
+ }
  @Test public void countsOnlyKnownDetections(){
   String sample="1. POSIBLE TIMBRE DE PUERTA · confianza estimada 91%\n"+
                 "2. POSIBLE SIRENA · confianza estimada 80%\n"+
