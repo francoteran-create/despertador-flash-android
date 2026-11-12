@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.11-recovery-reliability-beta, versionCode 51), revisión en PR #1.
+  (4.12-sound-evidence-beta, versionCode 52), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -49,8 +49,8 @@ para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
 ## Instalación de la beta y seguridad de los datos
-La version 4.11 BETA usa el paquete independiente
-`com.despertadorflash.beta411`, nombre visible `AURORA 4.11 BETA`.
+La version 4.12 BETA usa el paquete independiente
+`com.despertadorflash.beta412`, nombre visible `AURORA 4.12 BETA`.
 La app original es `com.despertadorflash`, y las betas previas
 (4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9 y 4.10) tienen identificadores distintos. Se instala en paralelo
 **sin desinstalar las anteriores**, y NO migra sus alarmas o datos de
@@ -61,12 +61,12 @@ No ejecutar ambos detectores de microfono a la vez: detener la escucha
 en la AURORA original antes de probar la beta (Android puede bloquear
 el acceso simultaneo al microfono).
 
-Instrucciones de esta beta: `docs/AURORA_411_RECUPERACION_CONFIABILIDAD.md`, `docs/AURORA_410_ICONO_ONDA_TRADUCCION.md`, `docs/AURORA_49_VISUALIZACION_HORIZONTAL.md`, `docs/AURORA_48_COLA_BILINGUE.md`, `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`, `docs/AURORA_46_AVISOS_SONOROS.md` y `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
+Instrucciones de esta beta: `docs/AURORA_412_ALERTAS_SIN_DUPLICADOS.md`, `docs/AURORA_411_RECUPERACION_CONFIABILIDAD.md`, `docs/AURORA_410_ICONO_ONDA_TRADUCCION.md`, `docs/AURORA_49_VISUALIZACION_HORIZONTAL.md`, `docs/AURORA_48_COLA_BILINGUE.md`, `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`, `docs/AURORA_46_AVISOS_SONOROS.md` y `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
 
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.11 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.12 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -86,7 +86,7 @@ se respaldan por TXT, con hash verificado. Se conservan antiguos archivos
 SONIDOS de otras versiones sin borrarlos: pueden verse activando
 `Mostrar archivos antiguos de sonidos`. No se crean nuevos archivos de sonidos.
 
-La beta 4.11 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.12 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Correcciones criticas 4.3: escucha y traduccion
@@ -231,6 +231,26 @@ Detalles: `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`.
 
 Detalles: `docs/AURORA_48_COLA_BILINGUE.md`.
 
+## NUEVO 4.12: menos avisos repetidos y etiquetas más prudentes
+- `SoundEventFamily` agrupa solo hipótesis equivalentes para
+  evitar dobles alertas de PERRO/LADRIDO, PUERTA/PORTAZO
+  y VOZ/CONVERSACIÓN dentro de la misma ventana de 15 segundos.
+- NO mezcla TIMBRE con PORTAZO, ni TIMBRE con GOLPES,
+  ni BOCINA con VEHÍCULO. Son eventos distintos.
+- Las etiquetas genéricas PERRO, PUERTA O CAJÓN, VEHÍCULO
+  y VOZ HUMANA requieren dos observaciones independientes
+  incluso si una sola puntuación fue alta.
+- Se corrigieron falsos mapeos semánticos: el instrumento
+  French horn no es una bocina; "cat" no se infiere de
+  fragmentos de palabras inglesas que no significan gato.
+- Nuevas pruebas JUnit verifican duplicados, umbrales,
+  cooldown, separación de eventos y etiquetas en castellano.
+- El detector todavía NO está calibrado con un corpus real:
+  sin pruebas físicas no podemos afirmar un porcentaje
+  medido de mejora de precisión.
+
+Guía: `docs/AURORA_412_ALERTAS_SIN_DUPLICADOS.md`.
+
 ## NUEVO 4.11: más resistencia real de escucha
 - VOZ: después de fallas temporales, Android SpeechRecognizer
   se vuelve a iniciar con tiempos de espera graduales hasta 30 s.
@@ -305,8 +325,8 @@ El workflow `.github/workflows/android-apk.yml` verifica primero
 las pruebas automatizadas, luego compila **solo arm64-v8a**.
 En entregas marcadas `[DELIVERY]` o ejecuciones manuales
 publica exactamente:
-1. `AURORA_4_11_ARM64.apk`: un instalador 64 bits para el Galaxy S9+.
-2. `AURORA_4_11_MASTER_ESTADO_Y_PLAN.pdf`: estado compilado,
+1. `AURORA_4_12_ARM64.apk`: un instalador 64 bits para el Galaxy S9+.
+2. `AURORA_4_12_MASTER_ESTADO_Y_PLAN.pdf`: estado compilado,
    verificado en CI, pendiente de prueba física y plan futuro.
 
 **No entregamos ZIP de fuentes ni APK de 32 bits**. El historial
@@ -316,8 +336,8 @@ dentro solo hay los dos documentos previstos.
 
 La firma es DEBUG y requiere pruebas reales antes de uso de producción.
 
-## Cómo probar AURORA 4.11
-Instalar `AURORA 4.11 BETA` en paralelo. Iniciar CONVERSACIÓN:
+## Cómo probar AURORA 4.12
+Instalar `AURORA 4.12 BETA` en paralelo. Iniciar CONVERSACIÓN:
 ver texto en vivo y confirmar que NO traduce solo. Tocar TRADUCIR
 ÚLTIMA FRASE solo cuando se necesite. Pulsar el icono de celular
 con flechas para abrir la pantalla negra horizontal y volver con
@@ -408,6 +428,15 @@ errores temporales, cinco reintentos de sonidos y descarte de
 detecciones antiguas al reconectar. Las pruebas de GitHub Actions
 son automatizadas; la precisión real en Galaxy S9+ sigue sin medirse.
 Mantener la rama main estable intacta mientras no se valide la beta.
+
+## Continuidad de la beta 4.12
+Lo nuevo es la reducción de notificaciones duplicadas entre
+hipótesis equivalentes, confirmación reforzada para etiquetas
+genéricas y corrección de mapeos semánticos. Lo ya existente
+(escucha con reconexión, traducción manual, pantalla negra
+horizontal, zigzag de audio real, 30 sonidos) se conserva.
+CI sólo verifica compilación y pruebas deterministas; falta
+medir sensibilidad y falsos positivos con ejemplos en el S9+.
 
 ## Retomar desde otro chat
 Buscar en GitHub la rama `aurora-sense-precision-2026-11-10`
