@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.12",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.13",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -66,7 +66,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         story.append(paragraph("- "+name+": "+desc,body))
     rows=[
         ("Versión compilada",version),
-        ("Paquete independiente","com.despertadorflash.beta412"),
+        ("Paquete independiente","com.despertadorflash.beta413"),
         ("Repositorio",REPO),
         ("Rama de trabajo",BRANCH),
         ("Commit exacto",commit),
@@ -133,6 +133,18 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "(instrumento musical) ya no se etiqueta como bocina; "
          "la palabra inglesa cat se reconoce como gato solo "
          "si aparece como palabra completa o en un sonido felino.")
+    item("NUEVO 4.13 - EVALUACIÓN DE SONIDOS", "el MODO DE VALIDACIÓN "
+         "optativo de CONFIGURACIÓN ahora guarda conteos reales marcados "
+         "por el usuario: ACERTÓ, NO COINCIDE y SONIDO NO DETECTADO. "
+         "Se agrupan por timbre, puerta, mascota, bocina, sirena, voz, "
+         "llanto y otros. No guarda audio ni conversaciones.")
+    item("NUEVO 4.13 - RESULTADOS", "panel de resultados de pruebas en "
+         "CONFIGURACIÓN, con conteos por tipo, porcentaje de coincidencia "
+         "solo entre alertas valoradas y cobertura de casos marcados. "
+         "Permite copiar resultados sin audio o borrar solo las estadísticas.")
+    item("NUEVO 4.13 - MÁS DE UN SONIDO", "hasta cinco detecciones recientes "
+         "pueden evaluarse antes de que desaparezcan las preguntas. "
+         "No se registran evaluaciones sin activar expresamente el modo.")
     item("HISTORIAL BILINGÜE", "el original se registra siempre; las traducciones "
          "que terminan antes de cerrar la conversación también se guardan "
          "en el archivo de sesión con referencia a su texto original.")
@@ -165,10 +177,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     item("MODO HORIZONTAL", "Android gestiona la orientación sin reiniciar "
          "esta Activity. Volver a vertical conserva la captura. Al salir "
          "de la app se cierra la sesión para proteger privacidad.")
-    item("PRUEBA REAL", "las nuevas reglas de etiquetas y supresión "
-         "de duplicados tienen pruebas automáticas, pero no hay aún "
-         "mediciones de tasa real de aciertos, falsos positivos o "
-         "tiempos de alerta en el S9+.")
+    item("PRUEBA REAL", "los porcentajes del nuevo panel reflejan "
+         "solo los casos que alguien decida marcar; NO son precisión "
+         "científica ni sustituyen ensayos controlados. Falta usar "
+         "el S9+ y medir omisiones y falsos positivos con casos reales.")
     head("4 | PRÓXIMOS OBJETIVOS (NO COMPILADOS)")
     item("Continuidad", "investigar un reconocedor de voz local o más "
          "resistente a cortes para conversaciones largas.")
@@ -181,7 +193,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "manuscrita flotante e ilustraciones de perros, puertas y bocinas.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.12 BETA ARM64 sin desinstalar la anterior.",
+        "Instalar AURORA 4.13 BETA ARM64 sin desinstalar la anterior.",
         "En CONVERSACIÓN tocar icono celular/flechas: texto grande "
         "en negro; la flecha pequeña permite volver sin cortar.",
         "Verificar que NO traduce automáticamente. Cuando se quiera, "
@@ -195,11 +207,15 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "Probar ladridos repetidos, timbres, portazos y bocinas. "
         "Comprobar que un mismo ruido no genere dos alertas "
         "equivalentes, y que sonidos distintos sigan apareciendo.",
+        "Activar MODO DE VALIDACIÓN en CONFIGURACIÓN. Abrir SONIDOS, "
+        "marcar 5 aciertos / errores y 2 sonidos omitidos manualmente. "
+        "Volver a CONFIGURACIÓN para revisar cifras, copiarlas y "
+        "probar BORRAR RESULTADOS sin perder los 30 sonidos.",
         "No activar dos versiones AURORA escuchando a la vez.",
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.12 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.13 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -217,7 +233,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.12 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.13 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -226,13 +242,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.12-sound-evidence-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.13-validation-metrics-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_12_ARM64.apk"
-    pdf=OUT/"AURORA_4_12_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_13_ARM64.apk"
+    pdf=OUT/"AURORA_4_13_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
