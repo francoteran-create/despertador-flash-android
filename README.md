@@ -297,6 +297,12 @@ No se afirma que funcione con precision real sin comprobarlo en un
 Galaxy S9+; los modelos de idioma pueden necesitar Internet al principio.
 Las betas anteriores y el MASTER 4.0 de main no se sustituyen.
 
+## Punto de continuidad de la entrega 4.8
+Este commit marca el cierre técnico del bloque de cola de traducciones
+y la primera entrega simplificada con **únicamente una APK de 64 bits
+y un MASTER PDF**. Las pruebas automatizadas pueden verificar el build,
+pero las funciones físicas aún necesitan pruebas Galaxy S9+.
+
 ## Retomar desde otro chat
 Buscar en GitHub la rama `aurora-sense-precision-2026-11-10`
 y el último commit verificado por CI. Consultar el MASTER PDF de
