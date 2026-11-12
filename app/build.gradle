@@ -2,13 +2,13 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 54; versionName '4.14-voice-watchdog-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 55; versionName '4.15-flash-diagnostics-beta' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // existing user installation or its private data because of a debug key.
  buildTypes {
   debug {
-   applicationIdSuffix '.beta414'
-   resValue 'string', 'app_name', 'AURORA 4.14 BETA'
+   applicationIdSuffix '.beta415'
+   resValue 'string', 'app_name', 'AURORA 4.15 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
