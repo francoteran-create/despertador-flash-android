@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.13-validation-metrics-beta, versionCode 53), revisión en PR #1.
+  (4.14-voice-watchdog-beta, versionCode 54), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -48,11 +48,26 @@ Las notificaciones de eventos simultaneos se identifican por etiqueta,
 para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
+## Cambios 4.14 — respuesta a bloqueos silenciosos de voz
+- El `SpeechStallWatchdog` detecta cuando SpeechRecognizer deja de emitir
+  callbacks sin devolver un error: 45 s esperando voz, 90 s durante voz sin
+  avances y 18 s esperando el resultado final, comprobados cada 5 s.
+- Cierra **el reconocedor antiguo antes de reiniciar**, conservando las
+  frases finales ya registradas y sin abrir micrófonos simultáneos.
+- La pantalla indica cuándo Android está reconectando y no está capturando.
+  El diagnóstico cuenta los reinicios sin guardar audio ni palabras.
+- Continúa la traducción **solo cuando el usuario la solicita**.
+- Código con pruebas Java y regresiones Python, pero aún falta verificar
+  conversaciones largas y consumo real en Galaxy S9+.
+- La 4.14 tiene paquete propio `com.despertadorflash.beta414`: se prueba
+  en paralelo, no importa datos de 4.13 ni debe escuchar simultáneamente.
+  Ver `docs/AURORA_414_RESILIENCIA_VOZ.md`.
+
 ## Instalación de la beta y seguridad de los datos
-La version 4.13 BETA usa el paquete independiente
-`com.despertadorflash.beta413`, nombre visible `AURORA 4.13 BETA`.
+La versión 4.14 BETA usa el paquete independiente
+`com.despertadorflash.beta414`, nombre visible `AURORA 4.14 BETA`.
 La app original es `com.despertadorflash`, y las betas previas
-(4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9 y 4.10) tienen identificadores distintos. Se instala en paralelo
+(4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10 y 4.13) tienen identificadores distintos. Se instala en paralelo
 **sin desinstalar las anteriores**, y NO migra sus alarmas o datos de
 forma automatica. No mantener dos escuchas de microfono activas ni
 activar alarmas duplicadas.
@@ -66,7 +81,7 @@ Instrucciones de esta beta: `docs/AURORA_413_LABORATORIO_SONIDOS.md`, `docs/AURO
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.13 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.14 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -86,7 +101,7 @@ se respaldan por TXT, con hash verificado. Se conservan antiguos archivos
 SONIDOS de otras versiones sin borrarlos: pueden verse activando
 `Mostrar archivos antiguos de sonidos`. No se crean nuevos archivos de sonidos.
 
-La beta 4.13 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.14 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Correcciones criticas 4.3: escucha y traduccion
