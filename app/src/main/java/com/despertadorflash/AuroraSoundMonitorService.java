@@ -239,6 +239,7 @@ public final class AuroraSoundMonitorService extends Service {
   // No synchronous file writes, SharedPreferences writes, or NotificationManager
   // calls on MediaPipe's classifier callback thread.
   eventWorker.execute(()->{
+   if(!listening||sessionId!=run)return;
    RecentSoundEvents.add(this,found,percent);
    getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · puntaje IA "+percent+"/100").apply();
    if(!listening||sessionId!=run)return;
