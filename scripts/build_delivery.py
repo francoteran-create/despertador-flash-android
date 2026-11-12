@@ -50,7 +50,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         fontSize=11.5,leading=14.5,textColor=accent,spaceBefore=7,spaceAfter=3.5))
     styles.add(ParagraphStyle(
         name="AuroraBody",fontName="Helvetica",
-        fontSize=8.9,leading=11.8,textColor=dark,spaceAfter=3))
+        fontSize=8.7,leading=11.3,textColor=dark,spaceAfter=2.6))
     styles.add(ParagraphStyle(
         name="AuroraSmall",fontName="Helvetica",
         fontSize=8,leading=12,textColor=grey,spaceAfter=5))
@@ -83,7 +83,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         ("GRID",(0,0),(-1,-1),.35,colors.HexColor("#D9E0E6")),
         ("VALIGN",(0,0),(-1,-1),"TOP"),
         ("LEFTPADDING",(0,0),(-1,-1),7),("RIGHTPADDING",(0,0),(-1,-1),7),
-        ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+        ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
     ]))
     story.append(table)
     head("1 | ESTADO REAL DE ESTA ENTREGA")
@@ -108,43 +108,26 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "multicolor que responde a las muestras PCM REALES del "
          "micrófono YAMNet. Sonidos más fuertes hacen picos "
          "mayores. Sin barras ni medición calibrada de decibelios.")
-    item("MEJORA 4.11 - RECONEXIÓN DE VOZ", "los errores temporales del "
-         "reconocedor no agotan definitivamente el reinicio tras seis intentos: "
-         "se siguen reintentando con pausas escalonadas hasta 30 segundos. "
-         "Los errores permanentes de permisos e idioma sí detienen la escucha. "
-         "Android puede cortar el servicio igualmente.")
-    item("MEJORA 4.11 - RECONEXIÓN DE SONIDOS", "hasta cinco reintentos "
-         "escalonados antes de detener el monitor e informar el fallo. "
-         "Se descartan resultados viejos del clasificador anterior "
-         "para evitar eventos falsos tras la reconexión.")
-    item("SEGURIDAD DE LA SESIÓN", "la escucha de fondo no reinicia por sí "
-         "misma después de que la persona la detiene; no registra eventos "
-         "atrasados tras la detención. Las pruebas incluyen estas garantías.")
-    item("MEJORA 4.12 - ALERTAS SIN DUPLICADOS", "perro y ladrido, "
-         "puerta y portazo, voz y conversación comparten un breve "
-         "enfriamiento cuando son hipótesis de un mismo ruido. "
-         "Timbre, golpes en puerta, bocina y motor permanecen "
-         "como alertas independientes.")
-    item("MEJORA 4.12 - CONFIRMACIÓN PRUDENTE", "las etiquetas "
-         "genéricas PERRO, PUERTA, VEHÍCULO y VOZ HUMANA requieren "
-         "al menos dos observaciones separadas. Sirenas y alertas "
-         "urgentes conservan su vía rápida, no certificada.")
-    item("MEJORA 4.12 - ETIQUETAS CORREGIDAS", "French horn "
-         "(instrumento musical) ya no se etiqueta como bocina; "
-         "la palabra inglesa cat se reconoce como gato solo "
-         "si aparece como palabra completa o en un sonido felino.")
-    item("NUEVO 4.13 - EVALUACIÓN DE SONIDOS", "el MODO DE VALIDACIÓN "
-         "optativo de CONFIGURACIÓN ahora guarda conteos reales marcados "
-         "por el usuario: ACERTÓ, NO COINCIDE y SONIDO NO DETECTADO. "
-         "Se agrupan por timbre, puerta, mascota, bocina, sirena, voz, "
-         "llanto y otros. No guarda audio ni conversaciones.")
-    item("NUEVO 4.13 - RESULTADOS", "panel de resultados de pruebas en "
-         "CONFIGURACIÓN, con conteos por tipo, porcentaje de coincidencia "
-         "solo entre alertas valoradas y cobertura de casos marcados. "
-         "Permite copiar resultados sin audio o borrar solo las estadísticas.")
-    item("NUEVO 4.13 - MÁS DE UN SONIDO", "hasta cinco detecciones recientes "
-         "pueden evaluarse antes de que desaparezcan las preguntas. "
-         "No se registran evaluaciones sin activar expresamente el modo.")
+    item("ESTABILIDAD 4.11", "la voz recupera errores temporales con "
+         "pausas de hasta 30 s; los sonidos tienen hasta 5 reconexiones. "
+         "Se bloquean resultados de detectores anteriores para no "
+         "generar avisos falsos al reconectar.")
+    item("ALERTAS 4.12", "evita alertas duplicadas perro/ladrido, "
+         "puerta/portazo y voz/conversación. Mantiene timbre, golpes "
+         "y bocina independientes; confirma dos veces hipótesis genéricas.")
+    item("ETIQUETAS 4.12", "evita confundir el instrumento French horn "
+         "con bocina y palabras que contienen 'cat' con un gato.")
+    item("EVALUACIÓN 4.13", "MODO DE VALIDACIÓN voluntario en "
+         "CONFIGURACIÓN permite registrar ACERTÓ, NO COINCIDE "
+         "y SONIDO NO DETECTADO, agrupados en ocho tipos, "
+         "sin conservar audio ni conversaciones.")
+    item("RESULTADOS 4.13", "conteos locales por categoría y "
+         "porcentajes SOLO de pruebas marcadas. Permite revisar, "
+         "copiar y borrar estadísticas sin afectar alarmas, "
+         "conversaciones ni últimos 30 sonidos.")
+    item("PRIVACIDAD 4.13", "pruebas desactivadas de fábrica; "
+         "no se guardan audios, etiquetas individuales, "
+         "nombres ni ubicaciones. Hasta 5 eventos evaluables.")
     item("HISTORIAL BILINGÜE", "el original se registra siempre; las traducciones "
          "que terminan antes de cerrar la conversación también se guardan "
          "en el archivo de sesión con referencia a su texto original.")
@@ -227,7 +210,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.12 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.13 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
