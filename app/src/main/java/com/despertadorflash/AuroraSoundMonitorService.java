@@ -194,7 +194,7 @@ public final class AuroraSoundMonitorService extends Service {
     }
     final int retry=failures;
     getSharedPreferences("aurora",0).edit()
-     .putString(KEY_ERROR,"Recuperando escucha · intento "+retry+" de 3").apply();
+     .putString(KEY_ERROR,"Recuperando escucha · intento "+retry+" de 5").apply();
     ui.post(()->{
      if(!listening||sessionId!=run)return;
      NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
