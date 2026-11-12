@@ -47,10 +47,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         fontSize=22,leading=27,textColor=dark,spaceAfter=8))
     styles.add(ParagraphStyle(
         name="AuroraHead",fontName="Helvetica-Bold",
-        fontSize=12,leading=17,textColor=accent,spaceBefore=12,spaceAfter=6))
+        fontSize=11.5,leading=15,textColor=accent,spaceBefore=8,spaceAfter=4))
     styles.add(ParagraphStyle(
         name="AuroraBody",fontName="Helvetica",
-        fontSize=9.4,leading=14,textColor=dark,spaceAfter=6))
+        fontSize=9,leading=12.8,textColor=dark,spaceAfter=4))
     styles.add(ParagraphStyle(
         name="AuroraSmall",fontName="Helvetica",
         fontSize=8,leading=12,textColor=grey,spaceAfter=5))
@@ -83,7 +83,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         ("GRID",(0,0),(-1,-1),.35,colors.HexColor("#D9E0E6")),
         ("VALIGN",(0,0),(-1,-1),"TOP"),
         ("LEFTPADDING",(0,0),(-1,-1),7),("RIGHTPADDING",(0,0),(-1,-1),7),
-        ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
     ]))
     story.append(table)
     head("1 | ESTADO REAL DE ESTA ENTREGA")
