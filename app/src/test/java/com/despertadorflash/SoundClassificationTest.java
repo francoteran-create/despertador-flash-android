@@ -42,6 +42,15 @@ public class SoundClassificationTest {
   assertFalse(SoundAlertPreferences.isNotificationForCategory("aurora_monitor","doors"));
   assertFalse(SoundAlertPreferences.isNotificationForCategory(null,"doors"));
  }
+ @Test public void musicalFrenchHornMustNotBecomeCarHorn(){
+  assertEquals("POSIBLE MÚSICA",SoundLabelsEs.name("French horn"));
+  assertEquals("POSIBLE BOCINA",SoundLabelsEs.name("Vehicle horn, car horn, honking"));
+ }
+ @Test public void catRequiresWholeWordNotEnglishSubstring(){
+  assertEquals("POSIBLE GATO",SoundLabelsEs.name("Cat"));
+  assertEquals("POSIBLE GATO",SoundLabelsEs.name("Cat purring"));
+  assertNull(SoundLabelsEs.name("Location"));
+ }
  @Test public void unknownClassesDoNotPretendRecognition(){
   assertNull(SoundLabelsEs.name(null));
   assertNull(SoundLabelsEs.name("Unknown audio class"));
