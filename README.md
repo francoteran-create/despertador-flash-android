@@ -61,7 +61,7 @@ No ejecutar ambos detectores de microfono a la vez: detener la escucha
 en la AURORA original antes de probar la beta (Android puede bloquear
 el acceso simultaneo al microfono).
 
-Instrucciones de esta beta: `docs/AURORA_49_VISUALIZACION_HORIZONTAL.md`, `docs/AURORA_48_COLA_BILINGUE.md`, `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`, `docs/AURORA_46_AVISOS_SONOROS.md` y `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
+Instrucciones de esta beta: `docs/AURORA_410_ICONO_ONDA_TRADUCCION.md`, `docs/AURORA_49_VISUALIZACION_HORIZONTAL.md`, `docs/AURORA_48_COLA_BILINGUE.md`, `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`, `docs/AURORA_46_AVISOS_SONOROS.md` y `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
 
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
@@ -189,7 +189,7 @@ Especificación completa: `docs/AURORA_45_SONIDOS_30.md`.
 
 Detalles y protocolo: `docs/AURORA_46_AVISOS_SONOROS.md`.
 
-## Corrección 4.7 — traducir automáticamente, sin pantallas confusas
+## Histórico 4.7 — traducción automática (reemplazada por traducción a pedido en 4.10)
 - Dos paneles juntos: **LO QUE SE DIJO · ORIGINAL** y
   **TRADUCCIÓN AUTOMÁTICA**, con texto traducido grande.
 - El idioma de la conversación y el de destino se eligen arriba.
@@ -373,6 +373,13 @@ La próxima tarea es validar en Galaxy S9+ el ícono celular con dos
 flechas, la vuelta con botón discreto, el zigzag neón en silencio/
 sonido fuerte, y la traducción solo por petición. Código y pruebas
 están en esta rama beta y la estabilidad de `main` no se altera.
+
+## Verificación necesaria antes de declarar estable
+AURORA 4.10 compila con tests de origen firmado del zigzag,
+interfaz de rotación y ausencia de traducción automática.
+Hay que corroborar físicamente en S9+ que el giro no detenga,
+que el botón chico vuelva a vertical y que DETENER guarde
+la conversación desde la pantalla normal.
 
 ## Retomar desde otro chat
 Buscar en GitHub la rama `aurora-sense-precision-2026-11-10`
