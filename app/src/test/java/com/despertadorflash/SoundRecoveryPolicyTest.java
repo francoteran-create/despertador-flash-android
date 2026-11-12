@@ -8,7 +8,9 @@ public class SoundRecoveryPolicyTest {
   assertEquals(700L,SoundRecoveryPolicy.delayAfterFailure(1));
   assertEquals(1600L,SoundRecoveryPolicy.delayAfterFailure(2));
   assertEquals(3500L,SoundRecoveryPolicy.delayAfterFailure(3));
-  assertEquals(-1L,SoundRecoveryPolicy.delayAfterFailure(4));
+  assertEquals(7000L,SoundRecoveryPolicy.delayAfterFailure(4));
+  assertEquals(12000L,SoundRecoveryPolicy.delayAfterFailure(5));
+  assertEquals(-1L,SoundRecoveryPolicy.delayAfterFailure(6));
   assertEquals(-1L,SoundRecoveryPolicy.delayAfterFailure(0));
  }
  @Test public void silentClassifierStallMustBeDetected(){
