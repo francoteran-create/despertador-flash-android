@@ -244,6 +244,10 @@ public final class AuroraSoundMonitorService extends Service {
    getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · puntaje IA "+percent+"/100").apply();
    if(!listening||sessionId!=run)return;
    if(!SoundAlertPreferences.isEnabled(this,found))return;
+   // The optional LED is not a notification: attempt it for every confirmed,
+   // enabled event even if posting the visible notification fails.
+   // Feedback itself checks user opt-in, CAMERA permission and cooldown.
+   if(soundFeedback!=null)soundFeedback.onConfirmed(found,false);
    if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
    NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
    if(nm==null)return;
@@ -257,8 +261,8 @@ public final class AuroraSoundMonitorService extends Service {
     .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
    try{
     nm.notify(SoundAlertPreferences.notificationTag(group,found),SoundAlertPreferences.notificationId(group),b.build());
-    // Android channel handles the vibration in background; optional torch only here.
-    if(soundFeedback!=null)soundFeedback.onConfirmed(found,false);
+    // Background vibration belongs to Android's notification channel.
+    // Optional LED was already requested independently above.
    }catch(SecurityException ignored){}
   });
  }
