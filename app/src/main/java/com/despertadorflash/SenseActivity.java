@@ -1234,7 +1234,7 @@ public final class SenseActivity extends Activity {
        soundLiveWindow.clear();
        state.setText("RECONECTANDO EL DETECTOR");
        result.setText("Reconectando micrófono…");
-       detail.setText("Interrupción detectada. Reintento "+attempt+" de 3.");
+       detail.setText("Interrupción detectada. Reintento "+attempt+" de 5.");
       }
      });
     }finally{
