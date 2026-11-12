@@ -633,6 +633,21 @@ public class MainActivity extends Activity {
    new Handler(Looper.getMainLooper()).postDelayed(testFeedback::stop,5000);
    Toast.makeText(this,"Probando vibración y flash según la configuración. No se registró ningún sonido.",Toast.LENGTH_LONG).show();
   });
+  Button flashDiagnostic=btn("CONSULTAR ÚLTIMO ESTADO DEL FLASH DE SONIDOS");
+  root.addView(flashDiagnostic);
+  flashDiagnostic.setOnClickListener(v->{
+   String report=prefs.getString("monitor_sound_flash_last_status","Aún no hubo un intento de flash ambiental.");
+   boolean enabled=prefs.getBoolean("monitor_sound_flash",false);
+   boolean authorized=Build.VERSION.SDK_INT>=23&&
+    checkSelfPermission(android.Manifest.permission.CAMERA)==android.content.pm.PackageManager.PERMISSION_GRANTED;
+   new AlertDialog.Builder(this).setTitle("Diagnóstico de flash por sonidos")
+    .setMessage("Flash por sonidos: "+(enabled?"ACTIVADO":"APAGADO")+
+     "\nPermiso Cámara: "+(authorized?"CONCEDIDO":"NO CONCEDIDO")+
+     "\nÚltimo resultado: "+report+
+     "\n\nSolo parpadea ante sonidos confirmados y categorías habilitadas. "+
+     "El teléfono puede bloquear la linterna si otra aplicación utiliza la cámara.")
+    .setPositiveButton("CERRAR",null).show();
+  });
   root.addView(section("MODO DE VALIDACIÓN DE SONIDOS"));
   android.widget.Switch validation=new android.widget.Switch(this);
   validation.setText("Evaluar detecciones con ACERTÓ / NO COINCIDE");
@@ -743,7 +758,7 @@ public class MainActivity extends Activity {
  if(Build.VERSION.SDK_INT>=34){NotificationManager notificationManager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);if(!notificationManager.canUseFullScreenIntent()){TextView fullWarning=txt("Android restringe las alarmas a pantalla completa. Revisá el permiso de alertas de pantalla completa.",16);fullWarning.setTextColor(0xffffcf70);root.addView(fullWarning);Button fullPermission=btn("Permitir alertas a pantalla completa");root.addView(fullPermission);fullPermission.setOnClickListener(v->startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,android.net.Uri.parse("package:"+getPackageName()))));}}
  Switch torchSwitch=new Switch(this);torchSwitch.setText("Flash LED intermitente en alarmas y temporizador");torchSwitch.setTextColor(Color.WHITE);torchSwitch.setTextSize(17);torchSwitch.setChecked(prefs.getBoolean("torch_alert",true));root.addView(torchSwitch);torchSwitch.setOnCheckedChangeListener((button,enabled)->{prefs.edit().putBoolean("torch_alert",enabled).apply();if(enabled&&Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);if(!enabled&&torch!=null)torch.stop();});
  if(Build.VERSION.SDK_INT>=23&&prefs.getBoolean("torch_alert",true)&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){Button torchPermission=btn("Autorizar flash LED (Cámara)");root.addView(torchPermission);torchPermission.setOnClickListener(v->requestPermissions(new String[]{android.Manifest.permission.CAMERA},2));}
- root.addView(txt("Aviso: el flash LED intermitente puede afectar a personas fotosensibles. Podés desactivarlo con el interruptor anterior.",13));
+ root.addView(txt("Aviso: el flash LED intermitente puede afectar a personas fotosensibles. Podés desactivarlo con el interruptor anterior. Si el flash funciona en PRUEBA pero no con la pantalla bloqueada, revisá permisos de notificaciones y alertas a pantalla completa: Android puede no abrir la pantalla de alarma.",13));
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
 
 
