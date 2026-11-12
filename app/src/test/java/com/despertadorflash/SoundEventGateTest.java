@@ -86,6 +86,39 @@ public class SoundEventGateTest {
   assertFalse(gate.accept("POSIBLE PERRO LADRANDO",60,2,1800));
   assertTrue(gate.accept("POSIBLE PERRO LADRANDO",60,2,2400));
  }
+ @Test public void duplicateDogLabelsAreNotTwoAlerts(){
+  SoundEventGate gate=new SoundEventGate();
+  assertTrue(gate.accept("POSIBLE PERRO LADRANDO",92,1,1000));
+  assertFalse(gate.accept("POSIBLE PERRO",92,1,1200));
+  assertFalse(gate.accept("POSIBLE PERRO",93,1,1700));
+  assertFalse(gate.accept("POSIBLE PERRO LADRANDO",96,1,2100));
+  assertFalse(gate.accept("POSIBLE PERRO",55,1,16300));
+  assertTrue(gate.accept("POSIBLE PERRO",55,1,16900));
+ }
+ @Test public void doorbellAndKnockingRemainIndependent(){
+  SoundEventGate gate=new SoundEventGate();
+  assertTrue(gate.accept("POSIBLE TIMBRE DE PUERTA",95,1,1000));
+  assertTrue(gate.accept("POSIBLE PORTAZO",95,1,1300));
+  assertTrue(gate.accept("POSIBLE BOCINA",94,1,1500));
+  assertTrue(gate.accept("POSIBLE VEHÍCULO",65,1,1700)==false);
+  assertTrue(gate.accept("POSIBLE VEHÍCULO",65,1,2100));
+ }
+ @Test public void genericClassNeedsTwoFramesEvenAtVeryHighScore(){
+  SoundEventGate gate=new SoundEventGate();
+  assertFalse(gate.accept("POSIBLE PERRO",99,1,1000));
+  assertTrue(gate.accept("POSIBLE PERRO",90,1,1500));
+  assertFalse(new SoundEventGate().accept("POSIBLE PUERTA O CAJÓN",99,1,2000));
+  assertFalse(new SoundEventGate().accept("POSIBLE VEHÍCULO",99,1,2300));
+  assertTrue(new SoundEventGate().accept("POSIBLE SIRENA",79,1,1000));
+ }
+ @Test public void resetClearsFamilyCooldown(){
+  SoundEventGate gate=new SoundEventGate();
+  assertTrue(gate.accept("POSIBLE PORTAZO",95,1,1000));
+  assertFalse(gate.accept("POSIBLE PUERTA O CAJÓN",99,1,1600));
+  gate.reset();
+  assertFalse(gate.accept("POSIBLE PUERTA O CAJÓN",99,1,2000));
+  assertTrue(gate.accept("POSIBLE PUERTA O CAJÓN",99,1,2500));
+ }
  @Test public void clockRollbackAndResetDontLockOutAlerts(){
   SoundEventGate gate=new SoundEventGate();
   assertTrue(gate.accept("A",95,1,100_000));
