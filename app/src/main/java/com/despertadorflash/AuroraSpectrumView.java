@@ -24,15 +24,20 @@ public final class AuroraSpectrumView extends View {
  private boolean drawing=false;
  private final Runnable repaint=new Runnable(){
   @Override public void run(){
-   if(!drawing)return;
+   if(!drawing||!listening||!isShown())return;
    invalidate();
    postDelayed(this,33L);
   }
  };
+ private void scheduleFrames(){
+  removeCallbacks(repaint);
+  if(drawing&&listening&&isShown())post(repaint);
+ }
  public AuroraSpectrumView(Context context){super(context);setBackgroundColor(Color.BLACK);}
  public void setListening(boolean live){
   listening=live;
   if(!live)clear();
+  scheduleFrames();
  }
  public void setSpectrum(LiveAudioSpectrum.Reading reading){
   if(reading==null)return;
@@ -49,7 +54,11 @@ public final class AuroraSpectrumView extends View {
  @Override protected void onAttachedToWindow(){
   super.onAttachedToWindow();
   drawing=true;
-  post(repaint);
+  scheduleFrames();
+ }
+ @Override protected void onVisibilityChanged(View changedView,int visibility){
+  super.onVisibilityChanged(changedView,visibility);
+  scheduleFrames();
  }
  @Override protected void onDetachedFromWindow(){
   drawing=false;removeCallbacks(repaint);super.onDetachedFromWindow();
