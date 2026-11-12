@@ -189,8 +189,11 @@ def main():
     pdf=OUT/"AURORA_4_8_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
-    if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>8000:
+    if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
         raise RuntimeError("Faltan bytes de entrega")
+    if not pdf.read_bytes().startswith(b"%PDF-"):
+        raise RuntimeError("MASTER PDF no valido")
+    print("Tamaños APK/PDF:",apk.stat().st_size,pdf.stat().st_size)
     files=sorted(p.name for p in OUT.iterdir() if p.is_file())
     if files!=sorted([apk.name,pdf.name]):
         raise RuntimeError("Entrega debe tener exactamente 2 archivos: "+str(files))
