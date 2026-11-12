@@ -1158,6 +1158,7 @@ public final class SenseActivity extends Activity {
      if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)
       throw new IllegalStateException("Android no habilitó el micrófono");
      soundReconnecting=false;
+     main.post(()->{if(wideSpectrum!=null&&wideMode)wideSpectrum.setListening(true);});
      started=SystemClock.elapsedRealtime();
      main.post(()->{
       if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
@@ -1170,6 +1171,19 @@ public final class SenseActivity extends Activity {
       if(classifierError.get()!=null)throw new IllegalStateException("El modelo perdió la conexión de audio");
       int frames=data.load(localRecord);
       if(frames>0){
+       // Reuse the actual PCM buffer feeding YAMNet; no second microphone.
+       if(wideMode){
+        LiveAudioSpectrum.Reading spectrum=LiveAudioSpectrum.fromPcm(data.getBuffer());
+        main.post(()->{
+         if(!wideMode||!soundRunning||mode!=MODE_SOUND||soundSession!=run)return;
+         if(wideSpectrum!=null)wideSpectrum.setSpectrum(spectrum);
+         if(wideIntensity!=null){
+          String intensity=spectrum.level>=.70f?"FUERTE":spectrum.level>=.27f?"MEDIA":"BAJA";
+          wideIntensity.setText("INTENSIDAD RELATIVA · "+intensity+
+           " · NO SON DECIBELES CALIBRADOS");
+         }
+        });
+       }
        captureStats.samplesRead(frames);
        localClassifier.classifyAsync(data,SystemClock.uptimeMillis());
        emptyReads=0;
@@ -1187,6 +1201,10 @@ public final class SenseActivity extends Activity {
      android.util.Log.w("AURORA","Escucha interrumpida: recuperación de micrófono/modelo",error);
      captureStats.recovering(error.getClass().getSimpleName()+": "+error.getMessage());
      soundReconnecting=true;
+     main.post(()->{
+      if(wideSpectrum!=null)wideSpectrum.setListening(false);
+      if(wideIntensity!=null)wideIntensity.setText("RECONECTANDO · SIN MEDICIÓN DE AUDIO");
+     });
      if(SystemClock.elapsedRealtime()-started>30000L)consecutiveFailures=0;
      recoveryDelay=SoundRecoveryPolicy.delayAfterFailure(++consecutiveFailures);
      if(recoveryDelay<0){
@@ -1231,6 +1249,8 @@ public final class SenseActivity extends Activity {
   soundSession++;
   if(soundFeedback!=null){soundFeedback.stop();soundFeedback=null;}
   mode=MODE_NONE;soundRunning=false;soundReconnecting=false;stopSoundDisplayTick();
+  if(wideSpectrum!=null)wideSpectrum.setListening(false);
+  if(wideIntensity!=null)wideIntensity.setText("MICRÓFONO DETENIDO");
   if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
   finishHistory();
   releaseSpeech();
