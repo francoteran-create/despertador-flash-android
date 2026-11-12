@@ -396,6 +396,107 @@ public final class SenseActivity extends Activity {
   if(translationResult!=null)translationResult.addTextChangedListener(mirror);
   syncWideText();
  }
+ /** Visualización en la misma Activity y sin abrir otro micrófono.
+  * Android no recrea esta pantalla al cambiar orientación (ver Manifest).
+  */
+ private void buildWideView(){
+  wideOverlay=new FrameLayout(this);
+  wideOverlay.setBackgroundColor(Color.BLACK);
+  wideOverlay.setVisibility(View.GONE);
+  screenFrame.addView(wideOverlay,new FrameLayout.LayoutParams(-1,-1));
+  LinearLayout content=new LinearLayout(this);
+  content.setOrientation(LinearLayout.VERTICAL);
+  content.setBackgroundColor(Color.BLACK);
+  content.setPadding(dp(17),dp(9),dp(17),dp(8));
+  wideOverlay.addView(content,new FrameLayout.LayoutParams(-1,-1));
+  LinearLayout header=new LinearLayout(this);
+  header.setGravity(Gravity.CENTER_VERTICAL);
+  content.addView(header,new LinearLayout.LayoutParams(-1,dp(50)));
+  wideStatus=text("ESCUCHANDO",12,0xffb3b8c7);
+  wideStatus.setPadding(dp(5),0,dp(8),0);
+  header.addView(wideStatus,new LinearLayout.LayoutParams(0,-2,1f));
+  Button leave=button("VOLVER");
+  leave.setTextSize(12);
+  header.addView(leave,new LinearLayout.LayoutParams(dp(115),dp(48)));
+  leave.setOnClickListener(v->leaveWideMode());
+  Button stopWide=button("■ DETENER Y GUARDAR");
+  stopWide.setTextSize(12);
+  LinearLayout.LayoutParams stopSize=new LinearLayout.LayoutParams(dp(190),dp(48));
+  stopSize.leftMargin=dp(10);
+  header.addView(stopWide,stopSize);
+  stopWide.setOnClickListener(v->{
+   stopAll(true);
+   leaveWideMode();
+  });
+  if(screenMode==MODE_SPEECH){
+   TextView originalCaption=text("LO QUE SE ESTÁ DICIENDO",12,0xffb0b0b0);
+   content.addView(originalCaption);
+   ScrollView spoken=new ScrollView(this);spoken.setFillViewport(true);
+   content.addView(spoken,new LinearLayout.LayoutParams(-1,0,1.2f));
+   wideOriginal=text("Esperando conversación…",34,Color.WHITE);
+   wideOriginal.setTextIsSelectable(true);
+   wideOriginal.setGravity(Gravity.CENTER);
+   wideOriginal.setPadding(dp(20),dp(7),dp(20),dp(7));
+   spoken.addView(wideOriginal);
+   TextView translatedCaption=text("TRADUCCIÓN AUTOMÁTICA",12,0xffb0b0b0);
+   content.addView(translatedCaption);
+   ScrollView translated=new ScrollView(this);translated.setFillViewport(true);
+   content.addView(translated,new LinearLayout.LayoutParams(-1,0,1f));
+   wideTranslation=text("Esperando la traducción…",30,Color.WHITE);
+   wideTranslation.setTextIsSelectable(true);
+   wideTranslation.setGravity(Gravity.CENTER);
+   wideTranslation.setPadding(dp(20),dp(7),dp(20),dp(7));
+   translated.addView(wideTranslation);
+  }else{
+   wideSpectrum=new AuroraSpectrumView(this);
+   wideSpectrum.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+   content.addView(wideSpectrum,new LinearLayout.LayoutParams(-1,0,1f));
+   wideIntensity=text("INTENSIDAD RELATIVA · EN ESPERA",12,0xffc5c5c5);
+   wideIntensity.setGravity(Gravity.CENTER);
+   content.addView(wideIntensity,new LinearLayout.LayoutParams(-1,dp(28)));
+   wideLabel=text("Escuchando sonidos…",26,Color.WHITE);
+   wideLabel.setGravity(Gravity.CENTER);
+   wideLabel.setMaxLines(3);
+   content.addView(wideLabel,new LinearLayout.LayoutParams(-1,dp(110)));
+  }
+ }
+ private void syncWideText(){
+  if(wideStatus!=null&&state!=null)wideStatus.setText(state.getText());
+  if(screenMode==MODE_SPEECH){
+   if(wideOriginal!=null&&result!=null)wideOriginal.setText(result.getText());
+   if(wideTranslation!=null&&translationResult!=null)wideTranslation.setText(translationResult.getText());
+  }else if(wideLabel!=null&&result!=null)wideLabel.setText(result.getText());
+ }
+ private void enterWideMode(){
+  if(wideOverlay==null||wideMode)return;
+  wideMode=true;
+  wideOverlay.setVisibility(View.VISIBLE);
+  wideOverlay.bringToFront();
+  if(wideSpectrum!=null)wideSpectrum.setListening(soundRunning&&mode==MODE_SOUND);
+  syncWideText();
+  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+  getWindow().getDecorView().setSystemUiVisibility(
+   View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|
+   View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+  setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+ }
+ private void leaveWideMode(){
+  if(!wideMode)return;
+  wideMode=false;
+  if(wideSpectrum!=null)wideSpectrum.setListening(false);
+  if(wideOverlay!=null)wideOverlay.setVisibility(View.GONE);
+  getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+  getWindow().getDecorView().setSystemUiVisibility(0);
+  setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+ }
+ @Override public void onConfigurationChanged(Configuration config){
+  super.onConfigurationChanged(config);
+  if(wideOverlay!=null)wideOverlay.requestLayout();
+ }
+ @Override public void onBackPressed(){
+  if(wideMode){leaveWideMode();return;}
+  super.onBackPressed();
+ }
  private void showRecentSounds(){
   if(screenMode!=MODE_SOUND||eventsView==null)return;
   eventsView.removeAllViews();
