@@ -1,4 +1,4 @@
-"""AURORA 4.7 regression: translations must be triggered by FINAL recognized speech.
+"""AURORA 4.8 regression: all final phrases are queued and persisted if translated.
 
 Checks the Android integration contract in source in addition to compiling
 and running JUnit. Physical device tests are still required for ML Kit.
@@ -31,12 +31,19 @@ class AutoTranslationContract(unittest.TestCase):
         self.assertNotIn("manualTranslationInput",self.sense)
         self.assertIn("PROBAR TRADUCTOR CON TEXTO ESCRITO",self.sense)
 
-    def test_old_async_result_is_not_allowed_to_replace_new_translation(self):
-        self.assertIn("request==translationGeneration",self.sense)
-        self.assertIn("client!=null&&translator==client",self.sense)
-        self.assertIn("translationModelDownloading",self.sense)
+    def test_queue_keeps_intermediate_sentences_and_persists_completed_translation(self):
+        self.assertIn("translationQueue.offer(",self.sense)
+        self.assertIn("pumpTranslationQueue();",self.sense)
+        self.assertIn("translationQueue.complete(task.id)",self.sense)
+        self.assertIn("translationQueue.isActive(task.id)",self.sense)
+        self.assertIn("if(task.fromMicrophone)",self.sense)
+        self.assertIn('recordEvent("TRADUCCIÓN ("+task.language+")',self.sense)
+        self.assertIn("newestTranslationId",self.sense)
         self.assertIn("translationModelReady",self.sense)
-        self.assertIn("runTranslation(translationGeneration,pendingTranslationPhrase,client)",self.sense)
+
+    def test_stopping_speech_cancels_old_translations(self):
+        self.assertIn("invalidateTranslation(); // Do not write late ML Kit results",self.sense)
+        self.assertIn("translationQueue.clear()",self.sense)
 
     def test_main_page_links_to_single_translation_flow(self):
         self.assertIn('homeSpeechToggle.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH))',self.home)
