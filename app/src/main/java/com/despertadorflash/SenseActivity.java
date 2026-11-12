@@ -76,7 +76,9 @@ public final class SenseActivity extends Activity {
  private LinearLayout root;
  private ScrollView pageScroll;
  private FrameLayout screenFrame,wideOverlay;
- private TextView wideOriginal,wideTranslation,wideLabel,wideStatus,wideIntensity;
+ private TextView wideOriginal,wideTranslation,wideLabel,wideIntensity;
+ private ScrollView wideTranslationPanel;
+ private boolean manualTranslationRequested=false;
  private AuroraSpectrumView wideSpectrum;
  private volatile boolean wideMode=false;
  private final SoundCaptureTelemetry captureStats=new SoundCaptureTelemetry();
@@ -224,14 +226,14 @@ public final class SenseActivity extends Activity {
      invalidateTranslation();
      lastTranscript="";partialTranscript="";
      if(result!=null)result.setText("Esperando nueva conversación…");
-     if(translationResult!=null)translationResult.setText("Esperando una frase para traducir…");
+     if(translationResult!=null)translationResult.setText("Traducción disponible cuando la solicites.");
      if(translationOriginal!=null)translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
      if(mode==MODE_SPEECH){stopAll(true);toggle(MODE_SPEECH);}
     });
    }
   }
   if(screenMode==MODE_SPEECH){
-   root.addView(AuroraDesign.overline(this,"TRADUCIR AUTOMÁTICAMENTE AL"));
+   root.addView(AuroraDesign.overline(this,"IDIOMA PARA TRADUCIR CUANDO LO PIDAS"));
    LinearLayout targets=new LinearLayout(this);
    targets.setOrientation(LinearLayout.HORIZONTAL);
    root.addView(targets,new LinearLayout.LayoutParams(-1,dp(61)));
@@ -256,8 +258,11 @@ public final class SenseActivity extends Activity {
      getPreferences(MODE_PRIVATE).edit().putInt("translation_target",chosen).apply();
      refreshLanguageSelections();
      if(translationOriginal!=null)translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
-     if(!lastTranscript.trim().isEmpty())translatePhrase(lastTranscript,true);
-     else if(translationStatus!=null)translationMessage("Destino cambiado. La próxima frase se traducirá automáticamente.");
+     invalidateTranslation();
+     manualTranslationRequested=false;
+     if(translationResult!=null)translationResult.setText("Traducción disponible cuando la solicites.");
+     if(translationStatus!=null)translationMessage("Destino elegido. Para traducir, tocá TRADUCIR ÚLTIMA FRASE.");
+     syncWideText();
     });
    }
    refreshLanguageSelections();
@@ -275,30 +280,30 @@ public final class SenseActivity extends Activity {
   Button stop=button("■  DETENER");AuroraDesign.action(stop,0xff66334d,0xff4a253c,0xffa76e89);
   LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(0,dp(68),1f);stopParams.leftMargin=dp(9);
   controls.addView(stop,stopParams);stop.setOnClickListener(v->stopAll(true));
-  Button wide=button("↔  VISTA HORIZONTAL · PANTALLA COMPLETA");
-  wide.setContentDescription(screenMode==MODE_SOUND?
-   "Mostrar frecuencias luminosas en horizontal sin detener la escucha":
-   "Mostrar las palabras blancas sobre fondo negro en horizontal sin detener la conversación");
-  root.addView(wide,new LinearLayout.LayoutParams(-1,dp(61)));
-  wide.setOnClickListener(v->enterWideMode());
+  LinearLayout rotateRow=new LinearLayout(this);
+  rotateRow.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+  root.addView(rotateRow,new LinearLayout.LayoutParams(-1,dp(56)));
+  RotatePhoneIconView rotate=new RotatePhoneIconView(this);
+  rotateRow.addView(rotate,new LinearLayout.LayoutParams(dp(56),dp(56)));
+  rotate.setOnClickListener(v->enterWideMode());
   root.addView(AuroraDesign.overline(this,screenMode==MODE_SOUND?"SONIDO ACTUAL":"LO QUE SE DIJO · ORIGINAL"));
   result=text(screenMode==MODE_SOUND?"Buscando sonidos…":initial.isEmpty()?"Esperando conversación…":initial,25,Color.WHITE);
   result.setGravity(Gravity.CENTER);result.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
   result.setMinHeight(dp(126));result.setBackground(bg(0xff143447,0xff201e45));
   root.addView(result);
   if(screenMode==MODE_SPEECH){
-   root.addView(AuroraDesign.overline(this,"TRADUCCIÓN AUTOMÁTICA"));
+   root.addView(AuroraDesign.overline(this,"TRADUCCIÓN A PEDIDO"));
    translationOriginal=text(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget),14,0xffb8e8fa);
    root.addView(translationOriginal);
-   translationResult=text("Esperando una frase para traducir…",26,Color.WHITE);
+   translationResult=text("Traducción disponible cuando la solicites.",26,Color.WHITE);
    translationResult.setMinHeight(dp(114));
    translationResult.setTextIsSelectable(true);
    translationResult.setGravity(Gravity.CENTER_VERTICAL);
    translationResult.setBackground(bg(0xff0d434e,0xff1a3658));
    root.addView(translationResult,new LinearLayout.LayoutParams(-1,-2));
-   translationStatus=text("AUTOMÁTICO: al finalizar cada frase aparecerá aquí su traducción. La primera vez puede necesitar Internet.",14,0xffbee9eb);
+   translationStatus=text("La transcripción es en vivo. Solo se traduce cuando toques el botón; la primera descarga puede necesitar Internet.",14,0xffbee9eb);
    root.addView(translationStatus);
-   translateButton=button("REINTENTAR TRADUCCIÓN DE LA ÚLTIMA FRASE");
+   translateButton=button("TRADUCIR ÚLTIMA FRASE");
    root.addView(translateButton,new LinearLayout.LayoutParams(-1,dp(54)));
    translateButton.setOnClickListener(v->translateLast());
   }
@@ -592,7 +597,7 @@ public final class SenseActivity extends Activity {
    if(translationResult!=null)translationResult.setText("Esperando una frase para traducir…");
    if(translationOriginal!=null)
     translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
-   translationMessage("AUTOMÁTICO: las frases se traducen en orden; las traducciones completadas se guardan.");
+   translationMessage("Transcribiendo solamente. Tocá TRADUCIR ÚLTIMA FRASE cuando quieras.");
   }
   history=new SenseHistory(this);
   history.begin(type);
@@ -786,6 +791,8 @@ public final class SenseActivity extends Activity {
    }).show();
  }
  private void translateLast(){
+  manualTranslationRequested=true;
+  syncWideText();
   String phrase=lastTranscript.trim();
   if(phrase.isEmpty())phrase=partialTranscript.trim();
   if(phrase.isEmpty()){
@@ -836,7 +843,7 @@ public final class SenseActivity extends Activity {
   translationOriginal.setText((automatic?"ÚLTIMA FRASE RECONOCIDA":"PRUEBA ESCRITA")+
    " · "+selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
   translationResult.setText(translationModelReady?"Esperando turno de traducción…":"Preparando el idioma…");
-  translationMessage("Traducción automática en cola: "+translationQueue.size()+" frase(s).");
+  translationMessage("Traducción solicitada. Trabajos pendientes: "+translationQueue.size()+".");
   pumpTranslationQueue();
  }
  private void pumpTranslationQueue(){
@@ -915,7 +922,7 @@ public final class SenseActivity extends Activity {
      }
      if(task.id==newestTranslationId){
       translationResult.setText(clean);
-      translationMessage("TRADUCCIÓN LISTA · Las frases anteriores también quedan en el historial.");
+      translationMessage("TRADUCCIÓN LISTA · Se guardó junto al original.");
      }
     }
     translationQueue.complete(task.id);
@@ -997,7 +1004,7 @@ public final class SenseActivity extends Activity {
       speechFinalResults++;
       lastSpeechError=-1;
       result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);
-       translatePhrase(phrase,true);
+       // Opt-in only; do not submit recognized speech automatically.
       speechRetries.reset();
       if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}
      }
@@ -1013,7 +1020,7 @@ public final class SenseActivity extends Activity {
       partialTranscript=partial.get(0).trim();
       if(!partialTranscript.isEmpty()){
          result.setText(partialTranscript);
-         if(translationStatus!=null)translationMessage("Escuchando la frase… Se traducirá sola cuando Android la termine de reconocer.");
+         if(translationStatus!=null)translationMessage("Transcripción en vivo. Traducí únicamente cuando quieras.");
         }
      }
     }
