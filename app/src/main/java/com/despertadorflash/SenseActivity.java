@@ -53,6 +53,9 @@ public final class SenseActivity extends Activity {
  private final SpeechRetryController speechRetries=new SpeechRetryController();
  private int speechSession=0;
  private Runnable speechRetryTask;
+ private final SpeechStallWatchdog speechWatchdog=new SpeechStallWatchdog();
+ private Runnable speechWatchdogTask;
+ private int speechWatchdogRestarts=0;
  private void scheduleSpeechRetry(long delay){
   if(mode!=MODE_SPEECH)return;
   final int token=speechSession;
@@ -66,6 +69,39 @@ public final class SenseActivity extends Activity {
  private void cancelSpeechRetry(){
   speechSession++;
   if(speechRetryTask!=null){main.removeCallbacks(speechRetryTask);speechRetryTask=null;}
+ }
+
+ private void cancelSpeechWatchdog(){
+  if(speechWatchdogTask!=null){main.removeCallbacks(speechWatchdogTask);speechWatchdogTask=null;}
+  speechWatchdog.reset();
+ }
+ /**
+  * Recover a recognizer that stops emitting callbacks without onError.
+  * Already finalized phrases and the current session journal stay intact.
+  */
+ private void beginSpeechWatchdog(final SpeechRecognizer current){
+  cancelSpeechWatchdog();
+  speechWatchdog.started(SystemClock.elapsedRealtime());
+  speechWatchdogTask=new Runnable(){
+   @Override public void run(){
+    if(mode!=MODE_SPEECH||recognizer!=current)return;
+    if(speechWatchdog.timedOut(SystemClock.elapsedRealtime())){
+     String reason=speechWatchdog.timeoutReason();
+     speechWatchdogRestarts++;
+     if(audioHealth!=null)audioHealth.setText(
+      "Servicio de voz sin respuesta · reinicio "+speechWatchdogRestarts+" · sin audio guardado");
+     releaseSpeech();
+     long delay=speechRetries.onTemporaryFailure();
+     state.setText("VOZ EN RECONEXIÓN · SIN CAPTURA");
+     detail.setText(reason+". Se conservan las frases anteriores. Reintento en "+
+      ((delay+999)/1000)+" s. Durante este intervalo no hay transcripción.");
+     scheduleSpeechRetry(delay);
+     return;
+    }
+    main.postDelayed(this,5000L);
+   }
+  };
+  main.postDelayed(speechWatchdogTask,5000L);
  }
 
  private volatile boolean soundRunning=false;
@@ -709,6 +745,7 @@ public final class SenseActivity extends Activity {
    .append(SpeechRecognizer.isRecognitionAvailable(this)).append("\n");
   report.append("Frases completas recibidas: ").append(speechFinalResults).append("\n");
   report.append("Frases parciales recibidas: ").append(speechPartialResults).append("\n");
+  report.append("Reinicios de voz por falta de respuesta: ").append(speechWatchdogRestarts).append("\n");
   report.append("Último código error de voz: ").append(lastSpeechError).append("\n");
   report.append("Último fallo de traducción: ").append(lastTranslationFailure).append("\n");
   if(lastSpeechError>0)report.append("Detalle de voz: ")
@@ -976,11 +1013,26 @@ public final class SenseActivity extends Activity {
     ?SpeechRecognizer.createOnDeviceSpeechRecognizer(this):SpeechRecognizer.createSpeechRecognizer(this);
    recognizer=current;
    current.setRecognitionListener(new RecognitionListener(){
-    public void onReadyForSpeech(Bundle params){if(mode==MODE_SPEECH&&recognizer==current)state.setText("ESCUCHANDO · HABLÁ AHORA");}
-    public void onBeginningOfSpeech(){if(mode==MODE_SPEECH&&recognizer==current)state.setText("DETECTANDO VOZ");}
+    public void onReadyForSpeech(Bundle params){
+     if(mode==MODE_SPEECH&&recognizer==current){
+      speechWatchdog.ready(SystemClock.elapsedRealtime());
+      state.setText("ESCUCHANDO · HABLÁ AHORA");
+     }
+    }
+    public void onBeginningOfSpeech(){
+     if(mode==MODE_SPEECH&&recognizer==current){
+      speechWatchdog.speechBegan(SystemClock.elapsedRealtime());
+      state.setText("DETECTANDO VOZ");
+     }
+    }
     public void onRmsChanged(float rms){if(mode==MODE_SPEECH&&recognizer==current&&visual!=null)visual.setEnergy(Math.max(0f,Math.min(1f,rms/12f)));}
     public void onBufferReceived(byte[] buffer){}
-    public void onEndOfSpeech(){if(mode==MODE_SPEECH&&recognizer==current)state.setText("PROCESANDO PALABRAS…");}
+    public void onEndOfSpeech(){
+     if(mode==MODE_SPEECH&&recognizer==current){
+      speechWatchdog.speechEnded(SystemClock.elapsedRealtime());
+      state.setText("PROCESANDO PALABRAS…");
+     }
+    }
     public void onError(int error){
      if(mode!=MODE_SPEECH||recognizer!=current)return;
      lastSpeechError=error;
@@ -989,12 +1041,13 @@ public final class SenseActivity extends Activity {
      releaseSpeech();
      if(SpeechRetryController.isSilence(error)){
       // Silence is normal during long conversations; do not count it as a failure.
-      state.setText("ESCUCHANDO · EN PAUSA");
+      state.setText("VOZ EN PAUSA · REANUDANDO");
+      detail.setText("Android terminó la escucha por silencio. Se reanudará automáticamente; durante la pausa no hay captura.");
       scheduleSpeechRetry(speechRetries.silenceDelay());
      }else if(SpeechRetryController.isTemporary(error)){
       long delay=speechRetries.onTemporaryFailure();
       if(delay>=0){
-       state.setText("RECONEXIÓN AUTOMÁTICA");
+       state.setText("RECONEXIÓN AUTOMÁTICA · SIN CAPTURA");
        detail.setText(SpeechRetryController.explanation(error)+" · próximo intento en "+((delay+999)/1000)+" s");
        scheduleSpeechRetry(delay);
       }else{
@@ -1024,7 +1077,7 @@ public final class SenseActivity extends Activity {
       speechRetries.reset();
       if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}
      }
-     state.setText("ESCUCHANDO · NUEVA FRASE");
+     state.setText("FRASE RECIBIDA · REANUDANDO");
      releaseSpeech();
      scheduleSpeechRetry(speechRetries.silenceDelay());
     }
@@ -1035,7 +1088,8 @@ public final class SenseActivity extends Activity {
       speechPartialResults++;
       partialTranscript=partial.get(0).trim();
       if(!partialTranscript.isEmpty()){
-         result.setText(partialTranscript);
+         speechWatchdog.partialResult(SystemClock.elapsedRealtime());
+       result.setText(partialTranscript);
          if(translationStatus!=null)translationMessage("Transcripción en vivo. Traducí únicamente cuando quieras.");
         }
      }
@@ -1051,7 +1105,13 @@ public final class SenseActivity extends Activity {
    intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,3000L);
    intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,1800L);
    intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1);
+   beginSpeechWatchdog(current);
    current.startListening(intent);
+  }catch(SecurityException permissionError){
+   releaseSpeech();
+   state.setText("MICRÓFONO SIN PERMISO");
+   detail.setText("Android denegó el micrófono. Autorizalo antes de iniciar otra sesión.");
+   stopAll(false);
   }catch(Exception ex){
    releaseSpeech();
    long delay=speechRetries.onTemporaryFailure();
@@ -1066,7 +1126,14 @@ public final class SenseActivity extends Activity {
    }
   }
  }
- private void releaseSpeech(){if(recognizer!=null){SpeechRecognizer old=recognizer;recognizer=null;old.destroy();}}
+ private void releaseSpeech(){
+  cancelSpeechWatchdog();
+  if(recognizer!=null){
+   SpeechRecognizer old=recognizer;
+   recognizer=null;
+   old.destroy();
+  }
+ }
  private final SoundLiveWindow soundLiveWindow=new SoundLiveWindow();
  private Runnable soundDisplayTick;
 
