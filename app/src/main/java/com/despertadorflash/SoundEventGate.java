@@ -15,6 +15,7 @@ public final class SoundEventGate {
  private static final long MIN_EVIDENCE_GAP_MS=300L;
  private static final int MAX_TRACKED=128;
  private final Map<String,Candidate> candidates=new HashMap<>();
+ private final Map<String,Long> familyAlertAt=new HashMap<>();
 
  private static final class Candidate{
   long firstAt=-1L,lastSeen=-1L,lastAlertAt=-1L;
@@ -23,11 +24,12 @@ public final class SoundEventGate {
  }
 
  public synchronized boolean accept(String label,int confidence,int sensitivity,long elapsedMs){
-  if(label==null||label.isEmpty()||elapsedMs<0)return false;
+  if(label==null||label.isEmpty()||elapsedMs<0||confidence<0||confidence>100)return false;
   int threshold=sensitivity<=0?22:sensitivity>=2?45:30;
   if(confidence<threshold)return false;
   Candidate candidate=candidates.get(label);
   if(candidate==null){
+   if(candidates.size()>=MAX_TRACKED)trim(elapsedMs);
    candidate=new Candidate();
    candidates.put(label,candidate);
   }
@@ -54,9 +56,19 @@ public final class SoundEventGate {
   // when one model frame has a high score. Urgent sirens and fire alarms
   // keep a fast path, but are not certified emergency detectors.
   boolean urgent=label.contains("SIRENA")||label.contains("INCENDIO");
-  if(candidate.hits<2&&(sensitivity>=2&&!urgent||confidence<immediate))return false;
-  if(candidate.lastAlertAt>=0&&elapsedMs>=candidate.lastAlertAt&&
-     elapsedMs-candidate.lastAlertAt<COOLDOWN_MS){
+  boolean ambiguousGeneric=label.equals("POSIBLE PERRO")||
+   label.equals("POSIBLE PUERTA O CAJÓN")||
+   label.equals("POSIBLE VEHÍCULO")||
+   label.equals("POSIBLE VOZ HUMANA");
+  // Generic classes can be mistakenly high-scoring on one short frame.
+  if(candidate.hits<2&&((sensitivity>=2&&!urgent)||ambiguousGeneric||confidence<immediate))
+   return false;
+  String family=SoundEventFamily.key(label);
+  Long familyPrevious=familyAlertAt.get(family);
+  if((candidate.lastAlertAt>=0&&elapsedMs>=candidate.lastAlertAt&&
+      elapsedMs-candidate.lastAlertAt<COOLDOWN_MS)||
+     (familyPrevious!=null&&elapsedMs>=familyPrevious&&
+      elapsedMs-familyPrevious<COOLDOWN_MS)){
    // Observations suppressed inside the cooldown are not evidence for
    // a new alert once that cooldown expires.
    candidate.hits=0;
@@ -64,6 +76,7 @@ public final class SoundEventGate {
    return false;
   }
   candidate.lastAlertAt=elapsedMs;
+  familyAlertAt.put(family,elapsedMs);
   // Each emitted event consumes its confirmation. A single later observation
   // must never inherit the two hits of an earlier sound from 15 seconds ago.
   candidate.hits=0;
@@ -78,7 +91,10 @@ public final class SoundEventGate {
    Candidate v=it.next().getValue();
    if(elapsedMs-v.lastSeen>COOLDOWN_MS*2)it.remove();
   }
-  if(candidates.size()>MAX_TRACKED)candidates.clear(); // Defensive bound.
+  if(candidates.size()>=MAX_TRACKED)candidates.clear(); // Defensive bound.
+  familyAlertAt.entrySet().removeIf(e->
+   elapsedMs<e.getValue()||elapsedMs-e.getValue()>COOLDOWN_MS*2);
+  if(familyAlertAt.size()>MAX_TRACKED)familyAlertAt.clear();
  }
- public synchronized void reset(){candidates.clear();}
+ public synchronized void reset(){candidates.clear();familyAlertAt.clear();}
 }
