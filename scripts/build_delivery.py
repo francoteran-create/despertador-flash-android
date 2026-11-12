@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.10",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.11",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -66,7 +66,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         story.append(paragraph("- "+name+": "+desc,body))
     rows=[
         ("Versión compilada",version),
-        ("Paquete independiente","com.despertadorflash.beta410"),
+        ("Paquete independiente","com.despertadorflash.beta411"),
         ("Repositorio",REPO),
         ("Rama de trabajo",BRANCH),
         ("Commit exacto",commit),
@@ -108,6 +108,18 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "multicolor que responde a las muestras PCM REALES del "
          "micrófono YAMNet. Sonidos más fuertes hacen picos "
          "mayores. Sin barras ni medición calibrada de decibelios.")
+    item("MEJORA 4.11 - RECONEXIÓN DE VOZ", "los errores temporales del "
+         "reconocedor no agotan definitivamente el reinicio tras seis intentos: "
+         "se siguen reintentando con pausas escalonadas hasta 30 segundos. "
+         "Los errores permanentes de permisos e idioma sí detienen la escucha. "
+         "Android puede cortar el servicio igualmente.")
+    item("MEJORA 4.11 - RECONEXIÓN DE SONIDOS", "hasta cinco reintentos "
+         "escalonados antes de detener el monitor e informar el fallo. "
+         "Se descartan resultados viejos del clasificador anterior "
+         "para evitar eventos falsos tras la reconexión.")
+    item("SEGURIDAD DE LA SESIÓN", "la escucha de fondo no reinicia por sí "
+         "misma después de que la persona la detiene; no registra eventos "
+         "atrasados tras la detención. Las pruebas incluyen estas garantías.")
     item("HISTORIAL BILINGÜE", "el original se registra siempre; las traducciones "
          "que terminan antes de cerrar la conversación también se guardan "
          "en el archivo de sesión con referencia a su texto original.")
@@ -127,7 +139,8 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     story.append(Spacer(1,8))
     head("3 | LIMITACIONES QUE SIGUEN ABIERTAS")
     item("VOZ", "Android SpeechRecognizer puede pausar o interrumpir sesiones. "
-         "Se traduce al finalizar una frase, NO palabra por palabra.")
+         "La traducción solo se realiza si la persona la solicita; "
+         "no se garantiza escucha continua sin interrupciones.")
     item("COLA", "admite hasta 64 solicitudes para no agotar memoria. Si se "
          "llena, la transcripción original queda guardada, pero la traducción "
          "sobrecargada puede fallar.")
@@ -139,8 +152,9 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     item("MODO HORIZONTAL", "Android gestiona la orientación sin reiniciar "
          "esta Activity. Volver a vertical conserva la captura. Al salir "
          "de la app se cierra la sesión para proteger privacidad.")
-    item("PRUEBA REAL", "precisión de ladridos, timbres y puertas, alertas "
-         "físicas y tiempos de traducción no medidos en el S9+.")
+    item("PRUEBA REAL", "mejoras de reconexión verificadas en CI, no "
+         "validadas en el S9+. Precisión de sonidos, flash, vibración "
+         "y tiempos reales de traducción siguen sin medirse.")
     head("4 | PRÓXIMOS OBJETIVOS (NO COMPILADOS)")
     item("Continuidad", "investigar un reconocedor de voz local o más "
          "resistente a cortes para conversaciones largas.")
@@ -153,7 +167,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "manuscrita flotante e ilustraciones de perros, puertas y bocinas.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.10 BETA ARM64 sin desinstalar la anterior.",
+        "Instalar AURORA 4.11 BETA ARM64 sin desinstalar la anterior.",
         "En CONVERSACIÓN tocar icono celular/flechas: texto grande "
         "en negro; la flecha pequeña permite volver sin cortar.",
         "Verificar que NO traduce automáticamente. Cuando se quiera, "
@@ -161,11 +175,14 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "Desde vertical tocar DETENER y abrir CONVERSACIONES GUARDADAS.",
         "En SONIDOS abrir horizontal: línea zigzag más alta y "
         "brillante cuando hay audio real más fuerte.",
+        "Probar cortes temporales de Wi-Fi, sonidos y pausas de voz: "
+        "la app debe mostrar reconexión sin inventar detecciones.",
+        "Probar fallo persistente del detector: debe avisar que se detuvo.",
         "No activar dos versiones AURORA escuchando a la vez.",
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.10 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.11 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -183,7 +200,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.10 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.11 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -192,13 +209,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.10-manual-translation-wave-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.11-recovery-reliability-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_10_ARM64.apk"
-    pdf=OUT/"AURORA_4_10_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_11_ARM64.apk"
+    pdf=OUT/"AURORA_4_11_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
