@@ -224,6 +224,7 @@ public final class SenseActivity extends Activity {
      getPreferences(MODE_PRIVATE).edit().putInt("sense_language",chosen).apply();
      refreshLanguageSelections();
      invalidateTranslation();
+     manualTranslationRequested=false;
      lastTranscript="";partialTranscript="";
      if(result!=null)result.setText("Esperando nueva conversación…");
      if(translationResult!=null)translationResult.setText("Traducción disponible cuando la solicites.");
@@ -782,18 +783,18 @@ public final class SenseActivity extends Activity {
    }).show();
  }
  private void translateLast(){
-  manualTranslationRequested=true;
-  syncWideText();
   String phrase=lastTranscript.trim();
   if(phrase.isEmpty())phrase=partialTranscript.trim();
   if(phrase.isEmpty()){
    translationMessage("Todavía no reconocí ninguna frase. También podés probar un texto escrito en herramientas.");
    return;
   }
+  manualTranslationRequested=true;
+  syncWideText();
   translatePhrase(phrase,true);
  }
  /**
-  * Translate every FINAL recognized phrase automatically. Cache ML Kit
+  * Translate only after pressing TRADUCIR. Cache ML Kit
   * for each source/target pair, and ignore superseded async callbacks.
   */
  private void translatePhrase(String phrase,boolean automatic){
@@ -848,7 +849,7 @@ public final class SenseActivity extends Activity {
    return;
   }
   translationModelDownloading=true;
-  if(task.id==newestTranslationId){
+  if(displayTranslation(task)){
    translationResult.setText("Descargando o preparando idioma…");
    translationMessage("La primera traducción puede necesitar Internet. Las frases se mantienen en orden.");
   }
@@ -864,7 +865,7 @@ public final class SenseActivity extends Activity {
     translationModelDownloading=false;
     lastTranslationFailure="DESCARGA "+error.getClass().getSimpleName();
     translationQueue.clear();
-    if(task.id==newestTranslationId){
+    if(displayTranslation(task)){
      translationResult.setText("No pude preparar el idioma de traducción.");
      translationMessage("Revisá Internet y tocá REINTENTAR. Las frases originales están guardadas.");
     }
@@ -875,11 +876,15 @@ public final class SenseActivity extends Activity {
    translationQueue.isActive(task.id)&&client!=null&&translator==client&&
    !isFinishing()&&!isDestroyed();
  }
+ private boolean displayTranslation(TranslationWorkQueue.Item task){
+  return task.id==newestTranslationId&&(!task.fromMicrophone||
+   (manualTranslationRequested&&task.phrase.equals(lastTranscript)));
+ }
  private void runQueuedTranslation(int generation,TranslationWorkQueue.Item task,Translator client){
   if(!isCurrentTranslation(generation,task,client))return;
-  if(task.id==newestTranslationId){
+  if(displayTranslation(task)){
    translationResult.setText("Traduciendo…");
-   translationMessage("Procesando la frase más reciente. Otras traducciones se completan en orden.");
+   translationMessage("Procesando la traducción solicitada.");
   }
   // A stalled remote task must not block the remaining queue indefinitely.
   main.postDelayed(()->{
@@ -887,7 +892,7 @@ public final class SenseActivity extends Activity {
    lastTranslationFailure="TIEMPO DE TRADUCCIÓN AGOTADO";
    if(task.fromMicrophone)recordEvent("TRADUCCIÓN NO REALIZADA ("+
     task.language+") · se agotó el tiempo · original: "+shortOriginal(task.phrase));
-   if(task.id==newestTranslationId){
+   if(displayTranslation(task)){
     translationResult.setText("La traducción está demorando demasiado.");
     translationMessage("El original quedó guardado. Podés reintentar la última frase.");
    }
@@ -901,7 +906,7 @@ public final class SenseActivity extends Activity {
     if(clean.isEmpty()){
      if(task.fromMicrophone)recordEvent("TRADUCCIÓN NO REALIZADA ("+
       task.language+") · sin texto · original: "+shortOriginal(task.phrase));
-     if(task.id==newestTranslationId){
+     if(displayTranslation(task)){
       translationResult.setText("El traductor no devolvió texto.");
       translationMessage("La transcripción original está guardada. Probá REINTENTAR.");
      }
@@ -911,7 +916,7 @@ public final class SenseActivity extends Activity {
       recordEvent("TRADUCCIÓN ("+task.language+") de «"+
        shortOriginal(task.phrase)+"»: "+clean);
      }
-     if(task.id==newestTranslationId){
+     if(displayTranslation(task)){
       translationResult.setText(clean);
       translationMessage("TRADUCCIÓN LISTA · Se guardó junto al original.");
      }
@@ -924,7 +929,7 @@ public final class SenseActivity extends Activity {
     lastTranslationFailure="TRADUCTOR "+error.getClass().getSimpleName();
     if(task.fromMicrophone)recordEvent("TRADUCCIÓN NO REALIZADA ("+
      task.language+") · original: "+shortOriginal(task.phrase));
-    if(task.id==newestTranslationId){
+    if(displayTranslation(task)){
      translationResult.setText("No pude traducir esta frase.");
      translationMessage("Error de ML Kit. El original se guardó; podés reintentar.");
     }
