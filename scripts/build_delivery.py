@@ -47,10 +47,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         fontSize=22,leading=27,textColor=dark,spaceAfter=8))
     styles.add(ParagraphStyle(
         name="AuroraHead",fontName="Helvetica-Bold",
-        fontSize=11.5,leading=15,textColor=accent,spaceBefore=8,spaceAfter=4))
+        fontSize=11.5,leading=14.5,textColor=accent,spaceBefore=7,spaceAfter=3.5))
     styles.add(ParagraphStyle(
         name="AuroraBody",fontName="Helvetica",
-        fontSize=9,leading=12.8,textColor=dark,spaceAfter=4))
+        fontSize=8.9,leading=11.8,textColor=dark,spaceAfter=3))
     styles.add(ParagraphStyle(
         name="AuroraSmall",fontName="Helvetica",
         fontSize=8,leading=12,textColor=grey,spaceAfter=5))
@@ -149,7 +149,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "flash apagado de fábrica, requiere permiso y se limita la repetición.")
     item("OTROS", "alarmas y temporizador, respaldo de preferencias V2 compatible "
          "con V1, recuperación del detector YAMNet, y consulta de conversaciones.")
-    story.append(Spacer(1,8))
+    story.append(Spacer(1,4))
     head("3 | LIMITACIONES QUE SIGUEN ABIERTAS")
     item("VOZ", "Android SpeechRecognizer puede pausar o interrumpir sesiones. "
          "La traducción solo se realiza si la persona la solicita; "
@@ -211,7 +211,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.11 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.12 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
