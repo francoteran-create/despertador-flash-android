@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado verificado de código, compilaciones y plan futuro | Beta 4.8",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.9",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -66,7 +66,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         story.append(paragraph("- "+name+": "+desc,body))
     rows=[
         ("Versión compilada",version),
-        ("Paquete independiente","com.despertadorflash.beta48"),
+        ("Paquete independiente","com.despertadorflash.beta49"),
         ("Repositorio",REPO),
         ("Rama de trabajo",BRANCH),
         ("Commit exacto",commit),
@@ -101,6 +101,16 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     item("MEJORA 4.8 - TODAS LAS FRASES", "cola secuencial de hasta 64 trabajos "
          "de traducción. Si se pronuncian varias frases rápidamente, no se "
          "sustituyen silenciosamente las anteriores por la última.")
+    item("VISTA HORIZONTAL CONVERSACIÓN 4.9",
+         "botón de vista completa en la misma Activity, sin cortar el "
+         "micrófono ni cerrar la sesión. Pantalla negra con letras blancas "
+         "grandes: transcripción y traducción en dos sectores. VOLVER "
+         "regresa a vertical; DETENER Y GUARDAR cierra la sesión.")
+    item("VISTA HORIZONTAL SONIDOS 4.9",
+         "espectro luminoso multicolor de 32 bandas, generado mediante FFT "
+         "del mismo buffer real PCM que recibe YAMNet. Responde a volumen "
+         "y distribución aproximada de frecuencias; no es un sonómetro "
+         "calibrado. Se mantiene la descripción del sonido visible.")
     item("HISTORIAL BILINGÜE", "el original se registra siempre; las traducciones "
          "que terminan antes de cerrar la conversación también se guardan "
          "en el archivo de sesión con referencia a su texto original.")
@@ -129,6 +139,9 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "una traducción si termina antes del cierre.")
     item("PRIMER USO", "ML Kit necesita disponer de sus modelos; algunos "
          "servicios de transcripción de Android también requieren red.")
+    item("MODO HORIZONTAL", "Android gestiona la orientación sin reiniciar "
+         "esta Activity. Volver a vertical conserva la captura. Al salir "
+         "de la app se cierra la sesión para proteger privacidad.")
     item("PRUEBA REAL", "precisión de ladridos, timbres y puertas, alertas "
          "físicas y tiempos de traducción no medidos en el S9+.")
     head("4 | PRÓXIMOS OBJETIVOS (NO COMPILADOS)")
@@ -138,12 +151,20 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "de traducciones pendientes, si la prueba real lo justifica.")
     item("Calidad", "medir errores de YAMNet y la demora de ML Kit "
          "con pruebas repetibles y un teléfono real.")
-    item("Diseño futuro", "espacio negro, partículas pequeñas, tipografía "
-         "manuscrita flotante, mascota nube simple; figuras de perro, puerta, "
-         "bocina y otras al detectar sonidos. NO implementado todavía.")
+    item("Diseño futuro", "la vista horizontal negra y el espectro de "
+         "frecuencias ya forman parte del código 4.9. Permanecen planeadas "
+         "la mascota nube, la tipografía manuscrita flotante y las "
+         "ilustraciones de perro, puerta y bocina.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.8 BETA ARM64 sin borrar la versión anterior.",
+        "Instalar AURORA 4.9 BETA ARM64 sin borrar la versión anterior.",
+        "Entrar en CONVERSACIÓN, tocar VISTA HORIZONTAL. Ver texto "
+        "blanco grande; usar VOLVER sin interrumpir el micrófono.",
+        "Presionar DETENER Y GUARDAR desde horizontal y comprobar "
+        "historial de la conversación con fecha y hora.",
+        "Entrar en SONIDOS y abrir VISTA HORIZONTAL: comparar "
+        "voz baja/fuerte, golpear suavemente y mover fuentes agudas/graves. "
+        "Las barras deben variar con las muestras reales, sin grabación.",
         "Elegir Español -> Inglés. Decir tres frases con pausas cortas.",
         "Confirmar original y traducción automática sin tocar un botón.",
         "Detener y abrir CONVERSACIONES GUARDADAS. Debe haber originales "
@@ -153,7 +174,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.8 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.9 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -165,13 +186,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.8 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.9 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.8 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.9 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -180,13 +201,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.8-bilingual-queue-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.9-landscape-visual-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_8_ARM64.apk"
-    pdf=OUT/"AURORA_4_8_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_9_ARM64.apk"
+    pdf=OUT/"AURORA_4_9_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
