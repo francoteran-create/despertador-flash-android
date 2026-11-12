@@ -46,9 +46,9 @@ jobs:
           test "${#apks[@]}" -eq 1
           apk="${apks[0]}"
           [[ "$apk" == *arm64-v8a* ]]
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta412'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.12 BETA'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta412.photos"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta413'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.13 BETA'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta413.photos"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.INTERNET"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.RECORD_AUDIO"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.VIBRATE"
@@ -65,9 +65,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
         with:
-          name: AURORA-4-12-DOS-ARCHIVOS
+          name: AURORA-4-13-DOS-ARCHIVOS
           path: |
-            dist/AURORA_4_12_ARM64.apk
-            dist/AURORA_4_12_MASTER_ESTADO_Y_PLAN.pdf
+            dist/AURORA_4_13_ARM64.apk
+            dist/AURORA_4_13_MASTER_ESTADO_Y_PLAN.pdf
           if-no-files-found: error
           retention-days: 30
