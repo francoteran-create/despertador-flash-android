@@ -10,13 +10,13 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.7-auto-translation-beta, versionCode 47), revisión en PR #1.
+  (4.8-bilingual-queue-beta, versionCode 48), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
   Se elimino el personaje animado de versiones 3.x.
   PENDIENTE: verificacion visual y de interaccion en Galaxy S9+.
-- CI: pruebas JUnit y compilación Android de dos ABI. El resultado se
+- CI: pruebas JUnit y compilación Android solo ARM64 (64 bits). El resultado se
   consulta en GitHub Actions por commit; no equivale a verificación física.
 - Pruebas en Samsung Galaxy S9+, batería y clips reales: PENDIENTES.
 - Evaluación de precisión, falsos positivos y omisiones: NO MEDIDA.
@@ -49,10 +49,10 @@ para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
 
 ## Instalación de la beta y seguridad de los datos
-La version 4.7 BETA usa el paquete independiente
-`com.despertadorflash.beta47`, nombre visible `AURORA 4.7 BETA`.
+La version 4.8 BETA usa el paquete independiente
+`com.despertadorflash.beta48`, nombre visible `AURORA 4.8 BETA`.
 La app original es `com.despertadorflash`, y las betas previas
-(4.2, 4.3, 4.4, 4.5 y 4.6) tienen identificadores distintos. Se instala en paralelo
+(4.2, 4.3, 4.4, 4.5, 4.6 y 4.7) tienen identificadores distintos. Se instala en paralelo
 **sin desinstalar las anteriores**, y NO migra sus alarmas o datos de
 forma automatica. No mantener dos escuchas de microfono activas ni
 activar alarmas duplicadas.
@@ -61,12 +61,12 @@ No ejecutar ambos detectores de microfono a la vez: detener la escucha
 en la AURORA original antes de probar la beta (Android puede bloquear
 el acceso simultaneo al microfono).
 
-Instrucciones de esta beta: `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`, `docs/AURORA_46_AVISOS_SONOROS.md` y `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
+Instrucciones de esta beta: `docs/AURORA_48_COLA_BILINGUE.md`, `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`, `docs/AURORA_46_AVISOS_SONOROS.md` y `docs/AURORA_45_SONIDOS_30.md`. Diagnóstico de voz y traducción: `docs/AURORA_44_DIAGNOSTICO_REAL.md`.
 
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.7 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.8 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -86,7 +86,7 @@ se respaldan por TXT, con hash verificado. Se conservan antiguos archivos
 SONIDOS de otras versiones sin borrarlos: pueden verse activando
 `Mostrar archivos antiguos de sonidos`. No se crean nuevos archivos de sonidos.
 
-La beta 4.7 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.8 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Correcciones criticas 4.3: escucha y traduccion
@@ -212,39 +212,50 @@ Detalles y protocolo: `docs/AURORA_46_AVISOS_SONOROS.md`.
 
 Detalles: `docs/AURORA_47_TRADUCCION_AUTOMATICA.md`.
 
-## Entrega oficial: un único ZIP MASTER
+## Mejora 4.8: cola de traducciones y registros bilingües
+- Se procesan frases finales por orden con `TranslationWorkQueue`,
+  de capacidad máxima 64. Una frase nueva no hace que el resultado
+  de una anterior se descarte silenciosamente.
+- Toda frase original sigue escribiéndose en la conversación.
+  Las traducciones que alcanzan a completarse antes de DETENER
+  se agregan a ese mismo historial, referenciando su original.
+- Errores, tiempos agotados o cola llena se distinguen de
+  traducciones exitosas. No se promete un traductor continuo
+  palabra por palabra ni recuperar traducciones pendientes
+  después de cerrar la sesión.
+- Las pruebas JUnit cubren orden, saturación y cancelación;
+  los contratos Python comprueban integración al recibir
+  frases finales.
+- El código de la estética futura no se introdujo ni se cambió
+  la rama `main` estable.
 
-Al ejecutar manualmente el workflow `.github/workflows/android-apk.yml`,
-después de superar pruebas y compilación, se construye un único ZIP con:
+Detalles: `docs/AURORA_48_COLA_BILINGUE.md`.
 
-1. `APK/` - dos APK debug para ARM de la MISMA revisión.
-2. `FUENTES/` - todo el proyecto rastreado y modelo YAMNet incluido.
-3. `DOCUMENTACION/AURORA_MASTER_CONTINUIDAD.pdf` - estado e instrucciones.
-4. `MANIFEST.json` - commit exacto, versión, hash de archivos y estado real.
-5. `LEEME_PRIMERO.txt` - guía rápida y restricciones.
+## Entrega vigente: EXACTAMENTE DOS ARCHIVOS
+El workflow `.github/workflows/android-apk.yml` verifica primero
+las pruebas automatizadas, luego compila **solo arm64-v8a**.
+En entregas marcadas `[DELIVERY]` o ejecuciones manuales
+publica exactamente:
+1. `AURORA_4_8_ARM64.apk`: un instalador 64 bits para el Galaxy S9+.
+2. `AURORA_4_8_MASTER_ESTADO_Y_PLAN.pdf`: estado compilado,
+   verificado en CI, pendiente de prueba física y plan futuro.
 
-El workflow de PR verifica el empaquetado sin publicar APKs. La
-ejecucion manual o un commit especial marcado `[MASTER-ZIP]`
-publica el archivo como artefacto de GitHub Actions.
+**No entregamos ZIP de fuentes ni APK de 32 bits**. El historial
+del código, la rama y los commits están en GitHub. GitHub Actions
+puede envolver ambos archivos en un ZIP de descarga externo, pero
+dentro solo hay los dos documentos previstos.
 
-**El paquete debug NO ES un APK de lanzamiento firmado para Play Store.**
-Para distribuir: pruebas físicas, privacidad, firma de release, validación
-con usuarios sordos e hipoacúsicos y métricas de sonido verificadas.
+La firma es DEBUG y requiere pruebas reales antes de uso de producción.
 
-## Entrega beta 4.7 para Galaxy S9+
-Elegir APK ARM64 del ZIP MASTER. En Android debe aparecer
-`AURORA 4.7 BETA`, con datos propios. Probar texto manual,
-habla y sonidos por separado y copiar diagnóstico si falla.
-La compilación y tests NO equivalen a validación física.
-
-## Verificacion de beta 4.7 (NO declarada estable)
-Cambios y tests JUnit verificados con GitHub Actions. El paquete instala
-`AURORA 4.7 BETA` en paralelo con las versiones previas. Pruebas de
-YAMNet real, calidad de voz, idioma/modelo de traduccion y consumo
-del Galaxy S9+ siguen PENDIENTES. Entrega para diagnostico reproducible,
-no para prometer que ya se resolvio la incidencia reportada. No
-fusionar en `main` hasta validar. Proxima evaluacion: issue #3,
-motor de voz realmente continuo.
+## Cómo probar AURORA 4.8
+Instalar `AURORA 4.8 BETA` en paralelo. Elegir español
+como idioma de conversación e inglés como destino. Decir tres
+frases con pausas breves y confirmar que se traduzcan sin
+pulsar un botón; detener y abrir CONVERSACIONES GUARDADAS
+para leer los originales y las traducciones que terminaron.
+Si falla, usar COPIAR DIAGNÓSTICO SIN AUDIO. Los tiempos de
+respuesta y la tasa de error en Samsung Galaxy S9+ aún no
+fueron medidos.
 
 ## Cierre del bloque SONIDOS 30 — beta 4.5
 La implementacion de sonidos esta consolidada en el codigo, con
@@ -287,8 +298,9 @@ Galaxy S9+; los modelos de idioma pueden necesitar Internet al principio.
 Las betas anteriores y el MASTER 4.0 de main no se sustituyen.
 
 ## Retomar desde otro chat
+Buscar en GitHub la rama `aurora-sense-precision-2026-11-10`
+y el último commit verificado por CI. Consultar el MASTER PDF de
+esa revisión, `docs/AURORA_48_COLA_BILINGUE.md` y los registros
+de GitHub Actions. No suponer que CI prueba la precisión real
+en un teléfono ni que la estética futura ya se implementó.
 
-Abrir este repositorio y el último ZIP MASTER. Verificar el commit del
-MANIFEST, la rama y estado del CI. Usar el ZIP como entrega completa, no
-inferir cambios desde los mensajes del chat. Continuar siempre desde el
-último commit verificado, preservando la referencia estética AURORA 2.8.
