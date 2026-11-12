@@ -20,12 +20,14 @@ import java.util.Locale;
 public final class RecordsActivity extends Activity {
  private static final int CHOOSE_FOLDER=81;
  private static final int BROWSE_FOLDER=82;
+ private final java.util.concurrent.ExecutorService fileWorker=java.util.concurrent.Executors.newSingleThreadExecutor();
  private final ArrayList<File> shown=new ArrayList<>();
  private SenseHistory history;
  private SavedFolderManager destination;
  private LinearLayout results;
  private TextView folderStatus, count;
  private EditText search;
+ private boolean showLegacySounds=false;
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextSize(size);v.setTextColor(Color.WHITE);v.setPadding(dp(10),dp(10),dp(10),dp(10));return v;}
  private Button btn(String name){Button b=new Button(this);b.setText(name);AuroraDesign.action(b,0xff163e5a,0xff282857,0xff477e9c);return b;}
@@ -33,12 +35,24 @@ public final class RecordsActivity extends Activity {
  private void draw(){
   ScrollView sc=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(16),dp(18),dp(16),dp(24));root.setBackground(new AuroraSkyDrawable());sc.addView(root);setContentView(sc);
   Button back=btn("← VOLVER");root.addView(back);back.setOnClickListener(v->finish());
-  TextView title=txt("CARPETA DE REGISTROS",25);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);title.setTextColor(0xffb2f4ff);root.addView(title);
-  root.addView(txt("Buscá y abrí las escuchas guardadas. Las copias en una carpeta del teléfono también se podrán ver desde Archivos.",15));
+  TextView title=txt("CONVERSACIONES GUARDADAS",25);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);title.setTextColor(0xffb2f4ff);root.addView(title);
+  root.addView(txt("Releé y respaldá tus conversaciones transcritas. Los sonidos recientes se ven en SONIDOS y ya no generan archivos.",15));
   folderStatus=txt("",14);folderStatus.setTextColor(0xffc0e2ef);root.addView(folderStatus);
   Button select=btn("📁  ELEGIR CARPETA DEL TELÉFONO");root.addView(select);select.setOnClickListener(v->chooseFolder());
+  Button backup=btn("RESPALDAR Y VERIFICAR CONVERSACIONES");
+  root.addView(backup);backup.setOnClickListener(v->{
+   if(destination.selectedFolder()==null){chooseFolder();return;}
+   backupAndVerify();
+  });
   Button browse=btn("↗  BUSCAR ARCHIVOS EN LA CARPETA ELEGIDA");root.addView(browse);browse.setOnClickListener(v->browseFolder());
-  root.addView(AuroraDesign.overline(this,"EXPLORADOR DE SESIONES"));
+  root.addView(AuroraDesign.overline(this,"EXPLORADOR DE CONVERSACIONES"));
+  Switch archive=new Switch(this);
+  archive.setText("Mostrar archivos antiguos de sonidos");
+  archive.setTextSize(14);archive.setTextColor(0xffd2e8f4);
+  archive.setChecked(false);root.addView(archive);
+  archive.setOnCheckedChangeListener((control,enabled)->{
+   showLegacySounds=enabled;refresh();
+  });
   count=txt("",15);root.addView(count);
   search=new EditText(this);search.setSingleLine(true);AuroraDesign.entry(search);search.setTextColor(Color.WHITE);search.setHintTextColor(0xffbed3e2);search.setHint("Buscar por fecha, tipo o nombre");root.addView(search);
   search.addTextChangedListener(new android.text.TextWatcher(){
@@ -51,21 +65,22 @@ public final class RecordsActivity extends Activity {
  private void refreshFolder(){
   Uri uri=destination.selectedFolder();
   folderStatus.setText(uri==null?
-    "Guardado interno de AURORA. Elegí una carpeta externa para copiar todos los registros y las próximas escuchas automáticamente.":
-    "Carpeta externa configurada. Los próximos historiales se copiarán al detener la escucha.");
+    "Las conversaciones se guardan en AURORA. Elegí una carpeta para respaldarlas. Los sonidos no generan archivos.":
+    "Carpeta externa configurada. Las conversaciones se copiarán al detenerlas.");
  }
  private void refresh(){
   if(results==null)return;
   results.removeAllViews();shown.clear();
   String q=search.getText().toString().toLowerCase(Locale.ROOT).trim();
   for(File file:history.list()){
+   if(!showLegacySounds&&!ConversationRecordFilter.isConversation(file))continue;
    String label=SenseHistory.readableName(file);
    if(!label.toLowerCase(Locale.ROOT).contains(q)&&!file.getName().toLowerCase(Locale.ROOT).contains(q))continue;
    shown.add(file);
    Button item=btn("📄  "+label+"\nTocar para abrir");
    results.addView(item);item.setOnClickListener(v->openFile(file));
   }
-  count.setText(shown.size()+" archivo(s) encontrado(s)");
+  count.setText(shown.size()+(showLegacySounds?" archivos":" conversaciones")+" encontrados");
   if(shown.isEmpty())results.addView(txt("Todavía no hay registros que coincidan con la búsqueda.",15));
  }
  private void openFile(File file){
@@ -74,8 +89,13 @@ public final class RecordsActivity extends Activity {
    new AlertDialog.Builder(this).setTitle(SenseHistory.readableName(file)).setView(sc)
     .setNeutralButton("COPIAR A CARPETA",(d,w)->{
      if(destination.selectedFolder()==null){chooseFolder();return;}
-     try{destination.copyOne(file);Toast.makeText(this,"Archivo copiado a tu carpeta",Toast.LENGTH_LONG).show();}
-     catch(IOException e){showError(e.getMessage());}
+     fileWorker.execute(()->{
+      try{
+       destination.copyOne(file);
+       runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())
+        Toast.makeText(this,"Copia guardada y verificada",Toast.LENGTH_LONG).show();});
+      }catch(IOException e){runOnUiThread(()->{if(!isFinishing()&&!isDestroyed())showError(e.getMessage());});}
+     });
     }).setNegativeButton("ELIMINAR REGISTRO",(d,w)->new AlertDialog.Builder(this)
      .setTitle("Eliminar este registro")
      .setMessage("¿Borrar este archivo del almacenamiento interno de AURORA? Si lo copiaste a otra carpeta, esa copia no se eliminará.")
@@ -85,6 +105,32 @@ public final class RecordsActivity extends Activity {
       catch(IOException error){showError(error.getMessage());}
      }).show()).setPositiveButton("CERRAR",null).show();
   }catch(IOException e){showError(e.getMessage());}
+ }
+ private void backupAndVerify(){
+  // Copying and reading hashes through Android's document provider can be slow;
+  // never block the accessibility interface or the system UI thread.
+  File[] files=ConversationRecordFilter.conversations(history.list());
+  if(files.length==0){
+   Toast.makeText(this,"Todavía no hay registros terminados para respaldar",Toast.LENGTH_LONG).show();
+   return;
+  }
+  folderStatus.setText("Verificando copia de "+files.length+" registros…");
+  fileWorker.execute(()->{
+   try{
+    int checked=destination.copyAll(files);
+    runOnUiThread(()->{
+     if(isFinishing()||isDestroyed())return;
+     refreshFolder();
+     Toast.makeText(this,checked+" registros respaldados o verificados por SHA-256",Toast.LENGTH_LONG).show();
+    });
+   }catch(IOException error){
+    runOnUiThread(()->{
+     if(isFinishing()||isDestroyed())return;
+     refreshFolder();
+     showError("El respaldo no se completó: "+error.getMessage()+". Los originales permanecen en AURORA.");
+    });
+   }
+  });
  }
  private void chooseFolder(){
   Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -111,8 +157,8 @@ public final class RecordsActivity extends Activity {
   if(code==CHOOSE_FOLDER){
    try{
     destination.select(data.getData(),data.getFlags());
-    int copied=destination.copyAll(history.list());
-    refreshFolder();Toast.makeText(this,copied+" archivos copiados. Las próximas escuchas se copiarán automáticamente.",Toast.LENGTH_LONG).show();
+    refreshFolder();
+    backupAndVerify();
    }catch(Exception e){showError("No se pudo configurar o copiar a la carpeta: "+e.getMessage());}
   }else if(code==BROWSE_FOLDER){
    try{
@@ -122,4 +168,5 @@ public final class RecordsActivity extends Activity {
   }
  }
  @Override protected void onResume(){super.onResume();if(results!=null)refresh();}
+ @Override protected void onDestroy(){fileWorker.shutdown();super.onDestroy();}
 }

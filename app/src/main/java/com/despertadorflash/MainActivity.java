@@ -14,6 +14,7 @@ import android.widget.*;
 import java.util.*;
 public class MainActivity extends Activity {
  static final String PREF="aurora";
+ private static final int EXPORT_SETTINGS=9201,IMPORT_SETTINGS=9202;
  LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch; boolean alarmsPage=false; boolean timerPage=false; boolean communicationPage=false; boolean settingsPage=false;
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
@@ -118,6 +119,87 @@ public class MainActivity extends Activity {
  }
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if((requestCode==73||requestCode==74)&&grantResults.length>0){Toast.makeText(this,grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED?"Permiso concedido. Volvé a tocar Iniciar escucha continua.":"La escucha continua necesita ese permiso.",Toast.LENGTH_LONG).show();}if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
+ private void exportSettings(){
+  Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+  intent.addCategory(Intent.CATEGORY_OPENABLE);
+  intent.setType("text/plain");
+  String day=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.ROOT).format(new Date());
+  intent.putExtra(Intent.EXTRA_TITLE,"AURORA_CONFIGURACION_"+day+".txt");
+  try{startActivityForResult(intent,EXPORT_SETTINGS);}
+  catch(Exception problem){new AlertDialog.Builder(this).setTitle("Respaldo no disponible")
+   .setMessage("Android no permitió elegir un archivo: "+problem.getMessage())
+   .setPositiveButton("ENTENDIDO",null).show();}
+ }
+ private void importSettings(){
+  Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+  intent.addCategory(Intent.CATEGORY_OPENABLE);
+  intent.setType("text/plain");
+  intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+  try{startActivityForResult(intent,IMPORT_SETTINGS);}
+  catch(Exception problem){new AlertDialog.Builder(this).setTitle("Restauración no disponible")
+   .setMessage("Android no permitió abrir un archivo: "+problem.getMessage())
+   .setPositiveButton("ENTENDIDO",null).show();}
+ }
+ @Override protected void onActivityResult(int request,int response,Intent result){
+  super.onActivityResult(request,response,result);
+  if(response!=RESULT_OK||result==null||result.getData()==null)return;
+  if(request==EXPORT_SETTINGS){
+   try{
+    String backup=AuroraSettingsBackup.serialize(prefs.getAll());
+    try(java.io.OutputStream output=getContentResolver().openOutputStream(result.getData(),"wt")){
+     if(output==null)throw new java.io.IOException("No se pudo abrir el destino");
+     output.write(backup.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+     output.flush();
+    }
+    Toast.makeText(this,"Copia de alarmas y ajustes guardada",Toast.LENGTH_LONG).show();
+   }catch(Exception error){new AlertDialog.Builder(this).setTitle("No se guardó el respaldo")
+    .setMessage(error.getMessage()).setPositiveButton("ENTENDIDO",null).show();}
+  }else if(request==IMPORT_SETTINGS){
+   try{
+    java.io.ByteArrayOutputStream data=new java.io.ByteArrayOutputStream();
+    try(java.io.InputStream input=getContentResolver().openInputStream(result.getData())){
+     if(input==null)throw new java.io.IOException("No se pudo leer el archivo");
+     byte[] block=new byte[2048];int n;
+     while((n=input.read(block))!=-1){
+      if(data.size()+n>AuroraSettingsBackup.MAX_IMPORT_BYTES)
+       throw new java.io.IOException("La copia supera el límite de seguridad");
+      data.write(block,0,n);
+     }
+    }
+    final Map<String,Object> recovered=AuroraSettingsBackup.parse(
+     data.toString("UTF-8"));
+    int alarmCount=AuroraSettingsBackup.configuredAlarmCount(recovered);
+    new AlertDialog.Builder(this)
+     .setTitle("Confirmar restauración de AURORA")
+     .setMessage("Se encontraron "+alarmCount+" alarmas configuradas. "
+      +"Esta operación reemplazará las 5 posiciones de alarmas y las preferencias de notificación, flash y sensibilidad de esta instalación. "
+      +"Los registros y el perfil NO serán modificados. ¿Querés continuar?")
+     .setNegativeButton("CANCELAR",null)
+     .setPositiveButton("RESTAURAR",(dialog,choice)->applyRestoredSettings(recovered))
+     .show();
+   }catch(Exception error){new AlertDialog.Builder(this).setTitle("No se pudo restaurar")
+    .setMessage("El archivo no es una copia válida de AURORA o está incompleto: "+error.getMessage())
+    .setPositiveButton("ENTENDIDO",null).show();}
+  }
+ }
+ private void applyRestoredSettings(Map<String,Object> backup){
+  SharedPreferences.Editor edit=prefs.edit();
+  for(Map.Entry<String,Object> preference:backup.entrySet()){
+   Object value=preference.getValue();
+   if(value instanceof Boolean)edit.putBoolean(preference.getKey(),(Boolean)value);
+   else if(value instanceof Integer)edit.putInt(preference.getKey(),(Integer)value);
+  }
+  if(!edit.commit()){
+   new AlertDialog.Builder(this).setTitle("Restauración cancelada")
+    .setMessage("Android no pudo guardar los ajustes. No se reprogramaron alarmas.")
+    .setPositiveButton("ENTENDIDO",null).show();
+   return;
+  }
+  for(int id=0;id<5;id++){cancelSnooze(this,id);schedule(this,id);}
+  Toast.makeText(this,"Ajustes restaurados. Revisá permisos y alarmas.",Toast.LENGTH_LONG).show();
+  settingsPage=true;render();
+ }
+
  LinearLayout auroraCard(int first,int second){
   LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(12),dp(16),dp(12));
   AuroraDesign.panel(card,first,second);
@@ -181,7 +263,7 @@ public class MainActivity extends Activity {
    try{
     java.io.File saved=homeSpeechHistory.finish();
     if(saved!=null){
-     try{new SavedFolderManager(this).copyOne(saved);}catch(java.io.IOException copyError){android.util.Log.w("Aurora","No se pudo copiar el archivo a carpeta elegida",copyError);}
+     try{SavedFolderManager copies=new SavedFolderManager(this);if(copies.selectedFolder()!=null)copies.copyOne(saved);}catch(java.io.IOException copyError){android.util.Log.w("Aurora","No se pudo copiar el archivo a carpeta elegida",copyError);}
      if(wasListening&&homeSpeechStatus!=null)homeSpeechStatus.setText("Guardado: "+SenseHistory.readableName(saved));
     }
    }catch(java.io.IOException e){
@@ -209,35 +291,74 @@ public class MainActivity extends Activity {
   if(timerPage){stopHomeSpeech();renderTimerPage();return;}
   if(communicationPage){stopHomeSpeech();renderCommunicationPage();return;}
   if(settingsPage){stopHomeSpeech();renderSettingsPage();return;}
-  // The home is intentionally full-bleed black, with NO card grid or scroll.
-  android.widget.FrameLayout stage=new android.widget.FrameLayout(this);
-  stage.setBackgroundColor(Color.BLACK);
-  getWindow().setStatusBarColor(Color.BLACK);
-  getWindow().setNavigationBarColor(Color.BLACK);
-  AuroraCharacterStage actor=new AuroraCharacterStage(this,feature->{
-   if(feature==AuroraCharacterStage.SOUNDS){openSense(SenseActivity.MODE_SOUND);}
-   else if(feature==AuroraCharacterStage.VOICE){openSense(SenseActivity.MODE_SPEECH);}
-   else if(feature==AuroraCharacterStage.ALARMS){alarmsPage=true;render();}
-   else if(feature==AuroraCharacterStage.MESSAGES){stopHomeSpeech();communicationPage=true;render();}
-   else if(feature==AuroraCharacterStage.PROFILE){stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));}
-   else if(feature==AuroraCharacterStage.RECORDS){stopHomeSpeech();startActivity(new Intent(this,RecordsActivity.class));}
-   else if(feature==AuroraCharacterStage.TIMER){timerPage=true;render();}
-   else if(feature==AuroraCharacterStage.SETTINGS){settingsPage=true;render();}
-  });
-  stage.addView(actor,new android.widget.FrameLayout.LayoutParams(-1,-1));
-  TextView brand=new TextView(this);brand.setText("A U R O R A");
-  brand.setTextColor(0xfff2f3f1);brand.setTextSize(29);
-  brand.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
-  brand.setLetterSpacing(.18f);brand.setGravity(Gravity.CENTER);
-  brand.setPadding(0,dp(7),0,0);
-  android.widget.FrameLayout.LayoutParams head=new android.widget.FrameLayout.LayoutParams(-1,dp(68),Gravity.TOP);
-  stage.addView(brand,head);
-  TextView hint=new TextView(this);hint.setText("TOCÁ UNA FUNCIÓN");
-  hint.setTextColor(0xff879797);hint.setTextSize(11);
-  hint.setLetterSpacing(.16f);hint.setGravity(Gravity.CENTER);
-  android.widget.FrameLayout.LayoutParams foot=new android.widget.FrameLayout.LayoutParams(-1,dp(45),Gravity.BOTTOM);
-  stage.addView(hint,foot);
-  setContentView(stage);
+  setupPage();
+  root.setPadding(dp(17),dp(10),dp(17),dp(32));
+  LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);root.addView(heading);
+  TextView title=txt("AURORA",34);title.setTextColor(0xfff0ffff);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
+  title.setLetterSpacing(.18f);heading.addView(title,new LinearLayout.LayoutParams(0,dp(64),1f));
+  Button profile=btn("◉");profile.setContentDescription("Mi perfil");
+  accent(profile,0xff17435b,0xff243b61,0xff7bdcec);
+  LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(dp(50),dp(50));pp.rightMargin=dp(7);heading.addView(profile,pp);
+  profile.setOnClickListener(v->{stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));});
+  Button settings=btn("⚙");settings.setContentDescription("Configuración");
+  accent(settings,0xff1e2748,0xff2b2950,0xff8b87cd);heading.addView(settings,new LinearLayout.LayoutParams(dp(50),dp(50)));
+  settings.setOnClickListener(v->{settingsPage=true;render();});
+
+  TextView subtitle=txt("TU ENTORNO, EN UNA NUEVA DIMENSIÓN",12);
+  subtitle.setTextColor(0xff93d9e5);subtitle.setLetterSpacing(.12f);subtitle.setPadding(dp(2),0,0,dp(10));root.addView(subtitle);
+  AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);
+  root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
+  root.addView(AuroraDesign.overline(this,"EXPLORAR  /  ACCESOS DIRECTOS"));
+
+  LinearLayout shortcuts=new LinearLayout(this);shortcuts.setOrientation(LinearLayout.HORIZONTAL);root.addView(shortcuts);
+  LinearLayout soundTile=homeTile("◖))","SONIDOS","Detección del entorno",0xff102c42,0xff192b51);
+  LinearLayout speechTile=homeTile("◉","CONVERSACIÓN","Transcribe; traduce si lo pedís",0xff282044,0xff183750);
+  LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(158),1f);
+  left.rightMargin=dp(8);shortcuts.addView(soundTile,left);shortcuts.addView(speechTile,new LinearLayout.LayoutParams(0,dp(158),1f));
+  soundTile.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
+  speechTile.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  soundTile.setContentDescription("Reconocer sonidos del entorno");
+  speechTile.setContentDescription("Transcribir conversación en vivo y traducir solo cuando se solicita");
+
+  LinearLayout services=new LinearLayout(this);services.setOrientation(LinearLayout.HORIZONTAL);
+  LinearLayout.LayoutParams serviceParams=new LinearLayout.LayoutParams(-1,-2);serviceParams.topMargin=dp(9);root.addView(services,serviceParams);
+  Button alarms=btn("◷  ALARMAS");accent(alarms,0xff534120,0xff564021,0xffd6ad5f);
+  LinearLayout.LayoutParams halfA=new LinearLayout.LayoutParams(0,dp(66),1f);halfA.rightMargin=dp(8);services.addView(alarms,halfA);
+  alarms.setOnClickListener(v->{alarmsPage=true;render();});
+  Button messages=btn("▣  COMUNICAR");accent(messages,0xff432a69,0xff2a3466,0xffb28af1);
+  services.addView(messages,new LinearLayout.LayoutParams(0,dp(66),1f));
+  messages.setOnClickListener(v->{stopHomeSpeech();communicationPage=true;render();});
+
+  root.addView(AuroraDesign.overline(this,"CONVERSACIÓN · TRADUCCIÓN A PEDIDO"));
+  LinearLayout transcriptCard=auroraCard(0xff172b43,0xff201e42);
+  transcriptCard.setPadding(dp(17),dp(14),dp(17),dp(15));
+  TextView speechHeading=txt("PALABRAS EN VIVO",16);speechHeading.setTypeface(null,Typeface.BOLD);
+  speechHeading.setTextColor(0xffa8ecff);transcriptCard.addView(speechHeading);
+  homeTranscript=txt("La conversación se transcribe en vivo. La traducción aparece únicamente cuando tocás TRADUCIR.",20);
+  homeTranscript.setMinHeight(dp(66));homeTranscript.setMaxLines(3);
+  homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
+  homeSpeechStatus=txt("Elegí el idioma hablado. La traducción es opcional y no comienza sola.",13);
+  homeSpeechStatus.setTextColor(0xffb5cce7);transcriptCard.addView(homeSpeechStatus);
+  LinearLayout speechControls=new LinearLayout(this);speechControls.setOrientation(LinearLayout.HORIZONTAL);transcriptCard.addView(speechControls);
+  homeSpeechToggle=btn("🎙  ABRIR CONVERSACIÓN");accent(homeSpeechToggle,0xff4b388b,0xff275177,0xffac97f1);
+  LinearLayout.LayoutParams speechHalf=new LinearLayout.LayoutParams(0,dp(62),1f);speechHalf.rightMargin=dp(8);
+  speechControls.addView(homeSpeechToggle,speechHalf);
+  Button expand=btn("VER CONVERSACIONES");accent(expand,0xff1a455d,0xff273452,0xff62bdda);
+  speechControls.addView(expand,new LinearLayout.LayoutParams(0,dp(62),1f));
+  homeSpeechToggle.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  expand.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
+  root.addView(transcriptCard);
+
+  LinearLayout lower=new LinearLayout(this);lower.setOrientation(LinearLayout.HORIZONTAL);
+  LinearLayout.LayoutParams lowerParams=new LinearLayout.LayoutParams(-1,-2);lowerParams.topMargin=dp(8);root.addView(lower,lowerParams);
+  Button records=btn("📁  REGISTROS");accent(records,0xff193f53,0xff223557,0xff60baca);
+  LinearLayout.LayoutParams recordParam=new LinearLayout.LayoutParams(0,dp(60),1f);recordParam.rightMargin=dp(8);lower.addView(records,recordParam);
+  records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
+  Button timerButton=btn("◷  TEMPORIZADOR");accent(timerButton,0xff33344f,0xff243757,0xff8e9dd5);
+  lower.addView(timerButton,new LinearLayout.LayoutParams(0,dp(60),1f));
+  timerButton.setOnClickListener(v->{timerPage=true;render();});
+  TextView foot=txt("AURORA  /  ACCESIBILIDAD CON IDENTIDAD",12);
+  foot.setGravity(Gravity.CENTER);foot.setTextColor(0xff719bb9);root.addView(foot);
  }
  LinearLayout homeTile(String symbol,String name,String subtitle,int top,int bottom){
   LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);
@@ -443,17 +564,145 @@ public class MainActivity extends Activity {
    check.setText(SoundAlertPreferences.LABELS[cat]);
    check.setTextColor(Color.WHITE);check.setTextSize(16);
    check.setPadding(dp(10),dp(10),dp(10),dp(10));
-   check.setChecked(prefs.getBoolean("monitor_alert_"+key,!"other".equals(key)));
+   check.setChecked(prefs.getBoolean("monitor_alert_"+key,!"other".equals(key)&&!"voices".equals(key)));
    root.addView(check);
    check.setOnCheckedChangeListener((v,on)->{
     prefs.edit().putBoolean("monitor_alert_"+key,on).apply();
     if(!on){
      NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-     if(manager!=null)manager.cancel(SoundAlertPreferences.notificationId(key));
+     if(manager!=null){
+      // Remove every active notice from this category only, including
+      // distinct simultaneous events. Never cancel the microphone service.
+      try{
+       for(android.service.notification.StatusBarNotification note:manager.getActiveNotifications()){
+        if(SoundAlertPreferences.isNotificationForCategory(note.getTag(),key))
+         manager.cancel(note.getTag(),note.getId());
+       }
+       // Clear any legacy untagged notice issued by older AURORA builds.
+       manager.cancel(SoundAlertPreferences.notificationId(key));
+      }catch(RuntimeException issue){
+       android.util.Log.w("AURORA","No se pudieron limpiar avisos de "+key,issue);
+      }
+     }
     }
    });
   }
   root.addView(txt("Las categorías que no marques pueden seguir siendo detectadas, pero no generarán un aviso emergente. La clasificación es aproximada.",13));
+  root.addView(section("AVISOS AL DETECTAR SONIDOS"));
+  android.widget.Switch soundHaptics=new android.widget.Switch(this);
+  soundHaptics.setText("Vibrar por sonidos importantes en pantalla");
+  soundHaptics.setTextColor(Color.WHITE);soundHaptics.setTextSize(16);
+  soundHaptics.setPadding(dp(10),dp(9),dp(10),dp(9));
+  soundHaptics.setChecked(prefs.getBoolean("monitor_sound_vibration",true));
+  root.addView(soundHaptics);
+  soundHaptics.setOnCheckedChangeListener((button,enabled)->
+   prefs.edit().putBoolean("monitor_sound_vibration",enabled).apply());
+  root.addView(txt("En segundo plano, la vibración depende de las categorías de notificación de Android; no se duplica desde la app.",13));
+  android.widget.Switch soundFlash=new android.widget.Switch(this);
+  soundFlash.setText("Encender flash LED con sonidos detectados");
+  soundFlash.setTextColor(Color.WHITE);soundFlash.setTextSize(16);
+  soundFlash.setPadding(dp(10),dp(9),dp(10),dp(9));
+  soundFlash.setChecked(prefs.getBoolean("monitor_sound_flash",false));
+  root.addView(soundFlash);
+  soundFlash.setOnCheckedChangeListener((button,enabled)->{
+   if(!enabled){prefs.edit().putBoolean("monitor_sound_flash",false).apply();return;}
+   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){
+    soundFlash.setChecked(false);
+    requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);
+    Toast.makeText(this,"Autorizá Cámara y después volvé a activar el flash de sonidos",Toast.LENGTH_LONG).show();
+    return;
+   }
+   new AlertDialog.Builder(this)
+    .setTitle("Flash LED para sonidos")
+    .setMessage("Este aviso usa destellos de la linterna tras detectar sonidos habilitados. Dura hasta 2,6 segundos y limita las repeticiones. Puede afectar a personas fotosensibles, consumir batería o no funcionar si otra app usa la cámara. Es opcional y no sustituye alarmas de seguridad.")
+    .setPositiveButton("ACTIVAR",(dialog,which)->prefs.edit().putBoolean("monitor_sound_flash",true).apply())
+    .setNegativeButton("CANCELAR",(dialog,which)->soundFlash.setChecked(false))
+    .setOnCancelListener(dialog->soundFlash.setChecked(false))
+    .show();
+  });
+  root.addView(txt("Los sonidos se incorporan a la lista de los últimos 30 aunque no tengan avisos habilitados. Vibración y flash sólo se disparan por detecciones confirmadas de las categorías elegidas.",13));
+  Button testSoundSignal=btn("PROBAR ALERTA DE SONIDO · SIN MICRÓFONO");
+  root.addView(testSoundSignal);
+  testSoundSignal.setOnClickListener(v->{
+   if(!SoundAlertPreferences.isEnabled(this,"POSIBLE TIMBRE")){
+    Toast.makeText(this,"Habilitá Timbre y puertas para probar este aviso",Toast.LENGTH_LONG).show();
+    return;
+   }
+   SoundEventFeedback testFeedback=new SoundEventFeedback(this);
+   testFeedback.onConfirmed("POSIBLE TIMBRE",true);
+   new Handler(Looper.getMainLooper()).postDelayed(testFeedback::stop,5000);
+   Toast.makeText(this,"Probando vibración y flash según la configuración. No se registró ningún sonido.",Toast.LENGTH_LONG).show();
+  });
+  Button flashDiagnostic=btn("CONSULTAR ÚLTIMO ESTADO DEL FLASH DE SONIDOS");
+  root.addView(flashDiagnostic);
+  flashDiagnostic.setOnClickListener(v->{
+   String report=prefs.getString("monitor_sound_flash_last_status","Aún no hubo un intento de flash ambiental.");
+   boolean enabled=prefs.getBoolean("monitor_sound_flash",false);
+   boolean authorized=Build.VERSION.SDK_INT>=23&&
+    checkSelfPermission(android.Manifest.permission.CAMERA)==android.content.pm.PackageManager.PERMISSION_GRANTED;
+   new AlertDialog.Builder(this).setTitle("Diagnóstico de flash por sonidos")
+    .setMessage("Flash por sonidos: "+(enabled?"ACTIVADO":"APAGADO")+
+     "\nPermiso Cámara: "+(authorized?"CONCEDIDO":"NO CONCEDIDO")+
+     "\nÚltimo resultado: "+report+
+     "\n\nSolo parpadea ante sonidos confirmados y categorías habilitadas. "+
+     "El teléfono puede bloquear la linterna si otra aplicación utiliza la cámara.")
+    .setPositiveButton("CERRAR",null).show();
+  });
+  root.addView(section("MODO DE VALIDACIÓN DE SONIDOS"));
+  android.widget.Switch validation=new android.widget.Switch(this);
+  validation.setText("Evaluar detecciones con ACERTÓ / NO COINCIDE");
+  validation.setTextColor(Color.WHITE);validation.setTextSize(16);
+  validation.setPadding(dp(10),dp(10),dp(10),dp(10));
+  validation.setChecked(prefs.getBoolean("sense_feedback_mode",false));
+  root.addView(validation);
+  validation.setOnCheckedChangeListener((v,enabled)->
+   prefs.edit().putBoolean("sense_feedback_mode",enabled).apply());
+  root.addView(txt("Modo voluntario: en SONIDOS podés marcar ACERTÓ, NO COINCIDE o SONIDO NO DETECTADO. "
+   +"Se guardan únicamente conteos por tipo, sin audio, conversaciones, nombres ni ubicaciones. "
+   +"Los porcentajes reflejan solo las pruebas que marques vos; no son precisión de laboratorio.",13));
+  root.addView(section("RESULTADOS DE PRUEBAS REALES"));
+  SoundValidationMetrics metrics=SoundValidationStore.read(this);
+  TextView validationReport=txt(metrics.report(),13);
+  validationReport.setTextColor(0xffb3e5ec);
+  validationReport.setTextIsSelectable(true);
+  root.addView(validationReport);
+  Button refreshValidation=btn("ACTUALIZAR RESULTADOS DE PRUEBAS");
+  root.addView(refreshValidation);
+  refreshValidation.setOnClickListener(v->
+   validationReport.setText(SoundValidationStore.read(this).report()));
+  Button copyValidation=btn("COPIAR RESULTADOS SIN AUDIO");
+  root.addView(copyValidation);
+  copyValidation.setOnClickListener(v->{
+   String report=SoundValidationStore.read(this).report();
+   android.content.ClipboardManager clipboard=
+    (android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+   if(clipboard!=null){
+    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("AURORA EVALUACIÓN MANUAL",report));
+    Toast.makeText(this,"Resultados copiados, sin audio ni conversaciones",Toast.LENGTH_SHORT).show();
+   }
+  });
+  Button resetValidation=btn("BORRAR SOLO RESULTADOS DE PRUEBAS");
+  root.addView(resetValidation);
+  resetValidation.setOnClickListener(v->new AlertDialog.Builder(this)
+   .setTitle("Borrar estadísticas de validación")
+   .setMessage("Se borran únicamente los conteos manuales. Las conversaciones, "
+    +"alarmas y los últimos 30 sonidos no se modifican.")
+   .setNegativeButton("CANCELAR",null)
+   .setPositiveButton("BORRAR",(dialog,which)->{
+    SoundValidationStore.clear(this);
+    validationReport.setText(SoundValidationStore.read(this).report());
+   }).show());
+  root.addView(section("COPIA DE SEGURIDAD DE CONFIGURACIÓN"));
+  root.addView(txt("Guardá tus alarmas, horarios y preferencias en un TXT que podrás restaurar en AURORA. "
+   +"No incluye fotos ni conversaciones. Los sonidos se conservan únicamente como lista de los últimos 30 eventos dentro de la app; no se exportan como archivos.",14));
+  Button backup=btn("GUARDAR ALARMAS Y AJUSTES EN UN ARCHIVO");
+  root.addView(backup);
+  backup.setOnClickListener(v->exportSettings());
+  Button restore=btn("RESTAURAR ALARMAS Y AJUSTES");
+  root.addView(restore);
+  restore.setOnClickListener(v->importSettings());
+  root.addView(txt("Importar reemplaza las alarmas y ajustes actuales. No recupera datos eliminados de versiones antiguas; "
+   +"guardá antes las conversaciones desde la carpeta CONVERSACIONES GUARDADAS.",13));
   root.addView(section("SENSIBILIDAD DE ALERTAS"));
   final String[] levels={"ALTA","EQUILIBRADA","PRECISA"};
   android.widget.RadioGroup rg=new android.widget.RadioGroup(this);rg.setOrientation(0);
@@ -509,7 +758,7 @@ public class MainActivity extends Activity {
  if(Build.VERSION.SDK_INT>=34){NotificationManager notificationManager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);if(!notificationManager.canUseFullScreenIntent()){TextView fullWarning=txt("Android restringe las alarmas a pantalla completa. Revisá el permiso de alertas de pantalla completa.",16);fullWarning.setTextColor(0xffffcf70);root.addView(fullWarning);Button fullPermission=btn("Permitir alertas a pantalla completa");root.addView(fullPermission);fullPermission.setOnClickListener(v->startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,android.net.Uri.parse("package:"+getPackageName()))));}}
  Switch torchSwitch=new Switch(this);torchSwitch.setText("Flash LED intermitente en alarmas y temporizador");torchSwitch.setTextColor(Color.WHITE);torchSwitch.setTextSize(17);torchSwitch.setChecked(prefs.getBoolean("torch_alert",true));root.addView(torchSwitch);torchSwitch.setOnCheckedChangeListener((button,enabled)->{prefs.edit().putBoolean("torch_alert",enabled).apply();if(enabled&&Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);if(!enabled&&torch!=null)torch.stop();});
  if(Build.VERSION.SDK_INT>=23&&prefs.getBoolean("torch_alert",true)&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){Button torchPermission=btn("Autorizar flash LED (Cámara)");root.addView(torchPermission);torchPermission.setOnClickListener(v->requestPermissions(new String[]{android.Manifest.permission.CAMERA},2));}
- root.addView(txt("Aviso: el flash LED intermitente puede afectar a personas fotosensibles. Podés desactivarlo con el interruptor anterior.",13));
+ root.addView(txt("Aviso: el flash LED intermitente puede afectar a personas fotosensibles. Podés desactivarlo con el interruptor anterior. Si el flash funciona en PRUEBA pero no con la pantalla bloqueada, revisá permisos de notificaciones y alertas a pantalla completa: Android puede no abrir la pantalla de alarma.",13));
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
 
 

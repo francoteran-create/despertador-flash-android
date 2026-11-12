@@ -32,11 +32,11 @@ public final class AuroraSoundMonitorService extends Service {
  private volatile AudioRecord recorder;
  private volatile AudioClassifier classifier;
  private final SoundEventGate gate=new SoundEventGate();
+ private SoundEventFeedback soundFeedback;
  private volatile long lastClassifierCallbackElapsed=0L;
  private volatile long lastHeartbeatAt=0L;
  private long lastAlertsCheckAt=0L;
- private volatile SenseHistory history;
- @Override public void onCreate(){super.onCreate();history=new SenseHistory(this);createChannels();
+ @Override public void onCreate(){super.onCreate();createChannels();
   // Reset any stale status from a previous process termination; no automatic restart.
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
  }
@@ -66,14 +66,13 @@ public final class AuroraSoundMonitorService extends Service {
    getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"Android no permitió activar el micrófono en segundo plano").apply();
    Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;
   }
+  soundFeedback=new SoundEventFeedback(this);
   listening=true;sessionId++;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
   final long run=sessionId;
-  final SenseHistory currentHistory=new SenseHistory(this);
-  history=currentHistory;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
    .putLong(KEY_STARTED,System.currentTimeMillis()).putLong(KEY_HEARTBEAT,0L).apply();
   // Histories and notifications are serialized on a different thread from audio.
-  eventWorker.execute(()->currentHistory.begin("sonidos"));
+  // Sound events remain in the bounded in-app list; no TXT is opened.
   worker.execute(()->classifyLoop(run));
   return START_NOT_STICKY; // Do not restart microphone capture without user interaction.
  }
@@ -109,12 +108,20 @@ public final class AuroraSoundMonitorService extends Service {
  }
  private void classifyLoop(final long run){
   if(!listening||sessionId!=run)return;
-  AudioRecord localRecord=null;AudioClassifier localClassifier=null;
-  try{
+  int failures=0;
+  while(listening&&sessionId==run){
+   AudioRecord localRecord=null;AudioClassifier localClassifier=null;
+   final java.util.concurrent.atomic.AtomicReference<String> callbackError=new java.util.concurrent.atomic.AtomicReference<>();
+   final java.util.concurrent.atomic.AtomicBoolean activeClassifier=new java.util.concurrent.atomic.AtomicBoolean(true);
+   long started=SystemClock.elapsedRealtime();
+   long retryDelay=0L;
+   try{
+    lastClassifierCallbackElapsed=0L;
+    gate.reset();
    AudioClassifierOptions options=AudioClassifierOptions.builder().setBaseOptions(BaseOptions.builder().setModelAssetPath("yamnet.tflite").build())
-    .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(6).setScoreThreshold(.15f)
+    .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(40).setScoreThreshold(.12f)
     .setResultListener(result->{
-     if(!listening||sessionId!=run)return;
+     if(!activeClassifier.get()||!listening||sessionId!=run)return;
      long now=SystemClock.elapsedRealtime();
      boolean firstResult=lastClassifierCallbackElapsed==0L;
      lastClassifierCallbackElapsed=now;
@@ -131,36 +138,39 @@ public final class AuroraSoundMonitorService extends Service {
      }
      if(result.classificationResults().isEmpty()||result.classificationResults().get(0).classifications().isEmpty())return;
      List<Category> categories=result.classificationResults().get(0).classifications().get(0).categories();
-     java.util.Map<String,Float> strongestByLabel=new java.util.HashMap<>();
+     java.util.Map<String,Float> rawScores=new java.util.LinkedHashMap<>();
      for(Category item:categories){
-      String label=SoundLabelsEs.name(item.categoryName());
-      if(label==null)continue;
-      Float old=strongestByLabel.get(label);
-      if(old==null||item.score()>old)strongestByLabel.put(label,item.score());
+      String raw=item.categoryName();
+      Float previous=rawScores.get(raw);
+      if(previous==null||item.score()>previous)rawScores.put(raw,item.score());
      }
+     java.util.Map<String,Float> strongestByLabel=SoundEvidence.fromRawScores(rawScores);
      // Two simultaneous sound types can both be confirmed and reported.
      for(java.util.Map.Entry<String,Float> detected:strongestByLabel.entrySet()){
+      if(!activeClassifier.get())return;
       consider(detected.getKey(),Math.round(detected.getValue()*100f),run);
      }
     }).setErrorListener(err->{
-     Log.e("AURORA","Clasificador de fondo: "+err.getMessage());
-     reportFailure("Error interno del detector de sonidos",run);
+     if(activeClassifier.get())callbackError.compareAndSet(null,
+      err==null?"Fallo del clasificador":err.getMessage());
     }).build();
    localClassifier=AudioClassifier.createFromOptions(this,options);classifier=localClassifier;
    localRecord=localClassifier.createAudioRecord(1,16000,16000);recorder=localRecord;
-   AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),16000);
+   AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),SoundAudioCapturePolicy.BLOCK_SAMPLES);
    if(!listening||sessionId!=run)return;
    localRecord.startRecording();
    final long monitoringStarted=SystemClock.elapsedRealtime();
    if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)throw new IllegalStateException("El micrófono no comenzó a grabar");
    int emptyReads=0;
    while(listening&&sessionId==run){
+    if(callbackError.get()!=null)throw new IllegalStateException("El clasificador interrumpió la escucha");
     int count=samples.load(localRecord);
     if(count>0){localClassifier.classifyAsync(samples,SystemClock.uptimeMillis());emptyReads=0;}
-    else {SystemClock.sleep(120);if(++emptyReads>=6)throw new IllegalStateException("Micrófono sin muestras");}
+    else {SystemClock.sleep(120);if(++emptyReads>=12)throw new IllegalStateException("Micrófono sin muestras");}
     long now=SystemClock.elapsedRealtime();
     long lastInference=lastClassifierCallbackElapsed>0L?lastClassifierCallbackElapsed:monitoringStarted;
-    if(now-lastInference>90000L)throw new IllegalStateException("El detector no envía resultados");
+    if(SoundRecoveryPolicy.isStalled(lastInference,now))
+     throw new IllegalStateException("El detector dejó de responder");
     // Recheck user notification permission: a monitor with every alert blocked is misleading.
     if(Build.VERSION.SDK_INT>=24&&now-lastAlertsCheckAt>15000L){
      lastAlertsCheckAt=now;
@@ -170,16 +180,36 @@ public final class AuroraSoundMonitorService extends Service {
      }
     }
    }
-  }catch(Exception error){
-   if(listening&&sessionId==run){Log.e("AURORA","No se pudo mantener la escucha",error);
-    reportFailure(error.getMessage()!=null&&error.getMessage().contains("notificaciones")?
-     "Android bloqueó las notificaciones; escucha detenida":"El micrófono o el detector se interrumpió",run);}
-  }
-  finally{
+   }catch(Exception error){
+    if(!listening||sessionId!=run)break;
+    Log.w("AURORA","Interrupción en escucha continua, intentando recuperación",error);
+    String why=error.getMessage()==null?"Error de audio":error.getMessage();
+    if(why.contains("notificaciones")){
+     reportFailure("Android bloqueó las notificaciones; escucha detenida",run);break;
+    }
+    if(SystemClock.elapsedRealtime()-started>30000L)failures=0;
+    retryDelay=SoundRecoveryPolicy.delayAfterFailure(++failures);
+    if(retryDelay<0){
+     reportFailure("No se pudo recuperar el detector; escucha detenida",run);break;
+    }
+    final int retry=failures;
+    getSharedPreferences("aurora",0).edit()
+     .putString(KEY_ERROR,"Recuperando escucha · intento "+retry+" de 5").apply();
+    ui.post(()->{
+     if(!listening||sessionId!=run)return;
+     NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+     if(nm!=null)nm.notify(FOREGROUND_ID,
+      status("RECONECTANDO ("+retry+"/3) · no detecta durante la reconexión"));
+    });
+   }
+   finally{
+   activeClassifier.set(false);
    if(localRecord!=null){try{localRecord.stop();}catch(Exception ignored){}localRecord.release();}
    if(localClassifier!=null)localClassifier.close();
    if(recorder==localRecord)recorder=null;
    if(classifier==localClassifier)classifier=null;
+   }
+   if(retryDelay>0L)SystemClock.sleep(retryDelay);
   }
  }
  private void reportFailure(String message,long run){
@@ -205,14 +235,19 @@ public final class AuroraSoundMonitorService extends Service {
   if(!listening||sessionId!=run)return;
   int sensitivity=getSharedPreferences("aurora",0).getInt("monitor_sensitivity",1);
   if(!gate.accept(found,percent,sensitivity,SystemClock.elapsedRealtime()))return;
-  final SenseHistory savedHistory=history;
+  // Sound event persistence uses only the 30-item app list.
   // No synchronous file writes, SharedPreferences writes, or NotificationManager
   // calls on MediaPipe's classifier callback thread.
   eventWorker.execute(()->{
-   savedHistory.event(found+" · confianza estimada "+percent+"%");
-   getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · "+percent+"%").apply();
+   if(!listening||sessionId!=run)return;
+   RecentSoundEvents.add(this,found,percent);
+   getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · puntaje IA "+percent+"/100").apply();
    if(!listening||sessionId!=run)return;
    if(!SoundAlertPreferences.isEnabled(this,found))return;
+   // The optional LED is not a notification: attempt it for every confirmed,
+   // enabled event even if posting the visible notification fails.
+   // Feedback itself checks user opt-in, CAMERA permission and cooldown.
+   if(soundFeedback!=null)soundFeedback.onConfirmed(found,false);
    if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
    NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
    if(nm==null)return;
@@ -221,27 +256,25 @@ public final class AuroraSoundMonitorService extends Service {
    PendingIntent tap=PendingIntent.getActivity(this,5600,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
    Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,SoundAlertPreferences.channel(group)):new Notification.Builder(this);
    b.setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("AURORA · Sonido detectado")
-    .setContentText(found+" · estimación "+percent+"%").setContentIntent(tap)
+    .setContentText(found+" · puntaje IA "+percent+"/100").setContentIntent(tap)
     .setCategory(Notification.CATEGORY_STATUS).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PUBLIC)
     .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
-   try{nm.notify(SoundAlertPreferences.notificationId(group),b.build());}
-   catch(SecurityException ignored){}
+   try{
+    nm.notify(SoundAlertPreferences.notificationTag(group,found),SoundAlertPreferences.notificationId(group),b.build());
+    // Background vibration belongs to Android's notification channel.
+    // Optional LED was already requested independently above.
+   }catch(SecurityException ignored){}
   });
  }
  private synchronized void shutdown(){
+  if(soundFeedback!=null){soundFeedback.stop();soundFeedback=null;}
   if(!listening){getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();return;}
   listening=false;sessionId++;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
   // Release a blocking audio read on the capture worker before it disposes native objects.
   AudioRecord active=recorder;
   if(active!=null){try{if(active.getRecordingState()==AudioRecord.RECORDSTATE_RECORDING)active.stop();}catch(Exception ignored){}}
-  final SenseHistory closingHistory=history;
-  eventWorker.execute(()->{
-   try{
-    java.io.File saved=closingHistory.finish();
-    if(saved!=null)new SavedFolderManager(this).copyOne(saved);
-   }catch(Exception e){Log.w("AURORA","No se pudo guardar o copiar el registro",e);}
-  });
+  // No sound TXT files or external exports are generated.
  }
  @Override public void onDestroy(){
   shutdown();worker.shutdownNow();eventWorker.shutdown();ui.removeCallbacksAndMessages(null);super.onDestroy();

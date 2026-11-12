@@ -1,7 +1,9 @@
-name: Compilar APK Android
+name: Compilar AURORA Android 64 bits
 on:
   workflow_dispatch:
   push:
+    branches: [main, aurora-sense-precision-2026-11-10]
+  pull_request:
     branches: [main]
 jobs:
   build:
@@ -10,6 +12,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          # PR builds should record the actual feature-branch commit in MASTER,
+          # not GitHub's ephemeral merge ref.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -31,33 +37,41 @@ jobs:
             https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite \
             --output app/src/main/assets/yamnet.tflite
           test "$(wc -c < app/src/main/assets/yamnet.tflite)" -gt 1000000
-      - name: Probar clasificación y reglas de alertas
+      - name: Probar contratos de traducción, sonidos y privacidad
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+      - name: Probar Java y cola de traducciones
         run: gradle --no-daemon :app:testDebugUnitTest --stacktrace
-      - name: Compilar APK
+      - name: Compilar APK Android ARM64
         run: gradle --no-daemon :app:assembleDebug --stacktrace
-      - name: Inspeccionar APKs según procesador
+      - name: Verificar UN solo instalador ARM64 y paquete independiente
         run: |
           shopt -s nullglob
           apks=(app/build/outputs/apk/debug/*.apk)
-          test "${#apks[@]}" -eq 2
-          for apk in "${apks[@]}"; do
-            echo "Archivo: $apk"
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | head -n 12
-            "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -Fq com.despertadorflash
-          done
-      - name: Verificar firmas y tamaños de las dos APKs
+          test "${#apks[@]}" -eq 1
+          apk="${apks[0]}"
+          [[ "$apk" == *arm64-v8a* ]]
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta415'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.15 BETA'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta415.photos"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.INTERNET"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.RECORD_AUDIO"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.VIBRATE"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          sha256sum "$apk"
+      # The normal workflow validates source and APK; the final delivery is
+      # published only for explicit or marked commits to avoid repeated ZIPs.
+      - name: Generar MASTER PDF y copia única APK ARM64
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
         run: |
-          for apk in app/build/outputs/apk/debug/*.apk; do
-            test -s "$apk"
-            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
-            sha256sum "$apk"
-            du -h "$apk"
-          done
-      # En cada avance compilamos y probamos, sin publicar instalables.
-      # Sólo una ejecución manual produce un artefacto cuando el usuario lo pida.
+          python3 -m pip install --disable-pip-version-check 'reportlab>=4,<5'
+          python3 scripts/build_delivery.py
+          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
         with:
-          name: AURORA-MASTER-ARM
-          path: app/build/outputs/apk/debug/*.apk
+          name: AURORA-4-15-DOS-ARCHIVOS
+          path: |
+            dist/AURORA_4_15_ARM64.apk
+            dist/AURORA_4_15_MASTER_ESTADO_Y_PLAN.pdf
           if-no-files-found: error
+          retention-days: 30

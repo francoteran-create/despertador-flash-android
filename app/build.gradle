@@ -2,14 +2,25 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 40; versionName '4.0' }
- // Deliver only the native libraries required by each real Android CPU.
- // No emulators/Intel libraries and no duplicate ARM architectures per APK.
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 55; versionName '4.15-flash-diagnostics-beta' }
+ // Debug beta deliberately coexists with stable AURORA: never overwrite the
+ // existing user installation or its private data because of a debug key.
+ buildTypes {
+  debug {
+   applicationIdSuffix '.beta415'
+   resValue 'string', 'app_name', 'AURORA 4.15 BETA'
+  }
+  release {
+   resValue 'string', 'app_name', 'AURORA'
+  }
+ }
+ // Only one delivery APK, 64-bit ARM for the Galaxy S9+.
+ // Other architectures remain outside the agreed user delivery.
  splits {
   abi {
    enable true
    reset()
-   include 'arm64-v8a', 'armeabi-v7a'
+   include 'arm64-v8a'
    universalApk false
   }
  }
