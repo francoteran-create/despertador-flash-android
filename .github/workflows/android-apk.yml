@@ -63,7 +63,7 @@ jobs:
           python3 scripts/build_delivery.py
           test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
         with:
           name: AURORA-4-14-DOS-ARCHIVOS
           path: |
