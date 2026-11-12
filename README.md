@@ -328,6 +328,21 @@ y la primera entrega simplificada con **únicamente una APK de 64 bits
 y un MASTER PDF**. Las pruebas automatizadas pueden verificar el build,
 pero las funciones físicas aún necesitan pruebas Galaxy S9+.
 
+## Estado consolidado de entrega 4.9
+- Vista horizontal en CONVERSACIÓN: fondo negro, letras blancas,
+  original y traducción en grande, sin detener al entrar/salir.
+- Vista horizontal en SONIDOS: espectro FFT real de 32 bandas
+  multicolor y descripción visible, desde el mismo micrófono YAMNet.
+- Botón DETENER Y GUARDAR cierra conversación y su historial.
+  Android también cierra por seguridad si se abandona la Activity.
+- No hay segundo micrófono ni registros de audio; la lista de 30
+  sonidos y el historial de conversaciones conservan su estructura.
+- Redibujado del espectro pausado cuando no está visible, para
+  evitar consumo de CPU y batería sin utilidad.
+- Pendientes pruebas físicas en Samsung S9+: orientación, continuidad,
+  legibilidad, respuesta de barras e historial tras detener.
+- Entrega exclusivamente APK ARM64 y MASTER PDF desde el mismo commit.
+
 ## Retomar desde otro chat
 Buscar en GitHub la rama `aurora-sense-precision-2026-11-10`
 y el último commit verificado por CI. Consultar el MASTER PDF de
