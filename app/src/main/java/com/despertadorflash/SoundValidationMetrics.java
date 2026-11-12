@@ -11,7 +11,7 @@ import java.util.Map;
 public final class SoundValidationMetrics {
  public static final String[] KEYS={"timbre","puerta","perro","bocina",
   "sirena","voz","llanto","otros"};
- public static final String[] LABELS={"Timbre","Golpes / portazo","Ladrido / perro",
+ public static final String[] LABELS={"Timbre","Golpes / portazo","Mascotas / ladridos",
   "Bocina / tránsito","Sirena / alarma","Voz / conversación","Llanto / gritos","Otros"};
  private static final long MAX=1_000_000L;
  public static final class Count {
