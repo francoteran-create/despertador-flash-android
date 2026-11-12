@@ -1114,6 +1114,7 @@ public final class SenseActivity extends Activity {
     AudioRecord localRecord=null;
     final java.util.concurrent.atomic.AtomicLong lastResult=new java.util.concurrent.atomic.AtomicLong(0L);
     final java.util.concurrent.atomic.AtomicReference<String> classifierError=new java.util.concurrent.atomic.AtomicReference<>();
+    final java.util.concurrent.atomic.AtomicBoolean activeClassifier=new java.util.concurrent.atomic.AtomicBoolean(true);
     long started=SystemClock.elapsedRealtime();
     long recoveryDelay=0L;
     try{
@@ -1121,7 +1122,7 @@ public final class SenseActivity extends Activity {
      AudioClassifierOptions settings=AudioClassifierOptions.builder().setBaseOptions(base)
       .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(40).setScoreThreshold(.12f)
       .setResultListener(r->{
-       if(!soundRunning||soundSession!=run||r==null)return;
+       if(!activeClassifier.get()||!soundRunning||soundSession!=run||r==null)return;
        lastResult.set(SystemClock.elapsedRealtime());
        captureStats.classified(SystemClock.elapsedRealtime());
        if(r.classificationResults().isEmpty()||r.classificationResults().get(0).classifications().isEmpty())return;
@@ -1133,7 +1134,7 @@ public final class SenseActivity extends Activity {
        }
        final java.util.Map<String,Float> current=SoundEvidence.fromRawScores(rawScores);
        main.post(()->{
-        if(!soundRunning||soundSession!=run||mode!=MODE_SOUND)return;
+        if(!activeClassifier.get()||!soundRunning||soundSession!=run||mode!=MODE_SOUND)return;
         long now=SystemClock.elapsedRealtime();
         soundLiveWindow.observe(current,now);
         updateLiveSoundDisplay(now);
@@ -1153,7 +1154,7 @@ public final class SenseActivity extends Activity {
        });
       })
       .setErrorListener(error->{
-       classifierError.compareAndSet(null,error==null?"Error del clasificador":error.getMessage());
+       if(activeClassifier.get())classifierError.compareAndSet(null,error==null?"Error del clasificador":error.getMessage());
       }).build();
      localClassifier=AudioClassifier.createFromOptions(this,settings);
      classifier=localClassifier;
@@ -1237,6 +1238,7 @@ public final class SenseActivity extends Activity {
       }
      });
     }finally{
+     activeClassifier.set(false);
      if(localRecord!=null){
       try{localRecord.stop();}catch(Exception ignored){}
       try{localRecord.release();}catch(Exception ignored){}
