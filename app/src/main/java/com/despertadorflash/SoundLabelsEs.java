@@ -24,7 +24,7 @@ public final class SoundLabelsEs {
   if(has(s,"dog"))return "POSIBLE PERRO";
   if(has(s,"howl"))return "POSIBLE AULLIDO";
   if(has(s,"whimper"))return "POSIBLE GEMIDO";
-  if(has(s,"cat","meow","purr"))return "POSIBLE GATO";
+  if(word(s,"cat")||has(s,"meow","purr"))return "POSIBLE GATO";
   if(has(s,"bird","chirp","tweet","crow","rooster"))return "POSIBLES AVES";
   if(has(s,"siren"))return "POSIBLE SIRENA";
   if(has(s,"smoke detector","fire alarm"))return "POSIBLE ALARMA DE INCENDIO";
@@ -40,6 +40,7 @@ public final class SoundLabelsEs {
   if(has(s,"motorcycle"))return "POSIBLE MOTO";
   if(has(s,"aircraft","airplane","helicopter"))return "POSIBLE AERONAVE";
   if(has(s,"train","rail"))return "POSIBLE TREN";
+  if(has(s,"french horn","brass instrument","musical horn"))return "POSIBLE MÚSICA";
   if(has(s,"horn","honk"))return "POSIBLE BOCINA";
   if(has(s,"traffic","engine","vehicle","truck","bus","idling")||word(s,"car"))return "POSIBLE VEHÍCULO";
   if(has(s,"music","singing","guitar","piano","violin","drum","instrument"))return "POSIBLE MÚSICA";
