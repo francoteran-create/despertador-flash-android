@@ -24,6 +24,12 @@ public final class SoundFeedbackPolicy {
   lastFlash=now;
   return true;
  }
+ /** A camera that rejects setTorchMode must not suppress the next confirmed
+  * detection for the entire 12-second cooldown. Invoked on the main thread
+  * immediately after a failed start attempt. */
+ public synchronized void flashStartFailed(long attemptedAt){
+  if(lastFlash==attemptedAt)lastFlash=-1L;
+ }
  public synchronized void reset(){
   lastFeedback=-1L;
   lastFlash=-1L;
