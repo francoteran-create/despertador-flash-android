@@ -127,7 +127,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "flash apagado de fábrica, requiere permiso y se limita la repetición.")
     item("OTROS", "alarmas y temporizador, respaldo de preferencias V2 compatible "
          "con V1, recuperación del detector YAMNet, y consulta de conversaciones.")
-    story.append(PageBreak())
+    story.append(Spacer(1,8))
     head("3 | LIMITACIONES QUE SIGUEN ABIERTAS")
     item("VOZ", "Android SpeechRecognizer puede pausar o interrumpir sesiones. "
          "Se traduce al finalizar una frase, NO palabra por palabra.")
