@@ -7,20 +7,27 @@ package com.despertadorflash;
  */
 public final class LiveAudioSpectrum {
  public static final int BANDS=32;
+ public static final int WAVEFORM_POINTS=160;
  private static final int FFT_SIZE=1024;
  private static final int SAMPLE_RATE=16000;
  private LiveAudioSpectrum(){}
  public static final class Reading {
   public final float[] bands;
   public final float level;
-  public Reading(float[] bands,float level){this.bands=bands;this.level=level;}
+  public final float[] waveform;
+  public Reading(float[] bands,float level,float[] waveform){this.bands=bands;this.level=level;this.waveform=waveform;}
  }
  public static Reading fromPcm(float[] pcm){
   float[] bands=new float[BANDS];
-  if(pcm==null||pcm.length<FFT_SIZE)return new Reading(bands,0f);
+  float[] waveform=new float[WAVEFORM_POINTS];
+  if(pcm==null||pcm.length<FFT_SIZE)return new Reading(bands,0f,waveform);
   double[] re=new double[FFT_SIZE],im=new double[FFT_SIZE];
   int start=pcm.length-FFT_SIZE;
   double energy=0;
+  for(int point=0;point<WAVEFORM_POINTS;point++){
+   int ix=start+(point*(FFT_SIZE-1)/(WAVEFORM_POINTS-1));
+   waveform[point]=Math.max(-1f,Math.min(1f,pcm[ix]));
+  }
   for(int i=0;i<FFT_SIZE;i++){
    double raw=Math.max(-1d,Math.min(1d,pcm[start+i]));
    energy+=raw*raw;
@@ -70,6 +77,6 @@ public final class LiveAudioSpectrum {
    float magnitude=(float)Math.min(1d,Math.log1p(average*13d)/Math.log(14d));
    bands[band]=Math.max(0f,Math.min(1f,magnitude));
   }
-  return new Reading(bands,level);
+  return new Reading(bands,level,waveform);
  }
 }
