@@ -48,19 +48,37 @@ public final class SoundEventFeedback {
    }
    boolean flashEnabled=context.getSharedPreferences("aurora",0)
     .getBoolean("monitor_sound_flash",false);
-   if(!flashEnabled||Build.VERSION.SDK_INT<23||
-     context.checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED||
-     !policy.allowFlash(now))return;
+   if(!flashEnabled)return;
+   if(Build.VERSION.SDK_INT<23){
+    recordFlashStatus("Android no admite el control de linterna.");
+    return;
+   }
+   if(context.checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){
+    recordFlashStatus("No se encendió: falta autorizar Cámara.");
+    return;
+   }
+   if(!policy.allowFlash(now))return;
    if(torch==null)torch=new TorchFlasher(context);
    if(endFlash!=null){handler.removeCallbacks(endFlash);endFlash=null;}
    if(torch.start()){
+    recordFlashStatus("LED iniciado por sonido confirmado: "+label);
     endFlash=()->{
      if(torch!=null)torch.stop();
      endFlash=null;
     };
     handler.postDelayed(endFlash,SoundFeedbackPolicy.FLASH_DURATION_MS);
+   }else{
+    // A failed camera start is not a real flash. Permit a later event.
+    policy.flashStartFailed(now);
+    recordFlashStatus("LED no disponible: "+torch.getLastError());
    }
   });
+ }
+
+ private void recordFlashStatus(String message){
+  // Operational status only: no audio, recorded phrase or location.
+  context.getSharedPreferences("aurora",0).edit()
+   .putString("monitor_sound_flash_last_status",message).apply();
  }
 
  public void stop(){
