@@ -312,13 +312,13 @@ public class MainActivity extends Activity {
 
   LinearLayout shortcuts=new LinearLayout(this);shortcuts.setOrientation(LinearLayout.HORIZONTAL);root.addView(shortcuts);
   LinearLayout soundTile=homeTile("◖))","SONIDOS","Detección del entorno",0xff102c42,0xff192b51);
-  LinearLayout speechTile=homeTile("◉","CONVERSACIÓN","Transcribe y traduce",0xff282044,0xff183750);
+  LinearLayout speechTile=homeTile("◉","CONVERSACIÓN","Transcribe; traduce si lo pedís",0xff282044,0xff183750);
   LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(158),1f);
   left.rightMargin=dp(8);shortcuts.addView(soundTile,left);shortcuts.addView(speechTile,new LinearLayout.LayoutParams(0,dp(158),1f));
   soundTile.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   speechTile.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
   soundTile.setContentDescription("Reconocer sonidos del entorno");
-  speechTile.setContentDescription("Transcribir y traducir automáticamente una conversación");
+  speechTile.setContentDescription("Transcribir conversación en vivo y traducir solo cuando se solicita");
 
   LinearLayout services=new LinearLayout(this);services.setOrientation(LinearLayout.HORIZONTAL);
   LinearLayout.LayoutParams serviceParams=new LinearLayout.LayoutParams(-1,-2);serviceParams.topMargin=dp(9);root.addView(services,serviceParams);
@@ -329,18 +329,18 @@ public class MainActivity extends Activity {
   services.addView(messages,new LinearLayout.LayoutParams(0,dp(66),1f));
   messages.setOnClickListener(v->{stopHomeSpeech();communicationPage=true;render();});
 
-  root.addView(AuroraDesign.overline(this,"CONVERSACIÓN · TRADUCCIÓN AUTOMÁTICA"));
+  root.addView(AuroraDesign.overline(this,"CONVERSACIÓN · TRADUCCIÓN A PEDIDO"));
   LinearLayout transcriptCard=auroraCard(0xff172b43,0xff201e42);
   transcriptCard.setPadding(dp(17),dp(14),dp(17),dp(15));
-  TextView speechHeading=txt("LO QUE SE DICE Y SU TRADUCCIÓN",16);speechHeading.setTypeface(null,Typeface.BOLD);
+  TextView speechHeading=txt("PALABRAS EN VIVO",16);speechHeading.setTypeface(null,Typeface.BOLD);
   speechHeading.setTextColor(0xffa8ecff);transcriptCard.addView(speechHeading);
-  homeTranscript=txt("Abrí el traductor: las palabras originales y su traducción aparecen juntas, frase por frase.",20);
+  homeTranscript=txt("La conversación se transcribe en vivo. La traducción aparece únicamente cuando tocás TRADUCIR.",20);
   homeTranscript.setMinHeight(dp(66));homeTranscript.setMaxLines(3);
   homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
-  homeSpeechStatus=txt("Elegí idioma original y destino. AURORA traduce sola cada frase completa.",13);
+  homeSpeechStatus=txt("Elegí el idioma hablado. La traducción es opcional y no comienza sola.",13);
   homeSpeechStatus.setTextColor(0xffb5cce7);transcriptCard.addView(homeSpeechStatus);
   LinearLayout speechControls=new LinearLayout(this);speechControls.setOrientation(LinearLayout.HORIZONTAL);transcriptCard.addView(speechControls);
-  homeSpeechToggle=btn("🎙  ABRIR TRADUCTOR");accent(homeSpeechToggle,0xff4b388b,0xff275177,0xffac97f1);
+  homeSpeechToggle=btn("🎙  ABRIR CONVERSACIÓN");accent(homeSpeechToggle,0xff4b388b,0xff275177,0xffac97f1);
   LinearLayout.LayoutParams speechHalf=new LinearLayout.LayoutParams(0,dp(62),1f);speechHalf.rightMargin=dp(8);
   speechControls.addView(homeSpeechToggle,speechHalf);
   Button expand=btn("VER CONVERSACIONES");accent(expand,0xff1a455d,0xff273452,0xff62bdda);
