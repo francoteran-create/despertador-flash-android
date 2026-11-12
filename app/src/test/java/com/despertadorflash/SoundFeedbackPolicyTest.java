@@ -18,6 +18,21 @@ public final class SoundFeedbackPolicyTest {
   assertTrue(p.allowFlash(12001));
   assertEquals(2600L,SoundFeedbackPolicy.FLASH_DURATION_MS);
  }
+ @Test public void failedCameraDoesNotWasteFlashCooldown(){
+  SoundFeedbackPolicy p=new SoundFeedbackPolicy();
+  assertTrue(p.allowFlash(1000));
+  p.flashStartFailed(1000);
+  assertTrue(p.allowFlash(2000)); // Failed start must not block a later event.
+  assertFalse(p.allowFlash(3000)); // Successful start retains cooldown.
+ }
+ @Test public void staleFailureCannotUndoLaterSuccessfulFlash(){
+  SoundFeedbackPolicy p=new SoundFeedbackPolicy();
+  assertTrue(p.allowFlash(1000));
+  p.flashStartFailed(1000);
+  assertTrue(p.allowFlash(2000));
+  p.flashStartFailed(1000); // Callback for an older attempt.
+  assertFalse(p.allowFlash(3000));
+ }
  @Test public void resetAllowsNewSessionAndBackwardsClock(){
   SoundFeedbackPolicy p=new SoundFeedbackPolicy();
   assertFalse(p.allowFlash(-1));
