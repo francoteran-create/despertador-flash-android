@@ -112,6 +112,7 @@ public final class AuroraSoundMonitorService extends Service {
   while(listening&&sessionId==run){
    AudioRecord localRecord=null;AudioClassifier localClassifier=null;
    final java.util.concurrent.atomic.AtomicReference<String> callbackError=new java.util.concurrent.atomic.AtomicReference<>();
+   final java.util.concurrent.atomic.AtomicBoolean activeClassifier=new java.util.concurrent.atomic.AtomicBoolean(true);
    long started=SystemClock.elapsedRealtime();
    long retryDelay=0L;
    try{
@@ -120,7 +121,7 @@ public final class AuroraSoundMonitorService extends Service {
    AudioClassifierOptions options=AudioClassifierOptions.builder().setBaseOptions(BaseOptions.builder().setModelAssetPath("yamnet.tflite").build())
     .setRunningMode(RunningMode.AUDIO_STREAM).setMaxResults(40).setScoreThreshold(.12f)
     .setResultListener(result->{
-     if(!listening||sessionId!=run)return;
+     if(!activeClassifier.get()||!listening||sessionId!=run)return;
      long now=SystemClock.elapsedRealtime();
      boolean firstResult=lastClassifierCallbackElapsed==0L;
      lastClassifierCallbackElapsed=now;
@@ -146,10 +147,13 @@ public final class AuroraSoundMonitorService extends Service {
      java.util.Map<String,Float> strongestByLabel=SoundEvidence.fromRawScores(rawScores);
      // Two simultaneous sound types can both be confirmed and reported.
      for(java.util.Map.Entry<String,Float> detected:strongestByLabel.entrySet()){
+      if(!activeClassifier.get())return;
       consider(detected.getKey(),Math.round(detected.getValue()*100f),run);
      }
-    }).setErrorListener(err->callbackError.compareAndSet(null,
-     err==null?"Fallo del clasificador":err.getMessage())).build();
+    }).setErrorListener(err->{
+     if(activeClassifier.get())callbackError.compareAndSet(null,
+      err==null?"Fallo del clasificador":err.getMessage());
+    }).build();
    localClassifier=AudioClassifier.createFromOptions(this,options);classifier=localClassifier;
    localRecord=localClassifier.createAudioRecord(1,16000,16000);recorder=localRecord;
    AudioData samples=AudioData.create(AudioData.AudioDataFormat.create(localRecord.getFormat()),SoundAudioCapturePolicy.BLOCK_SAMPLES);
@@ -199,6 +203,7 @@ public final class AuroraSoundMonitorService extends Service {
     });
    }
    finally{
+   activeClassifier.set(false);
    if(localRecord!=null){try{localRecord.stop();}catch(Exception ignored){}localRecord.release();}
    if(localClassifier!=null)localClassifier.close();
    if(recorder==localRecord)recorder=null;
