@@ -106,6 +106,7 @@ public final class SenseActivity extends Activity {
  private SenseHistory history;
  private LinearLayout eventsView;
  private LinearLayout feedbackPanel;
+ private TextView feedbackStats;
  private TextView soundCount;
  private ScrollView eventsScroll;
  private Button openSaved;
@@ -314,14 +315,13 @@ public final class SenseActivity extends Activity {
   Button diagnostic=button("COPIAR DIAGNÓSTICO (SIN AUDIO)");
   diagnostic.setOnClickListener(v->copySoundDiagnostic());
   if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
-   TextView note=text("MODO PRUEBA: marcá ACERTÓ o NO COINCIDE debajo de cada detección. "
+   TextView note=text("MODO PRUEBA: marcá ACERTÓ o NO COINCIDE para las últimas detecciones. "
     +"Si escuchaste algo que AURORA no detectó, usá el botón. No se guarda audio.",13,0xffb0dfee);
    root.addView(note);
    Button missed=button("REGISTRAR SONIDO NO DETECTADO");
    root.addView(missed,new LinearLayout.LayoutParams(-1,dp(62)));
    missed.setOnClickListener(v->{
-    String[] categories={"Timbre de puerta","Golpes en una puerta","Ladrido de perro",
-     "Música","Voces o conversación","Otro sonido"};
+    String[] categories=SoundValidationMetrics.LABELS;
     new android.app.AlertDialog.Builder(this)
      .setTitle("¿Qué sonido no detectó AURORA?")
      .setItems(categories,(d,which)->{
@@ -329,20 +329,25 @@ public final class SenseActivity extends Activity {
        Toast.makeText(this,"Iniciá la escucha para registrar una omisión",Toast.LENGTH_SHORT).show();
        return;
       }
-      String line="OMISIÓN MANUAL · "+categories[which]+" · informado por la persona que prueba";
-      if(feedbackPanel!=null){
-       feedbackPanel.removeAllViews();
-       feedbackPanel.addView(text(line+" · solo durante esta prueba",14,0xffd5f0ff));
+      String kind=SoundValidationMetrics.KEYS[which];
+      if(SoundValidationStore.record(this,kind,false,true)){
+       refreshFeedbackSummary();
+       Toast.makeText(this,"Omisión registrada en el resumen local",Toast.LENGTH_SHORT).show();
+      }else{
+       Toast.makeText(this,"No se pudo guardar la omisión",Toast.LENGTH_LONG).show();
       }
-      // This manual observation is screen-only; no sound TXT.
+      // No audio recording or sound TXT is created.
      })
      .setNegativeButton("Cancelar",null).show();
    });
   }
   if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
+   feedbackStats=text("Validaciones manuales: sin datos",13,0xffb7eeea);
+   root.addView(feedbackStats);
    feedbackPanel=new LinearLayout(this);
    feedbackPanel.setOrientation(LinearLayout.VERTICAL);
    root.addView(feedbackPanel);
+   refreshFeedbackSummary();
   }
   root.addView(AuroraDesign.overline(this,screenMode==MODE_SOUND?"ÚLTIMOS 30 SONIDOS":"HISTORIAL DE ESTA CONVERSACIÓN"));
   if(screenMode==MODE_SOUND){
@@ -539,8 +544,9 @@ public final class SenseActivity extends Activity {
   showRecentSounds();
   if(soundFeedback!=null)soundFeedback.onConfirmed(label,true);
   if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||feedbackPanel==null)return;
-  feedbackPanel.removeAllViews();
-  feedbackPanel.addView(text("¿Coincidió el último sonido? "+label,14,0xffe5f8ff));
+  // Preserve up to five unanswered prompts, not just the latest event.
+  while(feedbackPanel.getChildCount()>=10)feedbackPanel.removeViewAt(0);
+  feedbackPanel.addView(text("¿Coincidió este sonido? "+label+" · IA "+score+"/100",14,0xffe5f8ff));
   LinearLayout feedback=new LinearLayout(this);
   feedback.setOrientation(LinearLayout.HORIZONTAL);
   Button yes=button("ACERTÓ");
@@ -556,6 +562,12 @@ public final class SenseActivity extends Activity {
   yes.setOnClickListener(v->saveSoundFeedback(label,score,true,yes,no));
   no.setOnClickListener(v->saveSoundFeedback(label,score,false,yes,no));
  }
+ private void refreshFeedbackSummary(){
+  if(feedbackStats==null)return;
+  SoundValidationMetrics m=SoundValidationStore.read(this);
+  feedbackStats.setText("PRUEBAS MANUALES · ACIERTOS "+m.totalYes()+
+   " · INCORRECTOS "+m.totalNo()+" · OMITIDOS "+m.totalMissed());
+ }
  private void saveSoundFeedback(String label,int score,boolean correct,Button yes,Button no){
   if(mode!=MODE_SOUND){
    Toast.makeText(this,"Iniciá la escucha para evaluar este sonido",Toast.LENGTH_SHORT).show();
@@ -565,11 +577,15 @@ public final class SenseActivity extends Activity {
   String verdict=correct?"ACERTÓ":"NO COINCIDE";
   // This is user feedback, not an independently measured accuracy metric.
   String entry="VALIDACIÓN MANUAL · "+verdict+" · "+label+" · puntaje IA "+score+"/100";
-  if(feedbackPanel!=null){
-   feedbackPanel.removeAllViews();
-   feedbackPanel.addView(text(entry+" · solo durante esta prueba",14,0xffd5f0ff));
+  boolean saved=SoundValidationStore.record(this,
+   SoundValidationMetrics.kindForSound(label),correct,false);
+  if(!saved){
+   yes.setEnabled(true);no.setEnabled(true);
+   Toast.makeText(this,"No se pudo guardar la evaluación",Toast.LENGTH_LONG).show();
+   return;
   }
-  Toast.makeText(this,"Evaluación mostrada en pantalla",Toast.LENGTH_SHORT).show();
+  refreshFeedbackSummary();
+  Toast.makeText(this,verdict+" · guardado en estadísticas privadas",Toast.LENGTH_SHORT).show();
  }
  private void beginHistory(String type){
   eventCount=0;eventsView.removeAllViews();lastSoundLabel="";lastSoundTime=0;
