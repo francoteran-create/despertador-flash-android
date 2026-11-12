@@ -1,4 +1,4 @@
-"""AURORA 4.8 regression: all final phrases are queued and persisted if translated.
+"""AURORA 4.10: only user-requested translation may be queued.
 
 Checks the Android integration contract in source in addition to compiling
 and running JUnit. Physical device tests are still required for ML Kit.
@@ -15,19 +15,21 @@ class AutoTranslationContract(unittest.TestCase):
         cls.sense=(JAVA/"SenseActivity.java").read_text(encoding="utf-8")
         cls.home=(JAVA/"MainActivity.java").read_text(encoding="utf-8")
 
-    def test_final_speech_sends_translation_automatically(self):
+    def test_final_speech_only_transcribes_and_never_auto_translates(self):
         start=self.sense.index("public void onResults(Bundle data){",self.sense.index("private void startSpeech(){"))
         finish=self.sense.index("public void onPartialResults(Bundle data){",start)
         callback=self.sense[start:finish]
         self.assertIn("recordEvent(phrase)",callback)
-        self.assertIn("translatePhrase(phrase,true)",callback)
-        self.assertLess(callback.index("recordEvent(phrase)"),callback.index("translatePhrase(phrase,true)"))
+        self.assertNotIn("translatePhrase(phrase,true)",callback)
+        self.assertIn('manualTranslationRequested=false;',callback)
+        self.assertIn('translateButton.setOnClickListener(v->translateLast())',self.sense)
+        self.assertIn('translatePhrase(phrase,true)',self.sense)
 
     def test_ui_keeps_original_and_translation_together(self):
         self.assertIn('"LO QUE SE DIJO · ORIGINAL"',self.sense)
-        self.assertIn('"TRADUCCIÓN AUTOMÁTICA"',self.sense)
-        self.assertIn('"TRADUCIR AUTOMÁTICAMENTE AL"',self.sense)
-        self.assertLess(self.sense.index('"LO QUE SE DIJO · ORIGINAL"'),self.sense.index('"TRADUCCIÓN AUTOMÁTICA"'))
+        self.assertIn('"TRADUCCIÓN A PEDIDO"',self.sense)
+        self.assertIn('"IDIOMA PARA TRADUCIR CUANDO LO PIDAS"',self.sense)
+        self.assertLess(self.sense.index('"LO QUE SE DIJO · ORIGINAL"'),self.sense.index('"TRADUCCIÓN A PEDIDO"'))
         self.assertNotIn("manualTranslationInput",self.sense)
         self.assertIn("PROBAR TRADUCTOR CON TEXTO ESCRITO",self.sense)
 
