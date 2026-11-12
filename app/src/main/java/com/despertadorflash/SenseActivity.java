@@ -2,6 +2,11 @@ package com.despertadorflash;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.WindowManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -70,6 +75,10 @@ public final class SenseActivity extends Activity {
  private int mode=MODE_NONE, requestedMode=MODE_NONE, screenMode=MODE_SPEECH;
  private LinearLayout root;
  private ScrollView pageScroll;
+ private FrameLayout screenFrame,wideOverlay;
+ private TextView wideOriginal,wideTranslation,wideLabel,wideStatus,wideIntensity;
+ private AuroraSpectrumView wideSpectrum;
+ private volatile boolean wideMode=false;
  private final SoundCaptureTelemetry captureStats=new SoundCaptureTelemetry();
  private volatile int lastSpeechError=-1;
  private volatile int speechFinalResults=0,speechPartialResults=0;
@@ -119,6 +128,7 @@ public final class SenseActivity extends Activity {
    Toast.makeText(this,"Escucha continua detenida para usar el micrófono aquí",Toast.LENGTH_LONG).show();
   }
   screenMode=getIntent().getIntExtra(EXTRA_MODE,MODE_SPEECH)==MODE_SOUND?MODE_SOUND:MODE_SPEECH;
+  setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
   draw();
   // Let Android release the previous microphone owner before acquiring it here.
   main.postDelayed(()->toggle(screenMode),backgroundWasActive?550L:0L);
@@ -128,7 +138,10 @@ public final class SenseActivity extends Activity {
   pageScroll=scroll;
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
   root.setPadding(dp(17),dp(14),dp(17),dp(25));
-  root.setBackground(new AuroraSkyDrawable());scroll.addView(root);setContentView(scroll);
+  root.setBackground(new AuroraSkyDrawable());scroll.addView(root);
+  screenFrame=new FrameLayout(this);
+  screenFrame.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
+  setContentView(screenFrame);
   LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);root.addView(top);
   Button back=button("‹");back.setContentDescription("Volver a AURORA");
   top.addView(back,new LinearLayout.LayoutParams(dp(56),dp(54)));back.setOnClickListener(v->finish());
@@ -262,6 +275,12 @@ public final class SenseActivity extends Activity {
   Button stop=button("■  DETENER");AuroraDesign.action(stop,0xff66334d,0xff4a253c,0xffa76e89);
   LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(0,dp(68),1f);stopParams.leftMargin=dp(9);
   controls.addView(stop,stopParams);stop.setOnClickListener(v->stopAll(true));
+  Button wide=button("↔  VISTA HORIZONTAL · PANTALLA COMPLETA");
+  wide.setContentDescription(screenMode==MODE_SOUND?
+   "Mostrar frecuencias luminosas en horizontal sin detener la escucha":
+   "Mostrar las palabras blancas sobre fondo negro en horizontal sin detener la conversación");
+  root.addView(wide,new LinearLayout.LayoutParams(-1,dp(61)));
+  wide.setOnClickListener(v->enterWideMode());
   root.addView(AuroraDesign.overline(this,screenMode==MODE_SOUND?"SONIDO ACTUAL":"LO QUE SE DIJO · ORIGINAL"));
   result=text(screenMode==MODE_SOUND?"Buscando sonidos…":initial.isEmpty()?"Esperando conversación…":initial,25,Color.WHITE);
   result.setGravity(Gravity.CENTER);result.setTypeface(Typeface.create("sans-serif-medium",Typeface.BOLD));
@@ -366,6 +385,16 @@ public final class SenseActivity extends Activity {
   TextView safety=text("Las detecciones son aproximadas. AURORA no sustituye las alarmas certificadas ni los dispositivos de emergencia.",13,0xffc3d6eb);
   root.addView(safety);
   updateModeVisibility();
+  buildWideView();
+  TextWatcher mirror=new TextWatcher(){
+   public void beforeTextChanged(CharSequence v,int start,int count,int after){}
+   public void onTextChanged(CharSequence v,int start,int before,int count){syncWideText();}
+   public void afterTextChanged(Editable value){}
+  };
+  result.addTextChangedListener(mirror);
+  state.addTextChangedListener(mirror);
+  if(translationResult!=null)translationResult.addTextChangedListener(mirror);
+  syncWideText();
  }
  private void showRecentSounds(){
   if(screenMode!=MODE_SOUND||eventsView==null)return;
