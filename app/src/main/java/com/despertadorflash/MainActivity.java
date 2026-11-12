@@ -642,8 +642,41 @@ public class MainActivity extends Activity {
   root.addView(validation);
   validation.setOnCheckedChangeListener((v,enabled)->
    prefs.edit().putBoolean("sense_feedback_mode",enabled).apply());
-  root.addView(txt("Modo de prueba voluntario: permite marcar aciertos o errores por sonido en la pantalla SONIDOS. "
-   +"Las respuestas de prueba se muestran solo en pantalla, sin crear archivos de sonidos ni guardar audio. Desactivado de forma predeterminada.",13));
+  root.addView(txt("Modo voluntario: en SONIDOS podés marcar ACERTÓ, NO COINCIDE o SONIDO NO DETECTADO. "
+   +"Se guardan únicamente conteos por tipo, sin audio, conversaciones, nombres ni ubicaciones. "
+   +"Los porcentajes reflejan solo las pruebas que marques vos; no son precisión de laboratorio.",13));
+  root.addView(section("RESULTADOS DE PRUEBAS REALES"));
+  SoundValidationMetrics metrics=SoundValidationStore.read(this);
+  TextView validationReport=txt(metrics.report(),13);
+  validationReport.setTextColor(0xffb3e5ec);
+  validationReport.setTextIsSelectable(true);
+  root.addView(validationReport);
+  Button refreshValidation=btn("ACTUALIZAR RESULTADOS DE PRUEBAS");
+  root.addView(refreshValidation);
+  refreshValidation.setOnClickListener(v->
+   validationReport.setText(SoundValidationStore.read(this).report()));
+  Button copyValidation=btn("COPIAR RESULTADOS SIN AUDIO");
+  root.addView(copyValidation);
+  copyValidation.setOnClickListener(v->{
+   String report=SoundValidationStore.read(this).report();
+   android.content.ClipboardManager clipboard=
+    (android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+   if(clipboard!=null){
+    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("AURORA EVALUACIÓN MANUAL",report));
+    Toast.makeText(this,"Resultados copiados, sin audio ni conversaciones",Toast.LENGTH_SHORT).show();
+   }
+  });
+  Button resetValidation=btn("BORRAR SOLO RESULTADOS DE PRUEBAS");
+  root.addView(resetValidation);
+  resetValidation.setOnClickListener(v->new AlertDialog.Builder(this)
+   .setTitle("Borrar estadísticas de validación")
+   .setMessage("Se borran únicamente los conteos manuales. Las conversaciones, "
+    +"alarmas y los últimos 30 sonidos no se modifican.")
+   .setNegativeButton("CANCELAR",null)
+   .setPositiveButton("BORRAR",(dialog,which)->{
+    SoundValidationStore.clear(this);
+    validationReport.setText(SoundValidationStore.read(this).report());
+   }).show());
   root.addView(section("COPIA DE SEGURIDAD DE CONFIGURACIÓN"));
   root.addView(txt("Guardá tus alarmas, horarios y preferencias en un TXT que podrás restaurar en AURORA. "
    +"No incluye fotos ni conversaciones. Los sonidos se conservan únicamente como lista de los últimos 30 eventos dentro de la app; no se exportan como archivos.",14));
