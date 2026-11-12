@@ -412,64 +412,54 @@ public final class SenseActivity extends Activity {
   LinearLayout content=new LinearLayout(this);
   content.setOrientation(LinearLayout.VERTICAL);
   content.setBackgroundColor(Color.BLACK);
-  content.setPadding(dp(17),dp(9),dp(17),dp(8));
+  content.setPadding(dp(9),dp(9),dp(9),dp(9));
   wideOverlay.addView(content,new FrameLayout.LayoutParams(-1,-1));
-  LinearLayout header=new LinearLayout(this);
-  header.setGravity(Gravity.CENTER_VERTICAL);
-  content.addView(header,new LinearLayout.LayoutParams(-1,dp(50)));
-  wideStatus=text("ESCUCHANDO",12,0xffb3b8c7);
-  wideStatus.setPadding(dp(5),0,dp(8),0);
-  header.addView(wideStatus,new LinearLayout.LayoutParams(0,-2,1f));
-  Button leave=button("VOLVER");
-  leave.setTextSize(12);
-  header.addView(leave,new LinearLayout.LayoutParams(dp(115),dp(48)));
-  leave.setOnClickListener(v->leaveWideMode());
-  Button stopWide=button("■ DETENER Y GUARDAR");
-  stopWide.setTextSize(12);
-  LinearLayout.LayoutParams stopSize=new LinearLayout.LayoutParams(dp(190),dp(48));
-  stopSize.leftMargin=dp(10);
-  header.addView(stopWide,stopSize);
-  stopWide.setOnClickListener(v->{
-   stopAll(true);
-   leaveWideMode();
-  });
   if(screenMode==MODE_SPEECH){
-   TextView originalCaption=text("LO QUE SE ESTÁ DICIENDO",12,0xffb0b0b0);
-   content.addView(originalCaption);
-   ScrollView spoken=new ScrollView(this);spoken.setFillViewport(true);
-   content.addView(spoken,new LinearLayout.LayoutParams(-1,0,1.2f));
-   wideOriginal=text("Esperando conversación…",34,Color.WHITE);
+   ScrollView spoken=new ScrollView(this);
+   spoken.setFillViewport(true);spoken.setBackgroundColor(Color.BLACK);
+   content.addView(spoken,new LinearLayout.LayoutParams(-1,0,1.4f));
+   wideOriginal=text("Esperando conversación…",40,Color.WHITE);
    wideOriginal.setTextIsSelectable(true);
    wideOriginal.setGravity(Gravity.CENTER);
-   wideOriginal.setPadding(dp(20),dp(7),dp(20),dp(7));
+   wideOriginal.setPadding(dp(32),dp(8),dp(32),dp(8));
    spoken.addView(wideOriginal);
-   TextView translatedCaption=text("TRADUCCIÓN AUTOMÁTICA",12,0xffb0b0b0);
-   content.addView(translatedCaption);
-   ScrollView translated=new ScrollView(this);translated.setFillViewport(true);
-   content.addView(translated,new LinearLayout.LayoutParams(-1,0,1f));
-   wideTranslation=text("Esperando la traducción…",30,Color.WHITE);
+   wideTranslationPanel=new ScrollView(this);
+   wideTranslationPanel.setFillViewport(true);
+   wideTranslationPanel.setBackgroundColor(Color.BLACK);
+   content.addView(wideTranslationPanel,new LinearLayout.LayoutParams(-1,0,1f));
+   wideTranslation=text("Traducción disponible cuando la solicites.",30,Color.WHITE);
    wideTranslation.setTextIsSelectable(true);
    wideTranslation.setGravity(Gravity.CENTER);
-   wideTranslation.setPadding(dp(20),dp(7),dp(20),dp(7));
-   translated.addView(wideTranslation);
+   wideTranslation.setPadding(dp(25),dp(7),dp(25),dp(7));
+   wideTranslationPanel.addView(wideTranslation);
+   wideTranslationPanel.setVisibility(View.GONE);
   }else{
    wideSpectrum=new AuroraSpectrumView(this);
    wideSpectrum.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
    content.addView(wideSpectrum,new LinearLayout.LayoutParams(-1,0,1f));
-   wideIntensity=text("INTENSIDAD RELATIVA · EN ESPERA",12,0xffc5c5c5);
-   wideIntensity.setGravity(Gravity.CENTER);
-   content.addView(wideIntensity,new LinearLayout.LayoutParams(-1,dp(28)));
-   wideLabel=text("Escuchando sonidos…",26,Color.WHITE);
-   wideLabel.setGravity(Gravity.CENTER);
-   wideLabel.setMaxLines(3);
-   content.addView(wideLabel,new LinearLayout.LayoutParams(-1,dp(110)));
+   wideLabel=text("Escuchando sonidos…",27,Color.WHITE);
+   wideLabel.setGravity(Gravity.CENTER);wideLabel.setMaxLines(3);
+   content.addView(wideLabel,new LinearLayout.LayoutParams(-1,dp(98)));
   }
+  // Single small back control; stopping/saving remains on the main screen.
+  TextView back=text("‹",30,Color.WHITE);
+  back.setGravity(Gravity.CENTER);
+  back.setPadding(0,0,0,0);
+  back.setBackgroundColor(Color.TRANSPARENT);
+  back.setContentDescription("Volver a vertical sin detener la escucha");
+  back.setClickable(true);back.setFocusable(true);
+  FrameLayout.LayoutParams backPosition=new FrameLayout.LayoutParams(
+   dp(48),dp(48),Gravity.TOP|Gravity.START);
+  backPosition.topMargin=dp(2);backPosition.leftMargin=dp(2);
+  wideOverlay.addView(back,backPosition);
+  back.setOnClickListener(v->leaveWideMode());
  }
  private void syncWideText(){
-  if(wideStatus!=null&&state!=null)wideStatus.setText(state.getText());
   if(screenMode==MODE_SPEECH){
    if(wideOriginal!=null&&result!=null)wideOriginal.setText(result.getText());
    if(wideTranslation!=null&&translationResult!=null)wideTranslation.setText(translationResult.getText());
+   if(wideTranslationPanel!=null)
+    wideTranslationPanel.setVisibility(manualTranslationRequested?View.VISIBLE:View.GONE);
   }else if(wideLabel!=null&&result!=null)wideLabel.setText(result.getText());
  }
  private void enterWideMode(){
@@ -592,6 +582,7 @@ public final class SenseActivity extends Activity {
   }
   invalidateTranslation(); // New session must not inherit pending translations.
   if(screenMode==MODE_SPEECH){
+   manualTranslationRequested=false;
    lastTranscript="";partialTranscript="";
    if(result!=null)result.setText("Escuchando… Esperando la primera frase.");
    if(translationResult!=null)translationResult.setText("Esperando una frase para traducir…");
@@ -1004,6 +995,10 @@ public final class SenseActivity extends Activity {
       speechFinalResults++;
       lastSpeechError=-1;
       result.setText(phrase);saveTranscript(phrase);recordEvent(phrase);
+      manualTranslationRequested=false;
+      if(translationResult!=null)
+       translationResult.setText("Tocá TRADUCIR ÚLTIMA FRASE cuando lo necesites.");
+      syncWideText();
        // Opt-in only; do not submit recognized speech automatically.
       speechRetries.reset();
       if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}
