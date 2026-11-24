@@ -2,13 +2,13 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 62; versionName '4.22-phone-notifications-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 63; versionName '4.23-aurora-voz-beta' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // existing user installation or its private data because of a debug key.
  buildTypes {
   debug {
-   applicationIdSuffix '.beta422'
-   resValue 'string', 'app_name', 'AURORA 4.22 BETA'
+   applicationIdSuffix '.beta423'
+   resValue 'string', 'app_name', 'AURORA 4.23 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
