@@ -72,7 +72,7 @@ public final class AuroraPhoneAlerts {
    .setVisibility(Notification.VISIBILITY_PUBLIC)
    .setPriority(Notification.PRIORITY_HIGH)
    .setVibrate(new long[]{0,220,100,220,120,320});
-  if(AuroraWatchAlert.isEnabled(c)){
+  if(!preview&&AuroraWatchAlert.isEnabled(c)){
    // Wearable image is an optional decoration; alerts never depend on it.
    AuroraWatchAlert.illustrate(c,b,label);
   }
