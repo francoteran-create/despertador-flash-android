@@ -278,92 +278,74 @@ public class MainActivity extends Activity {
   if(timer!=null){timer.cancel();timer=null;}
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(18),dp(18),dp(26));
-  root.setBackground(new AuroraSkyDrawable());
+  root.setBackgroundColor(Color.BLACK);
   scroll.addView(root);setContentView(scroll);
-  getWindow().setStatusBarColor(0xff080e27);getWindow().setNavigationBarColor(0xff090d20);
+  getWindow().setStatusBarColor(Color.BLACK);getWindow().setNavigationBarColor(Color.BLACK);
  }
  void pageTitle(String heading){
   Button back=btn("←   VOLVER AL INICIO");root.addView(back);back.setOnClickListener(v->{alarmsPage=false;timerPage=false;communicationPage=false;settingsPage=false;render();});
-  TextView title=txt(heading,27);title.setGravity(Gravity.CENTER);title.setTextColor(0xffb3eeff);title.setTypeface(null,Typeface.BOLD);root.addView(title);
+  TextView title=txt(heading,27);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(null,Typeface.BOLD);root.addView(title);
  }
  void render(){
   if(alarmsPage){stopHomeSpeech();renderAlarmsPage();return;}
   if(timerPage){stopHomeSpeech();renderTimerPage();return;}
   if(communicationPage){stopHomeSpeech();renderCommunicationPage();return;}
   if(settingsPage){stopHomeSpeech();renderSettingsPage();return;}
-  setupPage();
-  root.setPadding(dp(17),dp(10),dp(17),dp(32));
-  LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);root.addView(heading);
-  TextView title=txt("AURORA",34);title.setTextColor(0xfff0ffff);title.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
-  title.setLetterSpacing(.18f);heading.addView(title,new LinearLayout.LayoutParams(0,dp(64),1f));
-  Button profile=btn("◉");profile.setContentDescription("Mi perfil");
-  accent(profile,0xff17435b,0xff243b61,0xff7bdcec);
-  LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(dp(50),dp(50));pp.rightMargin=dp(7);heading.addView(profile,pp);
-  profile.setOnClickListener(v->{stopHomeSpeech();startActivity(new Intent(this,ProfileActivity.class));});
-  Button settings=btn("⚙");settings.setContentDescription("Configuración");
-  accent(settings,0xff1e2748,0xff2b2950,0xff8b87cd);heading.addView(settings,new LinearLayout.LayoutParams(dp(50),dp(50)));
+  renderMinimalHero();
+ }
+ /**
+  * One full-black home screen. Every cloud is a genuine focusable navigation
+  * action. Alarm and communication screens retain their existing logic.
+  */
+ void renderMinimalHero(){
+  stopHomeSpeech();
+  FrameLayout hero=new FrameLayout(this);
+  hero.setBackgroundColor(Color.BLACK);
+  getWindow().setStatusBarColor(Color.BLACK);
+  getWindow().setNavigationBarColor(Color.BLACK);
+  setContentView(hero);
+
+  // Small identity at the top, keeping the character itself the focal point.
+  TextView brand=txt("AURORA",21);
+  brand.setTextColor(Color.WHITE);
+  brand.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
+  brand.setLetterSpacing(.19f);brand.setPadding(dp(17),dp(8),0,0);
+  FrameLayout.LayoutParams brandParams=new FrameLayout.LayoutParams(-2,dp(48),Gravity.TOP|Gravity.START);
+  brandParams.topMargin=dp(8);hero.addView(brand,brandParams);
+
+  // Large, calm cloud to the center/right. It does not imply that the
+  // microphone is active just because the mascot is visible.
+  AuroraHeroCloudView centerCloud=new AuroraHeroCloudView(this);
+  FrameLayout.LayoutParams cloudParams=new FrameLayout.LayoutParams(dp(228),dp(226),Gravity.CENTER);
+  cloudParams.leftMargin=dp(62);
+  hero.addView(centerCloud,cloudParams);
+
+  LinearLayout choices=new LinearLayout(this);
+  choices.setOrientation(LinearLayout.VERTICAL);
+  choices.setGravity(Gravity.CENTER_VERTICAL);
+  FrameLayout.LayoutParams menuParams=new FrameLayout.LayoutParams(dp(144),-1,Gravity.START);
+  menuParams.leftMargin=dp(7);hero.addView(choices,menuParams);
+
+  addHeroShortcut(choices,"SONIDOS",()->openSense(SenseActivity.MODE_SOUND));
+  addHeroShortcut(choices,"CONVERSACIÓN",()->openSense(SenseActivity.MODE_SPEECH));
+  addHeroShortcut(choices,"ALARMA",()->{alarmsPage=true;render();});
+  addHeroShortcut(choices,"COMUNICAR",()->{communicationPage=true;render();});
+
+  Button settings=btn("⚙");
+  settings.setContentDescription("Abrir configuración");
+  settings.setTextColor(Color.WHITE);
+  settings.setBackgroundColor(Color.TRANSPARENT);
+  FrameLayout.LayoutParams settingsParams=new FrameLayout.LayoutParams(dp(56),dp(54),Gravity.TOP|Gravity.END);
+  settingsParams.topMargin=dp(5);settingsParams.rightMargin=dp(6);
+  hero.addView(settings,settingsParams);
   settings.setOnClickListener(v->{settingsPage=true;render();});
-
-  TextView subtitle=txt("TU ENTORNO, EN UNA NUEVA DIMENSIÓN",12);
-  subtitle.setTextColor(0xff93d9e5);subtitle.setLetterSpacing(.12f);subtitle.setPadding(dp(2),0,0,dp(10));root.addView(subtitle);
-  AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);
-  root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
-  // A small idle preview keeps the street-art mascot visible without
-  // implying that the microphone is capturing while the home page is idle.
-  AuroraCloudMascotView mascotPreview=new AuroraCloudMascotView(this);
-  mascotPreview.setListening(false);
-  root.addView(mascotPreview,new LinearLayout.LayoutParams(-1,-2));
-  root.addView(AuroraDesign.overline(this,"EXPLORAR  /  ACCESOS DIRECTOS"));
-
-  LinearLayout shortcuts=new LinearLayout(this);shortcuts.setOrientation(LinearLayout.HORIZONTAL);root.addView(shortcuts);
-  LinearLayout soundTile=homeTile("◖))","SONIDOS","Detección del entorno",0xff102c42,0xff192b51);
-  LinearLayout speechTile=homeTile("◉","CONVERSACIÓN","Transcribe; traduce si lo pedís",0xff282044,0xff183750);
-  LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(158),1f);
-  left.rightMargin=dp(8);shortcuts.addView(soundTile,left);shortcuts.addView(speechTile,new LinearLayout.LayoutParams(0,dp(158),1f));
-  soundTile.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
-  speechTile.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
-  soundTile.setContentDescription("Reconocer sonidos del entorno");
-  speechTile.setContentDescription("Transcribir conversación en vivo y traducir solo cuando se solicita");
-
-  LinearLayout services=new LinearLayout(this);services.setOrientation(LinearLayout.HORIZONTAL);
-  LinearLayout.LayoutParams serviceParams=new LinearLayout.LayoutParams(-1,-2);serviceParams.topMargin=dp(9);root.addView(services,serviceParams);
-  Button alarms=btn("◷  ALARMAS");accent(alarms,0xff534120,0xff564021,0xffd6ad5f);
-  LinearLayout.LayoutParams halfA=new LinearLayout.LayoutParams(0,dp(66),1f);halfA.rightMargin=dp(8);services.addView(alarms,halfA);
-  alarms.setOnClickListener(v->{alarmsPage=true;render();});
-  Button messages=btn("▣  COMUNICAR");accent(messages,0xff432a69,0xff2a3466,0xffb28af1);
-  services.addView(messages,new LinearLayout.LayoutParams(0,dp(66),1f));
-  messages.setOnClickListener(v->{stopHomeSpeech();communicationPage=true;render();});
-
-  root.addView(AuroraDesign.overline(this,"CONVERSACIÓN · TRADUCCIÓN A PEDIDO"));
-  LinearLayout transcriptCard=auroraCard(0xff172b43,0xff201e42);
-  transcriptCard.setPadding(dp(17),dp(14),dp(17),dp(15));
-  TextView speechHeading=txt("PALABRAS EN VIVO",16);speechHeading.setTypeface(null,Typeface.BOLD);
-  speechHeading.setTextColor(0xffa8ecff);transcriptCard.addView(speechHeading);
-  homeTranscript=txt("La conversación se transcribe en vivo. La traducción aparece únicamente cuando tocás TRADUCIR.",20);
-  homeTranscript.setMinHeight(dp(66));homeTranscript.setMaxLines(3);
-  homeTranscript.setEllipsize(android.text.TextUtils.TruncateAt.END);transcriptCard.addView(homeTranscript);
-  homeSpeechStatus=txt("Elegí el idioma hablado. La traducción es opcional y no comienza sola.",13);
-  homeSpeechStatus.setTextColor(0xffb5cce7);transcriptCard.addView(homeSpeechStatus);
-  LinearLayout speechControls=new LinearLayout(this);speechControls.setOrientation(LinearLayout.HORIZONTAL);transcriptCard.addView(speechControls);
-  homeSpeechToggle=btn("🎙  ABRIR CONVERSACIÓN");accent(homeSpeechToggle,0xff4b388b,0xff275177,0xffac97f1);
-  LinearLayout.LayoutParams speechHalf=new LinearLayout.LayoutParams(0,dp(62),1f);speechHalf.rightMargin=dp(8);
-  speechControls.addView(homeSpeechToggle,speechHalf);
-  Button expand=btn("VER CONVERSACIONES");accent(expand,0xff1a455d,0xff273452,0xff62bdda);
-  speechControls.addView(expand,new LinearLayout.LayoutParams(0,dp(62),1f));
-  homeSpeechToggle.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
-  expand.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
-  root.addView(transcriptCard);
-
-  LinearLayout lower=new LinearLayout(this);lower.setOrientation(LinearLayout.HORIZONTAL);
-  LinearLayout.LayoutParams lowerParams=new LinearLayout.LayoutParams(-1,-2);lowerParams.topMargin=dp(8);root.addView(lower,lowerParams);
-  Button records=btn("📁  REGISTROS");accent(records,0xff193f53,0xff223557,0xff60baca);
-  LinearLayout.LayoutParams recordParam=new LinearLayout.LayoutParams(0,dp(60),1f);recordParam.rightMargin=dp(8);lower.addView(records,recordParam);
-  records.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)));
-  Button timerButton=btn("◷  TEMPORIZADOR");accent(timerButton,0xff33344f,0xff243757,0xff8e9dd5);
-  lower.addView(timerButton,new LinearLayout.LayoutParams(0,dp(60),1f));
-  timerButton.setOnClickListener(v->{timerPage=true;render();});
-  TextView foot=txt("AURORA  /  ACCESIBILIDAD CON IDENTIDAD",12);
-  foot.setGravity(Gravity.CENTER);foot.setTextColor(0xff719bb9);root.addView(foot);
+ }
+ void addHeroShortcut(LinearLayout choices,String text,Runnable navigate){
+  AuroraHeroCloudButton cloud=new AuroraHeroCloudButton(this,text);
+  LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(134),dp(96));
+  lp.topMargin=dp(7);lp.bottomMargin=dp(7);
+  choices.addView(cloud,lp);
+  cloud.setOnClickListener(v->navigate.run());
  }
  LinearLayout homeTile(String symbol,String name,String subtitle,int top,int bottom){
   LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);
