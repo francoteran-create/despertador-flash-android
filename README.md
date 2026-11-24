@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.18-watch-picture-alerts-beta, versionCode 58), revisión en PR #1.
+  (4.19-minimal-black-hero-beta, versionCode 59), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -47,6 +47,18 @@ El script tiene tests en `scripts/tests/` ejecutados por GitHub Actions.
 Las notificaciones de eventos simultaneos se identifican por etiqueta,
 para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
+
+## Cambios 4.19 — portada HERO minimalista
+- Pantalla inicial totalmente negra; nube blanca central con gesto
+  tranquilo y cuatro botones con forma de nube a la izquierda:
+  SONIDOS, CONVERSACIÓN, ALARMA y COMUNICAR.
+- Se quitaron del inicio las tarjetas repetidas, el reloj decorativo
+  y los paneles de transcripción. No se eliminaron funciones internas.
+- Páginas secundarias SONIDOS, CONVERSACIÓN, ALARMA y COMUNICAR
+  usan fondo negro. El estilo de todos los controles internos todavía
+  necesita armonización visual y ensayo de accesibilidad.
+- Ajustes quedan bajo un botón pequeño, discreto, arriba a la derecha.
+- Ver `docs/AURORA_419_HERO_MINIMALISTA.md`. No validado en S9+.
 
 ## Cambios 4.18 — dibujos en notificaciones para Wear OS
 - Notificaciones Android con ilustraciones monocromas de puerta,
@@ -116,10 +128,10 @@ la misma categoria. Desactivar avisos retira solo esa categoria.
   Ver `docs/AURORA_414_RESILIENCIA_VOZ.md`.
 
 ## Instalación de la beta y seguridad de los datos
-La versión 4.18 BETA usa el paquete independiente
-`com.despertadorflash.beta418`, nombre visible `AURORA 4.18 BETA`.
+La versión 4.19 BETA usa el paquete independiente
+`com.despertadorflash.beta419`, nombre visible `AURORA 4.19 BETA`.
 La app original es `com.despertadorflash`, y las betas previas
-(4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.13, 4.14, 4.15, 4.16 y 4.17) tienen identificadores distintos. Se instala en paralelo
+(4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.13, 4.14, 4.15, 4.16, 4.17 y 4.18) tienen identificadores distintos. Se instala en paralelo
 **sin desinstalar las anteriores**, y NO migra sus alarmas o datos de
 forma automatica. No mantener dos escuchas de microfono activas ni
 activar alarmas duplicadas.
@@ -133,7 +145,7 @@ Instrucciones de esta beta: `docs/AURORA_413_LABORATORIO_SONIDOS.md`, `docs/AURO
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.18 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.19 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -153,7 +165,7 @@ se respaldan por TXT, con hash verificado. Se conservan antiguos archivos
 SONIDOS de otras versiones sin borrarlos: pueden verse activando
 `Mostrar archivos antiguos de sonidos`. No se crean nuevos archivos de sonidos.
 
-La beta 4.18 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.19 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Correcciones criticas 4.3: escucha y traduccion
