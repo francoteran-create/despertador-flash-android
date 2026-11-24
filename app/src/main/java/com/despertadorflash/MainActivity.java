@@ -427,6 +427,9 @@ public class MainActivity extends Activity {
   quick.addView(sound,half1);quick.addView(speech,new LinearLayout.LayoutParams(0,dp(155),1f));
   sound.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   speech.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  Button auroraVoice=btn("AURORA VOZ · TEXTO A AUDIO Y WHATSAPP");
+  root.addView(auroraVoice,new LinearLayout.LayoutParams(-1,dp(66)));
+  auroraVoice.setOnClickListener(v->startActivity(new Intent(this,AuroraVoiceActivity.class)));
   root.addView(AuroraDesign.overline(this,"MENSAJE PERSONALIZADO"));
   EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);
   msg.setTextSize(20);msg.setMinLines(2);msg.setHintTextColor(0xffabc5d8);
