@@ -178,7 +178,7 @@ public final class SenseActivity extends Activity {
   pageScroll=scroll;
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
   root.setPadding(dp(17),dp(14),dp(17),dp(25));
-  root.setBackground(new AuroraSkyDrawable());scroll.addView(root);
+  root.setBackgroundColor(Color.BLACK);scroll.addView(root);
   screenFrame=new FrameLayout(this);
   screenFrame.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
   setContentView(screenFrame);
