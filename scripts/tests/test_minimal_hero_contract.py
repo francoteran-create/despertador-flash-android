@@ -11,7 +11,8 @@ BUTTON=(ROOT/"app/src/main/java/com/despertadorflash/AuroraHeroCloudButton.java"
 class HeroNavigationTest(unittest.TestCase):
  def test_exact_four_cloud_nav_targets(self):
   area=MAIN[MAIN.index("void renderMinimalHero(){"):MAIN.index("LinearLayout homeTile(")]
-  self.assertEqual(area.count("addHeroShortcut(choices,"),4)
+  self.assertEqual(area.count("addHeroShortcut(upper,"),2)
+  self.assertEqual(area.count("addHeroShortcut(lower,"),2)
   for title in ('"SONIDOS"','"CONVERSACIÓN"','"ALARMA"','"COMUNICAR"'):
    self.assertIn(title,area)
   self.assertIn("openSense(SenseActivity.MODE_SOUND)",area)
@@ -31,7 +32,9 @@ class HeroNavigationTest(unittest.TestCase):
   self.assertIn("setContentDescription(\"Abrir \"+title)",BUTTON)
   self.assertIn("setFocusable(true)",BUTTON)
   self.assertIn("setOnClickListener(v->navigate.run())",MAIN)
-  self.assertIn("nube blanca en espera",HERO)
+  self.assertIn('PREF_CHARACTER',MAIN)
+  self.assertIn('setSingleChoiceItems',MAIN)
+  self.assertIn("Personaje AURORA",HERO)
   for bad in ["AudioRecord","SpeechRecognizer","CameraManager","HttpURLConnection"]:
    self.assertNotIn(bad,HERO)
  def test_motion_can_be_reduced(self):
