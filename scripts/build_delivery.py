@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.24",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.25",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -66,7 +66,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         story.append(paragraph("- "+name+": "+desc,body))
     rows=[
         ("Versión compilada",version),
-        ("Paquete independiente","com.despertadorflash.beta424"),
+        ("Paquete independiente","com.despertadorflash.beta425"),
         ("Repositorio",REPO),
         ("Rama de trabajo",BRANCH),
         ("Commit exacto",commit),
@@ -112,10 +112,14 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "pausas de hasta 30 s; los sonidos tienen hasta 5 reconexiones. "
          "Se bloquean resultados de detectores anteriores para no "
          "generar avisos falsos al reconectar.")
-    item("MODO MOSTRADOR 4.24", "pantalla dividida y girada 180 grados "
-         "para la persona de enfrente, reconocimiento por turnos solo "
-         "al solicitarlo, texto para responder y voz Android a pedido. "
-         "No guarda conversaciones. Falta probar pantalla real.")
+    item("MODO MOSTRADOR 4.25 - DIRECCION CORREGIDA",
+         "el usuario escribe en la mitad inferior y su mensaje se ve "
+         "girado 180 grados en la mitad superior hacia la persona "
+         "de enfrente. Cuando esta responde hablando, el usuario "
+         "activa ESCUCHAR RESPUESTA y lee la transcripcion abajo "
+         "sin sustituir el mensaje escrito de arriba. TTS opcional "
+         "para leer el mensaje del usuario. No guarda conversaciones. "
+         "Falta probar en telefono real.")
     item("AURORA VOZ 4.23", "nuevo modulo COMUNICAR: texto en español "
          "a archivo WAV local, frases rapidas, vista previa, "
          "WhatsApp u otra app mediante compartir archivo. "
@@ -243,10 +247,14 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.24 BETA ARM64 sin desinstalar la anterior.",
-        "Abrir COMUNICAR > MODO MOSTRADOR; verificar que la parte "
-        "superior se lea desde el lado opuesto y la inferior desde "
-        "el lado del usuario.",
+        "Instalar AURORA 4.25 BETA ARM64 sin desinstalar la anterior.",
+        "MOSTRADOR: escribir abajo y MOSTRAR TEXTO; el mensaje "
+        "debe aparecer arriba girado 180 grados, y no en la zona "
+        "de transcripcion del usuario.",
+        "MOSTRADOR: hablar otra persona tras ESCUCHAR RESPUESTA; "
+        "la transcripcion DEBE mostrarse abajo del lado del "
+        "usuario, y NO sustituir el mensaje de arriba.",
+
         "Tocar ESCUCHAR y hablar; verificar transcripcion visible "
         "y que el microfono se detenga al finalizar.",
         "Escribir respuesta, tocar MOSTRAR TEXTO y DECIR EN VOZ "
@@ -310,7 +318,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.24 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.25 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -337,9 +345,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "y la estabilidad. La estetica queda postergada.",
         "AURORA VOZ: texto a WAV local y compartir con WhatsApp u otra "
         "app esta implementado en codigo; falta probarlo en Galaxy S9+.",
-        "Modo Mostrador 4.24: pantalla doble, transcripcion manual "
-        "por turnos y respuesta escrita/voz estan compiladas; "
-        "falta validacion fisica en Galaxy S9+.",
+        "Modo Mostrador 4.25: el USUARIO escribe abajo y lee abajo "
+        "la RESPUESTA transcrita; la persona de ENFRENTE solo ve "
+        "arriba el MENSAJE ESCRITO por el usuario girado 180 grados. "
+        "No intercambiar los dos destinos. Falta validacion fisica.",
         "Pendientes prioritarios: confirmar notificaciones y alertas "
         "reales, validar AURORA VOZ y Modo Mostrador, "
         "incorporar boton SOS y musica con vibraciones, fortalecer "
@@ -370,13 +379,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.24 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.25 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.24 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.25 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -385,13 +394,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.24-modo-mostrador-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.25-mostrador-direccion-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_24_ARM64.apk"
-    pdf=OUT/"AURORA_4_24_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_25_ARM64.apk"
+    pdf=OUT/"AURORA_4_25_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
