@@ -2,13 +2,13 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 58; versionName '4.18-watch-picture-alerts-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 59; versionName '4.19-minimal-black-hero-beta' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // existing user installation or its private data because of a debug key.
  buildTypes {
   debug {
-   applicationIdSuffix '.beta418'
-   resValue 'string', 'app_name', 'AURORA 4.18 BETA'
+   applicationIdSuffix '.beta419'
+   resValue 'string', 'app_name', 'AURORA 4.19 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
