@@ -137,7 +137,7 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
     public void onError(int error){
      stopListening();status.setText("No se reconoció la frase (código "+error+"). Probá de nuevo.");
     }
-    public void onResults(Bundle result){receiveText(result);}
+    public void onResults(Bundle result){receiveText(result);stopListening();status.setText("Frase recibida. Tocá ESCUCHAR para la siguiente.");}
     public void onPartialResults(Bundle result){receiveText(result);}
     public void onEvent(int type,Bundle params){}
    });
@@ -158,8 +158,6 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
    String recognized=words.get(0).trim();
    if(!recognized.isEmpty())heard.setText(recognized);
   }
-  // Final result stops capture. Partial result remains visible meanwhile.
-  if(result.containsKey(SpeechRecognizer.CONFIDENCE_SCORES)){stopListening();status.setText("Frase recibida. Tocá ESCUCHAR para la siguiente.");}
  }
  private void stopListening(){
   main.removeCallbacks(timeout);
