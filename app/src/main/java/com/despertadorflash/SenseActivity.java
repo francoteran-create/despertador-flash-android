@@ -123,6 +123,7 @@ public final class SenseActivity extends Activity {
  private TextView audioHealth;
  private TextView state, result, detail;
  private AuroraVisualEngineView visual;
+ private AuroraCloudMascotView cloudMascot;
  private Button speechButton, soundsButton, translateButton;
  private TextView translationResult, translationStatus, translationOriginal;
 
@@ -198,9 +199,13 @@ public final class SenseActivity extends Activity {
   root.addView(AuroraDesign.overline(this,"AURORA  /  INTELIGENCIA SENSORIAL"));
   TextView intro=text(screenMode==MODE_SOUND?"Escuchá lo que sucede a tu alrededor.":"Transcribí y traducí automáticamente, frase por frase.",15,0xffcbddee);
   intro.setGravity(Gravity.CENTER);root.addView(intro);
+  cloudMascot=new AuroraCloudMascotView(this);
+  root.addView(cloudMascot,new LinearLayout.LayoutParams(-1,-2));
   visual=new AuroraVisualEngineView(this,screenMode==MODE_SOUND?AuroraVisualEngineView.SOUND:AuroraVisualEngineView.SPEECH);
   LinearLayout.LayoutParams vis=new LinearLayout.LayoutParams(-1,-2);vis.bottomMargin=dp(6);root.addView(visual,vis);
-  if(screenMode==MODE_SPEECH)visual.setVisibility(View.GONE);
+  // Old decorative renderer is kept in code; portrait instead displays
+  // the new lightweight black/white mascot for both modes.
+  visual.setVisibility(View.GONE);
   state=text("MICRÓFONO APAGADO",16,0xff8fe8df);state.setGravity(Gravity.CENTER);
   state.setBackground(bg(0xff0c303f,0xff14264b));root.addView(state);
   String initial="";
@@ -575,6 +580,7 @@ public final class SenseActivity extends Activity {
   */
  private void recordSoundEvent(String label,int score){
   RecentSoundEvents.add(this,label,score);
+  if(cloudMascot!=null)cloudMascot.showConfirmedEvent(label);
   showRecentSounds();
   if(soundFeedback!=null)soundFeedback.onConfirmed(label,true);
   if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||feedbackPanel==null)return;
@@ -763,7 +769,7 @@ public final class SenseActivity extends Activity {
   if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
    requestedMode=next;requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},MIC_REQUEST);return;
   }
-  stopAll(false);mode=next;if(visual!=null){visual.setListening(true);visual.setDetected(false);}beginHistory(next==MODE_SOUND?"sonidos":"conversacion");updateModeVisibility();
+  stopAll(false);mode=next;if(visual!=null){visual.setListening(true);visual.setDetected(false);}if(cloudMascot!=null)cloudMascot.setListening(true);beginHistory(next==MODE_SOUND?"sonidos":"conversacion");updateModeVisibility();
   if(next==MODE_SPEECH)startSpeech();else startSounds();
  }
  @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] grants){
@@ -1010,6 +1016,7 @@ public final class SenseActivity extends Activity {
     }
     public void onBeginningOfSpeech(){
      if(mode==MODE_SPEECH&&recognizer==current){
+      if(cloudMascot!=null)cloudMascot.setSpeaking(true);
       speechWatchdog.speechBegan(SystemClock.elapsedRealtime());
       state.setText("DETECTANDO VOZ");
      }
@@ -1018,6 +1025,7 @@ public final class SenseActivity extends Activity {
     public void onBufferReceived(byte[] buffer){}
     public void onEndOfSpeech(){
      if(mode==MODE_SPEECH&&recognizer==current){
+      if(cloudMascot!=null)cloudMascot.setSpeaking(false);
       speechWatchdog.speechEnded(SystemClock.elapsedRealtime());
       state.setText("PROCESANDO PALABRAS…");
      }
@@ -1025,6 +1033,7 @@ public final class SenseActivity extends Activity {
     public void onError(int error){
      if(mode!=MODE_SPEECH||recognizer!=current)return;
      lastSpeechError=error;
+     if(cloudMascot!=null)cloudMascot.setSpeaking(false);
      if(audioHealth!=null)audioHealth.setText("Error del reconocimiento de voz: código "+
       error+" · "+SpeechRetryController.explanation(error));
      releaseSpeech();
@@ -1066,6 +1075,7 @@ public final class SenseActivity extends Activity {
       speechRetries.reset();
       if(visual!=null){visual.setEnergy(.75f);visual.setDetected(true);}
      }
+     if(cloudMascot!=null)cloudMascot.setSpeaking(false);
      state.setText("FRASE RECIBIDA · REANUDANDO");
      releaseSpeech();
      scheduleSpeechRetry(speechRetries.silenceDelay());
@@ -1077,6 +1087,7 @@ public final class SenseActivity extends Activity {
       speechPartialResults++;
       partialTranscript=partial.get(0).trim();
       if(!partialTranscript.isEmpty()){
+         if(cloudMascot!=null)cloudMascot.setSpeaking(true);
          speechWatchdog.partialResult(SystemClock.elapsedRealtime());
        result.setText(partialTranscript);
          if(translationStatus!=null)translationMessage("Transcripción en vivo. Traducí únicamente cuando quieras.");
@@ -1333,6 +1344,7 @@ public final class SenseActivity extends Activity {
   if(wideSpectrum!=null)wideSpectrum.setListening(false);
   if(wideIntensity!=null)wideIntensity.setText("MICRÓFONO DETENIDO");
   if(visual!=null){visual.setListening(false);visual.setDetected(false);visual.setEnergy(0f);}
+  if(cloudMascot!=null)cloudMascot.setListening(false);
   finishHistory();
   releaseSpeech();
   AudioRecord record=audioRecord;if(record!=null){try{record.stop();}catch(Exception ignored){}}
