@@ -9,7 +9,7 @@ class MascotContractTest(unittest.TestCase):
  def test_portrait_view_and_home_preview(self):
   self.assertIn("new AuroraCloudMascotView(this)",SENSE)
   self.assertIn("new AuroraHeroCloudView(this)",HOME)
-  self.assertIn("nube blanca en espera",(ROOT/"app/src/main/java/com/despertadorflash/AuroraHeroCloudView.java").read_text(encoding="utf-8"))
+  self.assertIn("Personaje AURORA",(ROOT/"app/src/main/java/com/despertadorflash/AuroraHeroCloudView.java").read_text(encoding="utf-8"))
  def test_audio_state_drives_mascot(self):
   self.assertIn("cloudMascot.setListening(true)",SENSE)
   self.assertIn("cloudMascot.setListening(false)",SENSE)
