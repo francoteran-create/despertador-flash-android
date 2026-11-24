@@ -24,14 +24,14 @@ import java.util.Locale;
 
 /**
  * Two-way counter conversation on a single phone. No server, no saved messages.
- * Staff text is rotated 180 degrees (opposite side of the counter).
+ * User-typed text faces the other person; that person's spoken reply is transcribed toward the user.
  * Speech recognition is user-triggered, never background recording.
  */
 public final class AuroraCounterActivity extends Activity implements TextToSpeech.OnInitListener {
  private SpeechRecognizer recognizer;
  private TextToSpeech voice;
  private boolean voiceReady=false,listening=false;
- private TextView heard,status;
+ private TextView facingMessage,replyTranscript,status;
  private EditText typed;
  private Button listen;
  private final Handler main=new Handler(Looper.getMainLooper());
@@ -66,22 +66,24 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
   staff.setRotation(180f);
   screen.addView(staff,new LinearLayout.LayoutParams(-1,0,1f));
   staff.addView(label("PERSONA DE ENFRENTE",14));
-  heard=label("Tocá ESCUCHAR y hablá hacia el teléfono.",24);
-  heard.setTextIsSelectable(true);
-  staff.addView(heard,new LinearLayout.LayoutParams(-1,0,1f));
-  listen=button("ESCUCHAR · MICRÓFONO APAGADO");
-  staff.addView(listen,new LinearLayout.LayoutParams(-1,dp(53)));
-  listen.setOnClickListener(v->{
-   if(listening)stopListening();else beginListening();
-  });
+  facingMessage=label("Esperando mensaje escrito…",24);
+  facingMessage.setTextIsSelectable(true);
+  staff.addView(facingMessage,new LinearLayout.LayoutParams(-1,0,1f));
 
   // Lower half faces the AURORA user; typed answers remain editable.
   LinearLayout user=vertical();
   screen.addView(user,new LinearLayout.LayoutParams(-1,0,1f));
   status=label("MODO MOSTRADOR · LISTO",13);status.setTextColor(0xffd9b4ef);
   user.addView(status,new LinearLayout.LayoutParams(-1,dp(42)));
+  user.addView(label("RESPUESTA DE LA OTRA PERSONA",14));
+  replyTranscript=label("Cuando te respondan, tocá ESCUCHAR y leé la respuesta acá.",20);
+  replyTranscript.setTextIsSelectable(true);
+  user.addView(replyTranscript,new LinearLayout.LayoutParams(-1,0,1f));
+  listen=button("ESCUCHAR RESPUESTA · MICRÓFONO APAGADO");
+  user.addView(listen,new LinearLayout.LayoutParams(-1,dp(48)));
+  listen.setOnClickListener(v->{if(listening)stopListening();else beginListening();});
   typed=new EditText(this);typed.setTextColor(Color.WHITE);typed.setHintTextColor(0xffaaaaaa);
-  typed.setTextSize(21);typed.setHint("Escribí tu respuesta aquí");
+  typed.setTextSize(21);typed.setHint("Escribí lo que querés decirle");
   typed.setGravity(Gravity.TOP);typed.setMinLines(2);
   user.addView(typed,new LinearLayout.LayoutParams(-1,0,1f));
   LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);
@@ -93,15 +95,15 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
   show.setOnClickListener(v->{
    String message=typed.getText().toString().trim();
    if(message.isEmpty()){status.setText("Primero escribí un mensaje.");return;}
-   heard.setText(message);status.setText("Mensaje mostrado a la otra persona.");
+   facingMessage.setText(message);status.setText("Tu mensaje aparece del otro lado.");
   });
   say.setOnClickListener(v->{
    String message=typed.getText().toString().trim();
    if(message.isEmpty()){status.setText("Primero escribí un mensaje.");return;}
    if(!voiceReady){status.setText("La voz Android no está disponible.");return;}
    voice.speak(message,TextToSpeech.QUEUE_FLUSH,null,"aurora_counter_speak");
-   heard.setText(message);
-   status.setText("Leyendo la respuesta en voz alta.");
+   facingMessage.setText(message);
+   status.setText("Leyendo tu mensaje en voz alta.");
   });
   Button close=button("← VOLVER A COMUNICAR");
   user.addView(close,new LinearLayout.LayoutParams(-1,dp(48)));
@@ -156,13 +158,13 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
   ArrayList<String> words=result.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
   if(words!=null&&!words.isEmpty()){
    String recognized=words.get(0).trim();
-   if(!recognized.isEmpty())heard.setText(recognized);
+   if(!recognized.isEmpty())replyTranscript.setText(recognized);
   }
  }
  private void stopListening(){
   main.removeCallbacks(timeout);
   listening=false;
-  if(listen!=null)listen.setText("ESCUCHAR · MICRÓFONO APAGADO");
+  if(listen!=null)listen.setText("ESCUCHAR RESPUESTA · MICRÓFONO APAGADO");
   if(recognizer!=null){
    SpeechRecognizer old=recognizer;recognizer=null;
    try{old.cancel();old.destroy();}catch(RuntimeException ignored){}
