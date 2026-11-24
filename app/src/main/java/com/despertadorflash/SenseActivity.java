@@ -583,7 +583,7 @@ public final class SenseActivity extends Activity {
   if(cloudMascot!=null)cloudMascot.showConfirmedEvent(label);
   showRecentSounds();
   if(soundFeedback!=null)soundFeedback.onConfirmed(label,true);
-  AuroraWatchAlert.notifyForeground(this,label);
+  AuroraPhoneAlerts.post(this,label,false);
   if(!getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)||feedbackPanel==null)return;
   // Preserve up to five unanswered prompts, not just the latest event.
   while(feedbackPanel.getChildCount()>=10)feedbackPanel.removeViewAt(0);
