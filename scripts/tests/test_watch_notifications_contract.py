@@ -18,7 +18,8 @@ class WatchContract(unittest.TestCase):
   start=SENSE.index("private void recordSoundEvent(")
   stop=SENSE.index("private void refreshFeedbackSummary(",start)
   area=SENSE[start:stop]
-  self.assertIn("AuroraWatchAlert.notifyForeground(this,label);",area)
+  self.assertIn("AuroraPhoneAlerts.post(this,label,false);",area)
+  self.assertNotIn("AuroraWatchAlert.notifyForeground(this,label);",area)
   self.assertNotIn("AuroraWatchAlert.previewDoor(this);",area)
  def test_preview_explicitly_no_mic_recording(self):
   self.assertIn("PRUEBA: dibujo de puerta",WATCH)
