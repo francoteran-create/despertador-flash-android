@@ -653,6 +653,32 @@ public class MainActivity extends Activity {
      "El teléfono puede bloquear la linterna si otra aplicación utiliza la cámara.")
     .setPositiveButton("CERRAR",null).show();
   });
+  root.addView(section("SMARTWATCH · AVISOS CON DIBUJOS"));
+  android.widget.Switch watchPictures=new android.widget.Switch(this);
+  watchPictures.setText("Avisos con dibujo para relojes compatibles");
+  watchPictures.setTextColor(Color.WHITE);watchPictures.setTextSize(16);
+  watchPictures.setChecked(AuroraWatchAlert.isEnabled(this));
+  root.addView(watchPictures);
+  watchPictures.setOnCheckedChangeListener((v,enabled)->
+   prefs.edit().putBoolean(AuroraWatchAlert.PREF,enabled).apply());
+  root.addView(txt("AURORA dibuja el evento en la notificación de Android. "+
+   "Un reloj Wear OS vinculado puede reflejarla y vibrar si sus avisos están habilitados. "+
+   "Algunos relojes muestran solo texto o un ícono pequeño; todavía no hay app de reloj independiente.",13));
+  Button watchPreview=btn("PROBAR DIBUJO DE PUERTA EN RELOJ · SIN MICRÓFONO");
+  root.addView(watchPreview);
+  watchPreview.setOnClickListener(v->{
+   if(!AuroraWatchAlert.isEnabled(this)){
+    Toast.makeText(this,"Activá primero los avisos con dibujos",Toast.LENGTH_LONG).show();return;
+   }
+   if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+      !=android.content.pm.PackageManager.PERMISSION_GRANTED){
+    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},1);
+    Toast.makeText(this,"Autorizá notificaciones y repetí la prueba",Toast.LENGTH_LONG).show();return;
+   }
+   AuroraWatchAlert.previewDoor(this);
+   Toast.makeText(this,"Prueba enviada a las notificaciones del teléfono. "+
+    "Revisá si también aparece en tu reloj vinculado.",Toast.LENGTH_LONG).show();
+  });
   root.addView(section("MODO DE VALIDACIÓN DE SONIDOS"));
   android.widget.Switch validation=new android.widget.Switch(this);
   validation.setText("Evaluar detecciones con ACERTÓ / NO COINCIDE");
