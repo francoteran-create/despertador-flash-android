@@ -259,6 +259,7 @@ public final class AuroraSoundMonitorService extends Service {
     .setContentText(found+" · puntaje IA "+percent+"/100").setContentIntent(tap)
     .setCategory(Notification.CATEGORY_STATUS).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PUBLIC)
     .setPriority(Notification.PRIORITY_HIGH).setVibrate(SoundAlertPreferences.vibrationPattern(group));
+   AuroraWatchAlert.illustrate(this,b,found);
    try{
     nm.notify(SoundAlertPreferences.notificationTag(group,found),SoundAlertPreferences.notificationId(group),b.build());
     // Background vibration belongs to Android's notification channel.
