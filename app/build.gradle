@@ -2,13 +2,13 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 59; versionName '4.19-minimal-black-hero-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 60; versionName '4.20-graffiti-hero-beta' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // existing user installation or its private data because of a debug key.
  buildTypes {
   debug {
-   applicationIdSuffix '.beta419'
-   resValue 'string', 'app_name', 'AURORA 4.19 BETA'
+   applicationIdSuffix '.beta420'
+   resValue 'string', 'app_name', 'AURORA 4.20 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
