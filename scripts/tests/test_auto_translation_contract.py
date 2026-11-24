@@ -48,8 +48,11 @@ class AutoTranslationContract(unittest.TestCase):
         self.assertIn("translationQueue.clear()",self.sense)
 
     def test_main_page_links_to_single_translation_flow(self):
-        self.assertIn('homeSpeechToggle.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH))',self.home)
-        self.assertIn('expand.setOnClickListener(v->startActivity(new Intent(this,RecordsActivity.class)))',self.home)
+        # 4.19 HERO has one direct Conversation cloud; saved conversations
+        # remain reachable from the Conversation module itself.
+        self.assertIn('addHeroShortcut(choices,"CONVERSACIÓN",()->openSense(SenseActivity.MODE_SPEECH))',self.home)
+        self.assertIn('openSense(SenseActivity.MODE_SPEECH)',self.home)
+        self.assertIn('TRADUCIR ÚLTIMA FRASE',self.sense)
 
 if __name__=="__main__":
     unittest.main()
