@@ -299,52 +299,64 @@ public class MainActivity extends Activity {
   */
  void renderMinimalHero(){
   stopHomeSpeech();
-  FrameLayout hero=new FrameLayout(this);
+  LinearLayout hero=new LinearLayout(this);
+  hero.setOrientation(LinearLayout.VERTICAL);
   hero.setBackgroundColor(Color.BLACK);
   getWindow().setStatusBarColor(Color.BLACK);
   getWindow().setNavigationBarColor(Color.BLACK);
+  hero.setPadding(dp(8),dp(4),dp(8),dp(10));
   setContentView(hero);
 
-  // Small identity at the top, keeping the character itself the focal point.
-  TextView brand=txt("AURORA",21);
+  // Small monochrome brand above four clouds, not a scrollable dashboard.
+  LinearLayout topBar=new LinearLayout(this);
+  topBar.setGravity(Gravity.CENTER_VERTICAL);
+  TextView brand=txt("AURORA",29);
   brand.setTextColor(Color.WHITE);
-  brand.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
-  brand.setLetterSpacing(.19f);brand.setPadding(dp(17),dp(8),0,0);
-  FrameLayout.LayoutParams brandParams=new FrameLayout.LayoutParams(-2,dp(48),Gravity.TOP|Gravity.START);
-  brandParams.topMargin=dp(8);hero.addView(brand,brandParams);
-
-  // Large, calm cloud to the center/right. It does not imply that the
-  // microphone is active just because the mascot is visible.
-  AuroraHeroCloudView centerCloud=new AuroraHeroCloudView(this);
-  FrameLayout.LayoutParams cloudParams=new FrameLayout.LayoutParams(dp(228),dp(226),Gravity.CENTER);
-  cloudParams.leftMargin=dp(62);
-  hero.addView(centerCloud,cloudParams);
-
-  LinearLayout choices=new LinearLayout(this);
-  choices.setOrientation(LinearLayout.VERTICAL);
-  choices.setGravity(Gravity.CENTER_VERTICAL);
-  FrameLayout.LayoutParams menuParams=new FrameLayout.LayoutParams(dp(144),-1,Gravity.START);
-  menuParams.leftMargin=dp(7);hero.addView(choices,menuParams);
-
-  addHeroShortcut(choices,"SONIDOS",()->openSense(SenseActivity.MODE_SOUND));
-  addHeroShortcut(choices,"CONVERSACIÓN",()->openSense(SenseActivity.MODE_SPEECH));
-  addHeroShortcut(choices,"ALARMA",()->{alarmsPage=true;render();});
-  addHeroShortcut(choices,"COMUNICAR",()->{communicationPage=true;render();});
-
+  brand.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));
+  brand.setLetterSpacing(.13f);
+  topBar.addView(brand,new LinearLayout.LayoutParams(0,dp(58),1f));
   Button settings=btn("⚙");
   settings.setContentDescription("Abrir configuración");
   settings.setTextColor(Color.WHITE);
   settings.setBackgroundColor(Color.TRANSPARENT);
-  FrameLayout.LayoutParams settingsParams=new FrameLayout.LayoutParams(dp(56),dp(54),Gravity.TOP|Gravity.END);
-  settingsParams.topMargin=dp(5);settingsParams.rightMargin=dp(6);
-  hero.addView(settings,settingsParams);
+  topBar.addView(settings,new LinearLayout.LayoutParams(dp(55),dp(52)));
   settings.setOnClickListener(v->{settingsPage=true;render();});
+  hero.addView(topBar,new LinearLayout.LayoutParams(-1,dp(60)));
+
+  // Row 1: SONIDOS and CONVERSACIÓN. Full width and equal touch targets.
+  LinearLayout upper=new LinearLayout(this);
+  upper.setOrientation(LinearLayout.HORIZONTAL);
+  hero.addView(upper,new LinearLayout.LayoutParams(-1,0,1.05f));
+  addHeroShortcut(upper,"SONIDOS",()->openSense(SenseActivity.MODE_SOUND));
+  addHeroShortcut(upper,"CONVERSACIÓN",()->openSense(SenseActivity.MODE_SPEECH));
+
+  // Central mascot. Tap changes between the two approved character options.
+  // The mascot itself never starts a microphone.
+  AuroraHeroCloudView centerCloud=new AuroraHeroCloudView(this);
+  centerCloud.setClickable(true);
+  centerCloud.setOnClickListener(v->new AlertDialog.Builder(this)
+   .setTitle("PERSONAJE AURORA")
+   .setSingleChoiceItems(new String[]{"Nube urbana","Nube alternativa"},
+    centerCloud.getCharacter(),(dialog,which)->{
+     centerCloud.setCharacter(which);
+     prefs.edit().putInt(AuroraHeroCloudView.PREF_CHARACTER,which).apply();
+     dialog.dismiss();
+    })
+   .setNegativeButton("CERRAR",null).show());
+  hero.addView(centerCloud,new LinearLayout.LayoutParams(-1,0,2.10f));
+
+  // Row 2: ALARMA and COMUNICAR. Settings and internal modules stay intact.
+  LinearLayout lower=new LinearLayout(this);
+  lower.setOrientation(LinearLayout.HORIZONTAL);
+  hero.addView(lower,new LinearLayout.LayoutParams(-1,0,1.05f));
+  addHeroShortcut(lower,"ALARMA",()->{alarmsPage=true;render();});
+  addHeroShortcut(lower,"COMUNICAR",()->{communicationPage=true;render();});
  }
- void addHeroShortcut(LinearLayout choices,String text,Runnable navigate){
+ void addHeroShortcut(LinearLayout row,String text,Runnable navigate){
   AuroraHeroCloudButton cloud=new AuroraHeroCloudButton(this,text);
-  LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(134),dp(96));
-  lp.topMargin=dp(7);lp.bottomMargin=dp(7);
-  choices.addView(cloud,lp);
+  LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1f);
+  lp.leftMargin=dp(3);lp.rightMargin=dp(3);
+  row.addView(cloud,lp);
   cloud.setOnClickListener(v->navigate.run());
  }
  LinearLayout homeTile(String symbol,String name,String subtitle,int top,int bottom){
