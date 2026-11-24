@@ -297,6 +297,51 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
         "haber superado CI.")
+    head("7 | COMO CONTINUAR EN OTRO CHAT (COPIAR ESTA INSTRUCCION)")
+    add("INSTRUCCION PARA UNA NUEVA CONVERSACION - AURORA")
+    for line in [
+        "Quiero continuar desarrollando AURORA exactamente desde el estado "
+        "documentado en este PDF MASTER adjunto, sin empezar de cero.",
+        "Lee integramente este MASTER antes de hacer cambios. "
+        "El ZIP de entrega contiene la APK Android ARM64 y este PDF; "
+        "el codigo fuente NO esta dentro del ZIP: se conserva en GitHub.",
+        "Repositorio GitHub: francoteran-create/despertador-flash-android",
+        "Rama de desarrollo: aurora-sense-precision-2026-11-10",
+        "Commit de referencia de esta entrega: "+commit,
+        "Version de la APK: "+version,
+        "Rama estable main: NO MODIFICAR sin autorizacion expresa.",
+        "Conectate a GitHub y verifica el codigo, el ultimo commit "
+        "de la rama y las pruebas, sin asumir que esta captura "
+        "es necesariamente la version mas reciente.",
+        "Conserva el trabajo ya programado y las decisiones del MASTER. "
+        "No me pidas que repita acuerdos ya documentados.",
+        "Prioriza el funcionamiento, la accesibilidad, las pruebas "
+        "y la estabilidad. La estetica queda postergada.",
+        "AURORA VOZ: texto a WAV local y compartir con WhatsApp u otra "
+        "app esta implementado en codigo; falta probarlo en Galaxy S9+.",
+        "Pendientes prioritarios: confirmar notificaciones y alertas "
+        "reales, validar AURORA VOZ, completar modo mostrador, "
+        "incorporar boton SOS y musica con vibraciones, fortalecer "
+        "conversaciones, alarmas y traducciones.",
+        "No implementar por ahora avatar interprete, lectura de labios, "
+        "videointerpretacion, subtitulos de audio de otras apps, "
+        "diccionario de senas ni mapa de accesibilidad. "
+        "La traduccion de senas solo se investiga a futuro.",
+        "Trabaja sobre la rama identificada, verifica compilaciones "
+        "y corrige errores reales antes de afirmar que algo funciona.",
+        "Distingue aprobado por pruebas automatizadas de comprobado "
+        "en telefono; no inventes porcentajes de precision.",
+        "Entrega un unico ZIP con exactamente una APK ARM64 y un "
+        "PDF MASTER actualizado. Incluye estado, pendientes, "
+        "pruebas, riesgos, porcentajes estimados y nueva referencia "
+        "exacta de commit de GitHub.",
+        "Empeza verificando GitHub y el MASTER. Continua con la "
+        "primera prioridad pendiente y entrega resultados verificables.",
+    ]:
+        add("- "+line)
+    add("IMPORTANTE: este mensaje puede copiarse del PDF en un chat nuevo. "
+        "El asistente debe verificar el repositorio; no puede recuperar "
+        "automaticamente trabajo que no se haya guardado.")
     def footer(canvas,pdf):
         canvas.saveState()
         w,_=A4
