@@ -18,7 +18,12 @@ class CounterMode(unittest.TestCase):
   self.assertIn('screen.addView(staff,new LinearLayout.LayoutParams(-1,0,1f))',COUNTER)
   self.assertIn('screen.addView(user,new LinearLayout.LayoutParams(-1,0,1f))',COUNTER)
   self.assertIn('typed.getText().toString().trim()',COUNTER)
-  self.assertIn('heard.setText(message)',COUNTER)
+  self.assertIn('facingMessage.setText(message)',COUNTER)
+  self.assertIn('replyTranscript.setText(recognized)',COUNTER)
+  self.assertIn('user.addView(listen',COUNTER)
+  self.assertNotIn('staff.addView(listen',COUNTER)
+  self.assertNotIn('facingMessage.setText(recognized)',COUNTER)
+  self.assertNotIn('replyTranscript.setText(message)',COUNTER)
   self.assertIn('TextToSpeech.QUEUE_FLUSH',COUNTER)
  def test_microphone_only_on_request(self):
   self.assertIn('listen.setOnClickListener',COUNTER)
