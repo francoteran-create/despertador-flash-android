@@ -308,6 +308,11 @@ public class MainActivity extends Activity {
   subtitle.setTextColor(0xff93d9e5);subtitle.setLetterSpacing(.12f);subtitle.setPadding(dp(2),0,0,dp(10));root.addView(subtitle);
   AuroraVisualEngineView clock=new AuroraVisualEngineView(this,AuroraVisualEngineView.CLOCK);
   root.addView(clock,new LinearLayout.LayoutParams(-1,-2));
+  // A small idle preview keeps the street-art mascot visible without
+  // implying that the microphone is capturing while the home page is idle.
+  AuroraCloudMascotView mascotPreview=new AuroraCloudMascotView(this);
+  mascotPreview.setListening(false);
+  root.addView(mascotPreview,new LinearLayout.LayoutParams(-1,-2));
   root.addView(AuroraDesign.overline(this,"EXPLORAR  /  ACCESOS DIRECTOS"));
 
   LinearLayout shortcuts=new LinearLayout(this);shortcuts.setOrientation(LinearLayout.HORIZONTAL);root.addView(shortcuts);
