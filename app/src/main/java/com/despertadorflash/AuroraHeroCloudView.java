@@ -25,15 +25,18 @@ public final class AuroraHeroCloudView extends View {
  public AuroraHeroCloudView(Context c){
   super(c);
   power=(PowerManager)c.getSystemService(Context.POWER_SERVICE);
-  character=c.getSharedPreferences("aurora",0).getInt(PREF_CHARACTER,0);
-  setContentDescription("Personaje AURORA. Tocá para cambiar de personaje");
+  character=c.getSharedPreferences("aurora",0).getInt(PREF_CHARACTER,0)==1?1:0;
+  setCharacterDescription();
   setFocusable(true);
   float scale=1f;
   try{scale=Settings.Global.getFloat(c.getContentResolver(),Settings.Global.ANIMATOR_DURATION_SCALE,1f);}
   catch(Exception ignored){}
   reducedMotion=scale==0f||(Build.VERSION.SDK_INT>=26&&!ValueAnimator.areAnimatorsEnabled());
  }
- public void setCharacter(int selected){character=selected==1?1:0;invalidate();}
+ private void setCharacterDescription(){
+  setContentDescription((character==0?"Nube urbana":"Nube alternativa")+". Tocá para cambiar de personaje");
+ }
+ public void setCharacter(int selected){character=selected==1?1:0;setCharacterDescription();invalidate();}
  public int getCharacter(){return character;}
  @Override protected void onAttachedToWindow(){super.onAttachedToWindow();active=true;invalidate();}
  @Override protected void onDetachedFromWindow(){active=false;removeCallbacks(frame);super.onDetachedFromWindow();}
@@ -83,20 +86,32 @@ public final class AuroraHeroCloudView extends View {
   stroke(VIOLET,.065f);canvas.drawRoundRect(-1.13f,-.61f,-.78f,.17f,.13f,.13f,p);
   fill(Color.WHITE);p.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
   p.setTextSize(.31f);p.setTextAlign(Paint.Align.CENTER);canvas.drawText("A",-.96f,-.10f,p);
-  // Distinct selectable character expressions.
+  // Real visual distinction: the two options differ in accessories, eyes,
+  // eyebrows, headwear and expression, not merely a hidden preference.
   if(character==0){
    fill(Color.BLACK);
    canvas.drawRoundRect(-.64f,-.35f,.66f,-.04f,.09f,.09f,p);
    fill(VIOLET);canvas.drawRect(-.48f,-.29f,-.23f,-.21f,p);
    canvas.drawRect(.27f,-.29f,.48f,-.21f,p);
   }else{
-   // Alternative cloud: expressive half-lidded eyes and a side sweep.
-   stroke(Color.BLACK,.052f);
-   canvas.drawArc(-.62f,-.51f,-.10f,-.01f,182f,171f,false,p);
-   canvas.drawArc(.10f,-.51f,.63f,-.01f,182f,171f,false,p);
+   // Alternative lead cloud: confident expressive eyes, bold lashes,
+   // violet hair sweep and a visible star badge. Never stereotyping users.
+   stroke(0xff222222,.078f);
+   canvas.drawArc(-.62f,-.54f,-.10f,-.03f,194f,152f,false,p);
+   canvas.drawArc(.10f,-.54f,.63f,-.03f,194f,152f,false,p);
    fill(Color.BLACK);
-   canvas.drawOval(-.45f,-.26f,-.27f,-.09f,p);canvas.drawOval(.29f,-.26f,.47f,-.09f,p);
-   stroke(VIOLET,.06f);canvas.drawLine(.57f,-.86f,.78f,-.62f,p);
+   canvas.drawOval(-.45f,-.29f,-.24f,-.10f,p);
+   canvas.drawOval(.29f,-.29f,.50f,-.10f,p);
+   stroke(Color.BLACK,.048f);
+   canvas.drawLine(-.58f,-.29f,-.68f,-.37f,p);
+   canvas.drawLine(.58f,-.28f,.70f,-.37f,p);
+   stroke(VIOLET,.092f);
+   Path swept=new Path();swept.moveTo(-.20f,-1.06f);
+   swept.cubicTo(.16f,-1.27f,.61f,-1.17f,.78f,-.89f);
+   swept.cubicTo(.93f,-.61f,.80f,-.56f,.64f,-.59f);
+   canvas.drawPath(swept,p);
+   stroke(Color.BLACK,.047f);
+   canvas.drawLine(.57f,-.78f,.85f,-.53f,p);
   }
   stroke(Color.BLACK,.055f);
   shape.reset();shape.moveTo(-.25f,.12f);shape.quadTo(.02f,.33f,.31f,.09f);
@@ -109,7 +124,7 @@ public final class AuroraHeroCloudView extends View {
   canvas.drawLine(-.59f,.60f,.43f,.94f,p);
   canvas.drawLine(.60f,.56f,-.33f,.93f,p);
   fill(Color.WHITE);p.setTextSize(.36f);p.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-  canvas.drawText("A",.06f,.82f,p);
+  canvas.drawText(character==0?"A":"✦",.06f,.82f,p);
   canvas.restore();
   removeCallbacks(frame);
   if(animate)postDelayed(frame,220L);
