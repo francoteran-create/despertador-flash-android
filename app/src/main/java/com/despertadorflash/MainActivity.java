@@ -314,6 +314,7 @@ public class MainActivity extends Activity {
   brand.setTextColor(Color.WHITE);
   brand.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));
   brand.setLetterSpacing(.13f);
+  brand.setContentDescription("AURORA, asistente de accesibilidad sonora");
   topBar.addView(brand,new LinearLayout.LayoutParams(0,dp(58),1f));
   Button settings=btn("⚙");
   settings.setContentDescription("Abrir configuración");
@@ -340,6 +341,7 @@ public class MainActivity extends Activity {
     centerCloud.getCharacter(),(dialog,which)->{
      centerCloud.setCharacter(which);
      prefs.edit().putInt(AuroraHeroCloudView.PREF_CHARACTER,which).apply();
+     Toast.makeText(this,which==0?"Nube urbana elegida":"Nube alternativa elegida",Toast.LENGTH_SHORT).show();
      dialog.dismiss();
     })
    .setNegativeButton("CERRAR",null).show());
