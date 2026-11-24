@@ -208,6 +208,23 @@ public final class SenseActivity extends Activity {
   visual.setVisibility(View.GONE);
   state=text("MICRÓFONO APAGADO",16,0xff8fe8df);state.setGravity(Gravity.CENTER);
   state.setBackground(bg(0xff0c303f,0xff14264b));root.addView(state);
+  if(screenMode==MODE_SOUND){
+   Button testNotification=button("PROBAR NOTIFICACIÓN EN TELÉFONO · SIN MICRÓFONO");
+   root.addView(testNotification,new LinearLayout.LayoutParams(-1,dp(58)));
+   testNotification.setOnClickListener(v->{
+    String report=AuroraPhoneAlerts.post(this,"POSIBLE TIMBRE DE PUERTA",true);
+    new android.app.AlertDialog.Builder(this).setTitle("PRUEBA DE NOTIFICACIONES")
+     .setMessage(report+"\n\n"+AuroraPhoneAlerts.report(this))
+     .setPositiveButton("VER AJUSTES DE ANDROID",(d,w)->{
+      android.content.Intent go=android.os.Build.VERSION.SDK_INT>=26?
+       new android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra("android.provider.extra.APP_PACKAGE",getPackageName()):
+       new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        android.net.Uri.parse("package:"+getPackageName()));
+      startActivity(go);
+     }).setNegativeButton("CERRAR",null).show();
+   });
+  }
   String initial="";
   lastTranscript="";
   if(screenMode==MODE_SOUND){
