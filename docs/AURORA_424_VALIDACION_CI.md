@@ -1,0 +1,1 @@
+AURORA 4.24 Modo Mostrador: corrección de prueba del MASTER que verifica la nueva denominación del módulo. Deben ejecutarse pruebas Python y Java, compilación ARM64, firma y generación de PDF MASTER con instrucciones de continuidad. Prueba física en Samsung S9+ pendiente.
