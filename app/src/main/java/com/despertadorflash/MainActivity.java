@@ -507,6 +507,31 @@ public class MainActivity extends Activity {
  }
  void renderSettingsPage(){
   setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
+  root.addView(section("DIAGNÓSTICO RÁPIDO DE NOTIFICACIONES"));
+  root.addView(txt("Primero probá un aviso del teléfono sin micrófono ni smartwatch. "+
+   "Si no llega, el problema es de permisos o de configuración Android; "+
+   "si llega, revisaremos la detección y las categorías de sonidos.",14));
+  Button testPhoneAlert=btn("PROBAR NOTIFICACIÓN · TELÉFONO");
+  root.addView(testPhoneAlert);
+  testPhoneAlert.setOnClickListener(v->{
+   String result=AuroraPhoneAlerts.post(this,"POSIBLE TIMBRE DE PUERTA",true);
+   new AlertDialog.Builder(this).setTitle("Diagnóstico de notificaciones")
+    .setMessage(result+"\n\n"+AuroraPhoneAlerts.report(this))
+    .setPositiveButton("AJUSTES DE NOTIFICACIONES",(d,w)->{
+     Intent go=Build.VERSION.SDK_INT>=26?
+      new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+       .putExtra("android.provider.extra.APP_PACKAGE",getPackageName()):
+      new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+       android.net.Uri.parse("package:"+getPackageName()));
+     startActivity(go);
+    }).setNegativeButton("CERRAR",null).show();
+  });
+  Button reportPhoneAlert=btn("CONSULTAR ÚLTIMO AVISO");
+  root.addView(reportPhoneAlert);
+  reportPhoneAlert.setOnClickListener(v->new AlertDialog.Builder(this)
+   .setTitle("Estado de avisos del teléfono")
+   .setMessage(AuroraPhoneAlerts.report(this))
+   .setPositiveButton("CERRAR",null).show());
   root.addView(section("ESCUCHA DEL ENTORNO EN SEGUNDO PLANO"));
   root.addView(txt("Activala solo cuando la necesites. Android mostrará una notificación permanente mientras se usa el micrófono. La escucha se detiene al apagarla y no se reactiva sola al reiniciar.",15));
   Button bgStart=btn("◉  INICIAR ESCUCHA CONTINUA");
