@@ -125,8 +125,8 @@ public final class SenseActivity extends Activity {
  private AuroraVisualEngineView visual;
  private Button speechButton, soundsButton, translateButton;
  private TextView translationResult, translationStatus, translationOriginal;
- private Button[] translationTargetButtons;
- private Button[] sourceLanguageButtons;
+
+ private Spinner translationTargetPicker;
  private String activeTranslationPair="";
  private boolean translationModelReady=false,translationModelDownloading=false;
  private final TranslationWorkQueue translationQueue=new TranslationWorkQueue();
@@ -237,29 +237,28 @@ public final class SenseActivity extends Activity {
    root.addView(sensitivityHint);
   }else{
    root.addView(AuroraDesign.overline(this,"IDIOMA DE LA CONVERSACIÓN"));
-   LinearLayout languageRow=new LinearLayout(this);languageRow.setOrientation(LinearLayout.HORIZONTAL);
-   root.addView(languageRow,new LinearLayout.LayoutParams(-1,dp(64)));
-   String[] languageLabels={"ESPAÑOL","INGLÉS","PORTUGUÉS"};
-   Button[] languageButtons=new Button[3];
-   sourceLanguageButtons=languageButtons;
-   languageSelection=Math.max(0,Math.min(2,getPreferences(MODE_PRIVATE).getInt("sense_language",0)));
-   for(int k=0;k<3;k++){
-    int chosen=k;
-    Button item=button(languageLabels[k]);item.setTextSize(12);languageButtons[k]=item;
-    AuroraDesign.action(item,k==languageSelection?0xff155a70:0xff1b2e46,
-     k==languageSelection?0xff2c4b7a:0xff242741,k==languageSelection?0xff86f4ed:0xff44647d);
-    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(60),1f);
-    if(k>0)lp.leftMargin=dp(6);
-    languageRow.addView(item,lp);
-    item.setOnClickListener(v->{
+   languageSelection=AuroraLanguageCatalog.validIndex(
+    getPreferences(MODE_PRIVATE).getInt("sense_language",0));
+   Spinner sourcePicker=new Spinner(this);
+   ArrayAdapter<String> sourceAdapter=new ArrayAdapter<>(this,
+    android.R.layout.simple_spinner_item,AuroraLanguageCatalog.LABELS);
+   sourceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+   sourcePicker.setAdapter(sourceAdapter);
+   sourcePicker.setSelection(languageSelection);
+   sourcePicker.setContentDescription("Elegir idioma hablado");
+   root.addView(sourcePicker,new LinearLayout.LayoutParams(-1,dp(58)));
+   sourcePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+    @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+    @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+     int chosen=AuroraLanguageCatalog.validIndex(position);
      if(languageSelection==chosen)return;
      languageSelection=chosen;
      if(translationTarget==chosen){
-      translationTarget=chosen==0?1:0;
+      translationTarget=AuroraLanguageCatalog.defaultDestination(chosen);
       getPreferences(MODE_PRIVATE).edit().putInt("translation_target",translationTarget).apply();
+      if(translationTargetPicker!=null)translationTargetPicker.setSelection(translationTarget);
      }
      getPreferences(MODE_PRIVATE).edit().putInt("sense_language",chosen).apply();
-     refreshLanguageSelections();
      invalidateTranslation();
      manualTranslationRequested=false;
      lastTranscript="";partialTranscript="";
@@ -267,43 +266,42 @@ public final class SenseActivity extends Activity {
      if(translationResult!=null)translationResult.setText("Traducción disponible cuando la solicites.");
      if(translationOriginal!=null)translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
      if(mode==MODE_SPEECH){stopAll(true);toggle(MODE_SPEECH);}
-    });
-   }
+    }
+   });
   }
   if(screenMode==MODE_SPEECH){
    root.addView(AuroraDesign.overline(this,"IDIOMA PARA TRADUCIR CUANDO LO PIDAS"));
-   LinearLayout targets=new LinearLayout(this);
-   targets.setOrientation(LinearLayout.HORIZONTAL);
-   root.addView(targets,new LinearLayout.LayoutParams(-1,dp(61)));
-   final String[] names={"ESPAÑOL","INGLÉS","PORTUGUÉS"};
-   translationTargetButtons=new Button[3];
    int preferred=getPreferences(MODE_PRIVATE).getInt("translation_target",-1);
-   translationTarget=preferred>=0&&preferred<3&&preferred!=languageSelection?
-    preferred:(languageSelection==0?1:0);
-   for(int k=0;k<3;k++){
-    final int chosen=k;
-    Button target=button(names[k]);target.setTextSize(12);
-    translationTargetButtons[k]=target;
-    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1f);
-    if(k>0)lp.leftMargin=dp(5);
-    targets.addView(target,lp);
-    target.setOnClickListener(v->{
+   translationTarget=preferred>=0&&preferred<AuroraLanguageCatalog.count()&&preferred!=languageSelection?
+    preferred:AuroraLanguageCatalog.defaultDestination(languageSelection);
+   translationTargetPicker=new Spinner(this);
+   ArrayAdapter<String> targetAdapter=new ArrayAdapter<>(this,
+    android.R.layout.simple_spinner_item,AuroraLanguageCatalog.LABELS);
+   targetAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+   translationTargetPicker.setAdapter(targetAdapter);
+   translationTargetPicker.setSelection(translationTarget);
+   translationTargetPicker.setContentDescription("Elegir idioma de traducción");
+   root.addView(translationTargetPicker,new LinearLayout.LayoutParams(-1,dp(58)));
+   translationTargetPicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+    @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+    @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+     int chosen=AuroraLanguageCatalog.validIndex(position);
+     if(chosen==translationTarget)return;
      if(chosen==languageSelection){
-      Toast.makeText(this,"Elegí un idioma distinto del original",Toast.LENGTH_SHORT).show();
+      Toast.makeText(SenseActivity.this,"Elegí un idioma distinto del original",Toast.LENGTH_SHORT).show();
+      translationTargetPicker.setSelection(translationTarget);
       return;
      }
      translationTarget=chosen;
      getPreferences(MODE_PRIVATE).edit().putInt("translation_target",chosen).apply();
-     refreshLanguageSelections();
-     if(translationOriginal!=null)translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
      invalidateTranslation();
      manualTranslationRequested=false;
+     if(translationOriginal!=null)translationOriginal.setText(selectedLanguageName(languageSelection)+" → "+selectedLanguageName(translationTarget));
      if(translationResult!=null)translationResult.setText("Traducción disponible cuando la solicites.");
      if(translationStatus!=null)translationMessage("Destino elegido. Para traducir, tocá TRADUCIR ÚLTIMA FRASE.");
      syncWideText();
-    });
-   }
-   refreshLanguageSelections();
+    }
+   });
   }
   LinearLayout controls=new LinearLayout(this);controls.setOrientation(LinearLayout.HORIZONTAL);
   LinearLayout.LayoutParams controlsParams=new LinearLayout.LayoutParams(-1,-2);controlsParams.topMargin=dp(12);
@@ -781,29 +779,20 @@ public final class SenseActivity extends Activity {
   if(translateButton!=null)translateButton.setVisibility(isSpeech?View.VISIBLE:View.GONE);
  }
  private String recognizedLanguage(){
-  int selected=languageSelection;return selected==1?"en-US":selected==2?"pt-BR":"es-AR";
+  return AuroraLanguageCatalog.speechTag(languageSelection);
  }
  private void saveTranscript(String phrase){
   lastTranscript=phrase;partialTranscript="";
   getSharedPreferences("aurora",0).edit().putString("sense_last_transcript",phrase).apply();
  }
  private String targetLanguage(int selected){
-  return selected==0?TranslateLanguage.SPANISH:
-   selected==2?TranslateLanguage.PORTUGUESE:TranslateLanguage.ENGLISH;
+  return AuroraLanguageCatalog.translationTag(selected);
  }
  private void translationMessage(String message){
   if(translationStatus!=null)translationStatus.setText(message);
  }
  private String selectedLanguageName(int choice){
-  return choice==0?"Español":choice==1?"Inglés":"Portugués";
- }
- private void refreshLanguageSelections(){
-  if(sourceLanguageButtons!=null)for(int i=0;i<sourceLanguageButtons.length;i++)
-   AuroraDesign.action(sourceLanguageButtons[i],i==languageSelection?0xff155a70:0xff1b2e46,
-    i==languageSelection?0xff2c4b7a:0xff242741,i==languageSelection?0xff86f4ed:0xff44647d);
-  if(translationTargetButtons!=null)for(int i=0;i<translationTargetButtons.length;i++)
-   AuroraDesign.action(translationTargetButtons[i],i==translationTarget?0xff155a70:0xff1b2e46,
-    i==translationTarget?0xff2c4b7a:0xff242741,i==translationTarget?0xff86f4ed:0xff44647d);
+  return AuroraLanguageCatalog.name(choice);
  }
  private void invalidateTranslation(){
   translationGeneration++;
