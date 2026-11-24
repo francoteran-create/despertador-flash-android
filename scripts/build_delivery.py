@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.18",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.19",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -66,7 +66,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         story.append(paragraph("- "+name+": "+desc,body))
     rows=[
         ("Versión compilada",version),
-        ("Paquete independiente","com.despertadorflash.beta418"),
+        ("Paquete independiente","com.despertadorflash.beta419"),
         ("Repositorio",REPO),
         ("Rama de trabajo",BRANCH),
         ("Commit exacto",commit),
@@ -112,6 +112,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "pausas de hasta 30 s; los sonidos tienen hasta 5 reconexiones. "
          "Se bloquean resultados de detectores anteriores para no "
          "generar avisos falsos al reconectar.")
+    item("HERO 4.19", "inicio negro minimalista con nube blanca central "
+         "y cuatro accesos en forma de nube: SONIDOS, CONVERSACION, "
+         "ALARMA y COMUNICAR. Las pantallas de cada modulo usan "
+         "fondo negro. Falta validar en Galaxy S9+.")
     item("RELOJ 4.18", "notificaciones Android ilustradas mediante "
          "dibujos monocromos de puerta, perro, bocina y otros. "
          "El espejo de notificaciones Wear OS es condicional y "
@@ -191,6 +195,9 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     item("SMARTWATCH", "no existe aún una app Wear OS independiente. "
          "Falta ensayar espejo, vibración y presentación de imágenes "
          "en un reloj físico con notificaciones habilitadas.")
+    item("DISEÑO 4.19", "se retiraron de la portada el reloj decorativo, "
+         "los paneles repetidos de transcripcion y tarjetas. "
+         "Las opciones avanzadas siguen en las vistas secundarias.")
     item("PRUEBA REAL", "los porcentajes del nuevo panel reflejan "
          "solo los casos que alguien decida marcar; NO son precisión "
          "científica ni sustituyen ensayos controlados. Falta usar "
@@ -207,7 +214,11 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "manuscrita flotante e ilustraciones de perros, puertas y bocinas.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.18 BETA ARM64 sin desinstalar la anterior.",
+        "Instalar AURORA 4.19 BETA ARM64 sin desinstalar la anterior.",
+        "Comprobar HERO negro con nube blanca central y exactamente "
+        "cuatro accesos en nube del lado izquierdo.",
+        "Tocar SONIDOS, CONVERSACION, ALARMA y COMUNICAR; probar "
+        "navegacion de regreso y fondos negros.",
         "Emparejar un Wear OS y habilitar notificaciones de AURORA; "
         "en Configuración probar dibujo de puerta SIN MICRÓFONO.",
         "Verificar imagen, vibración y tamaño en el reloj real. "
@@ -249,7 +260,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.18 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.19 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -261,13 +272,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.18 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.19 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.18 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.19 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -276,13 +287,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.18-watch-picture-alerts-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.19-minimal-black-hero-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_18_ARM64.apk"
-    pdf=OUT/"AURORA_4_18_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_19_ARM64.apk"
+    pdf=OUT/"AURORA_4_19_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
