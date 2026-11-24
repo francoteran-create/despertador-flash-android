@@ -34,7 +34,7 @@ class HeroNavigationTest(unittest.TestCase):
   self.assertIn("setOnClickListener(v->navigate.run())",MAIN)
   self.assertIn('PREF_CHARACTER',MAIN)
   self.assertIn('setSingleChoiceItems',MAIN)
-  self.assertIn("Personaje AURORA",HERO)
+  self.assertIn("Tocá para cambiar de personaje",HERO)
   for bad in ["AudioRecord","SpeechRecognizer","CameraManager","HttpURLConnection"]:
    self.assertNotIn(bad,HERO)
  def test_motion_can_be_reduced(self):
