@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.23",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.24",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -66,7 +66,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         story.append(paragraph("- "+name+": "+desc,body))
     rows=[
         ("Versión compilada",version),
-        ("Paquete independiente","com.despertadorflash.beta423"),
+        ("Paquete independiente","com.despertadorflash.beta424"),
         ("Repositorio",REPO),
         ("Rama de trabajo",BRANCH),
         ("Commit exacto",commit),
@@ -112,6 +112,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "pausas de hasta 30 s; los sonidos tienen hasta 5 reconexiones. "
          "Se bloquean resultados de detectores anteriores para no "
          "generar avisos falsos al reconectar.")
+    item("MODO MOSTRADOR 4.24", "pantalla dividida y girada 180 grados "
+         "para la persona de enfrente, reconocimiento por turnos solo "
+         "al solicitarlo, texto para responder y voz Android a pedido. "
+         "No guarda conversaciones. Falta probar pantalla real.")
     item("AURORA VOZ 4.23", "nuevo modulo COMUNICAR: texto en español "
          "a archivo WAV local, frases rapidas, vista previa, "
          "WhatsApp u otra app mediante compartir archivo. "
@@ -230,9 +234,23 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     item("Diseño futuro", "vistas negras y zigzag ya están "
          "programadas. Aún quedan la mascota nube, tipografía "
          "manuscrita flotante e ilustraciones de perros, puertas y bocinas.")
+    head("4A | AVANCE ORIENTATIVO POR FUNCION")
+    add("Porcentajes de trabajo estimados, NO precision, fiabilidad "
+        "ni pruebas de uso: alarmas/temporizador 85%, detector "
+        "ambiental 75%, alertas visibles 70%, conversacion 80%, "
+        "traduccion voluntaria 75%, AURORA VOZ 80%, "
+        "Modo Mostrador 70%, SOS 0%, musica haptica 0%, "
+        "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.23 BETA ARM64 sin desinstalar la anterior.",
+        "Instalar AURORA 4.24 BETA ARM64 sin desinstalar la anterior.",
+        "Abrir COMUNICAR > MODO MOSTRADOR; verificar que la parte "
+        "superior se lea desde el lado opuesto y la inferior desde "
+        "el lado del usuario.",
+        "Tocar ESCUCHAR y hablar; verificar transcripcion visible "
+        "y que el microfono se detenga al finalizar.",
+        "Escribir respuesta, tocar MOSTRAR TEXTO y DECIR EN VOZ "
+        "ALTA; probar teclado, permisos y salida segura.",
         "Abrir COMUNICAR y AURORA VOZ; escribir texto y generar WAV.",
         "Escuchar la vista previa, pulsar WHATSAPP, elegir chat "
         "y verificar que aparezca audio adjunto antes de enviarlo.",
@@ -292,7 +310,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.23 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.24 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -319,8 +337,11 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "y la estabilidad. La estetica queda postergada.",
         "AURORA VOZ: texto a WAV local y compartir con WhatsApp u otra "
         "app esta implementado en codigo; falta probarlo en Galaxy S9+.",
+        "Modo Mostrador 4.24: pantalla doble, transcripcion manual "
+        "por turnos y respuesta escrita/voz estan compiladas; "
+        "falta validacion fisica en Galaxy S9+.",
         "Pendientes prioritarios: confirmar notificaciones y alertas "
-        "reales, validar AURORA VOZ, completar modo mostrador, "
+        "reales, validar AURORA VOZ y Modo Mostrador, "
         "incorporar boton SOS y musica con vibraciones, fortalecer "
         "conversaciones, alarmas y traducciones.",
         "No implementar por ahora avatar interprete, lectura de labios, "
@@ -349,13 +370,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.23 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.24 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.23 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.24 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -364,13 +385,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.23-aurora-voz-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.24-modo-mostrador-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_23_ARM64.apk"
-    pdf=OUT/"AURORA_4_23_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_24_ARM64.apk"
+    pdf=OUT/"AURORA_4_24_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
