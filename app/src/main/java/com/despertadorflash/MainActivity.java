@@ -427,6 +427,9 @@ public class MainActivity extends Activity {
   quick.addView(sound,half1);quick.addView(speech,new LinearLayout.LayoutParams(0,dp(155),1f));
   sound.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   speech.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  Button music=btn("SENTIR LA MÚSICA · VIBRACIÓN POR RITMO");
+  root.addView(music,new LinearLayout.LayoutParams(-1,dp(66)));
+  music.setOnClickListener(v->startActivity(new Intent(this,AuroraMusicActivity.class)));
   Button sos=btn("SOS · AVISAR A UN CONTACTO DE CONFIANZA");
   root.addView(sos,new LinearLayout.LayoutParams(-1,dp(65)));
   sos.setOnClickListener(v->startActivity(new Intent(this,AuroraSosActivity.class)));
