@@ -2,13 +2,13 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 66; versionName '4.26-sos-contacto-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 67; versionName '4.27-musica-haptica-beta' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // existing user installation or its private data because of a debug key.
  buildTypes {
   debug {
-   applicationIdSuffix '.beta426'
-   resValue 'string', 'app_name', 'AURORA 4.26 BETA'
+   applicationIdSuffix '.beta427'
+   resValue 'string', 'app_name', 'AURORA 4.27 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
