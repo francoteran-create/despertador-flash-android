@@ -10,7 +10,7 @@ certificados de seguridad ni servicios de emergencia.
 - Repositorio: francoteran-create/despertador-flash-android
 - Rama estable de código: `main` (MASTER interna 4.0, versionCode 40).
 - Rama de trabajo de precisión: `aurora-sense-precision-2026-11-10`
-  (4.25-mostrador-direccion-beta, versionCode 65), revisión en PR #1.
+  (4.26-sos-contacto-beta, versionCode 66), revisión en PR #1.
 - Referencia visual elegida por el usuario: APK AURORA 2.8 proporcionada
   en la conversacion. La pantalla inicial se restauro desde el codigo
   fuente historico del commit 1c0f41cbd9f44a798890afdfd23103db8d7ab9e9.
@@ -47,6 +47,15 @@ El script tiene tests en `scripts/tests/` ejecutados por GitHub Actions.
 Las notificaciones de eventos simultaneos se identifican por etiqueta,
 para que un timbre y unos golpes de puerta no se reemplacen dentro de
 la misma categoria. Desactivar avisos retira solo esa categoria.
+
+## Cambios 4.26 — SOS a contacto de confianza
+- COMUNICAR integra SOS: número de confianza guardado localmente,
+  mensaje editable, vista previa y confirmación antes de abrir SMS.
+- Casilla optativa para ubicación aproximada reciente. Sin posición
+  reciente o permiso, se prepara el mensaje sin ubicación.
+- Alternativa compartir mensaje en otra app. Envío nunca automático.
+- No equivale a un servicio de emergencias ni garantiza recepción.
+- Pendiente validación física en Samsung Galaxy S9+.
 
 ## Cambios 4.25 — Modo Mostrador corregido
 - El usuario escribe abajo y su texto aparece ARRIBA para quien está enfrente (180°).
@@ -182,8 +191,8 @@ la misma categoria. Desactivar avisos retira solo esa categoria.
   Ver `docs/AURORA_414_RESILIENCIA_VOZ.md`.
 
 ## Instalación de la beta y seguridad de los datos
-La versión 4.25 BETA usa el paquete independiente
-`com.despertadorflash.beta425`, nombre visible `AURORA 4.25 BETA`.
+La versión 4.26 BETA usa el paquete independiente
+`com.despertadorflash.beta426`, nombre visible `AURORA 4.26 BETA`.
 La app original es `com.despertadorflash`, y las betas previas
 (4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.13, 4.14, 4.15, 4.16, 4.17 y 4.18) tienen identificadores distintos. Se instala en paralelo
 **sin desinstalar las anteriores**, y NO migra sus alarmas o datos de
@@ -199,7 +208,7 @@ Instrucciones de esta beta: `docs/AURORA_413_LABORATORIO_SONIDOS.md`, `docs/AURO
 La beta tiene firma de desarrollo efimera. Puede no actualizar otra
 beta ya instalada con firma distinta: exportar primero alarmas y
 registros de la beta anterior. **No desinstalar la AURORA original.**
-La beta 4.25 no restaura por si sola la informacion de una AURORA 2.8
+La beta 4.26 no restaura por si sola la informacion de una AURORA 2.8
 anterior: el exportador nuevo solo existe en las versiones que lo
 incorporan. La copia nueva de configuracion no contiene datos privados
 de perfil ni historiales.
@@ -219,7 +228,7 @@ se respaldan por TXT, con hash verificado. Se conservan antiguos archivos
 SONIDOS de otras versiones sin borrarlos: pueden verse activando
 `Mostrar archivos antiguos de sonidos`. No se crean nuevos archivos de sonidos.
 
-La beta 4.25 sigue siendo una version de PRUEBA, no un lanzamiento para
+La beta 4.26 sigue siendo una version de PRUEBA, no un lanzamiento para
 Play Store; hacen falta validacion en Galaxy S9+ y sonidos reales.
 
 ## Correcciones criticas 4.3: escucha y traduccion
