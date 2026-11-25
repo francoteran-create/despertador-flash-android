@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.26",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.27",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -66,7 +66,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         story.append(paragraph("- "+name+": "+desc,body))
     rows=[
         ("Versión compilada",version),
-        ("Paquete independiente","com.despertadorflash.beta426"),
+        ("Paquete independiente","com.despertadorflash.beta427"),
         ("Repositorio",REPO),
         ("Rama de trabajo",BRANCH),
         ("Commit exacto",commit),
@@ -112,6 +112,12 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
          "pausas de hasta 30 s; los sonidos tienen hasta 5 reconexiones. "
          "Se bloquean resultados de detectores anteriores para no "
          "generar avisos falsos al reconectar.")
+    item("MUSICA HAPTICA 4.27",
+         "pantalla SENTIR LA MUSICA en COMUNICAR con captura voluntaria "
+         "de microfono PCM, potencia de graves de 80/125/180 Hz, "
+         "pulsos limitados a 220 ms entre vibraciones y niveles "
+         "SUAVE/MEDIO/FUERTE. Detiene microfono y vibrador al salir. "
+         "No guarda ni sube audio. Necesita prueba fisica.")
     item("SOS 4.26 - CONTACTO DE CONFIANZA",
          "contacto configurable y guardado localmente, mensaje "
          "editable y confirmacion antes de abrir SMS o compartir. "
@@ -250,11 +256,17 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "ni pruebas de uso: alarmas/temporizador 85%, detector "
         "ambiental 75%, alertas visibles 70%, conversacion 80%, "
         "traduccion voluntaria 75%, AURORA VOZ 80%, "
-        "Modo Mostrador 70%, SOS 70%, musica haptica 0%, "
+        "Modo Mostrador 70%, SOS 70%, musica haptica 70%, "
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.26 BETA ARM64 sin desinstalar la anterior.",
+        "Instalar AURORA 4.27 BETA ARM64 sin desinstalar la anterior.",
+        "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
+        "probar música con graves cercanos y vibración.",
+        "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
+        "que la vibración se detenga inmediatamente al salir.",
+        "MUSICA: probar en silencio, con permiso rechazado y "
+        "tras haber activado escucha ambiental en segundo plano.",
         "En COMUNICAR > SOS, probar contacto, mensaje editable "
         "y vista previa antes de abrir SMS; nunca enviar automaticamente.",
         "SOS: probar SIN ubicacion, con ubicacion autorizada y "
@@ -332,7 +344,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.26 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.27 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -366,10 +378,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "SOS 4.26: contacto local, mensaje editable, ubicacion "
         "aproximada optativa y preparacion de SMS o compartir. "
         "Siempre requiere confirmar envio fuera de AURORA.",
+        "MUSICA HAPTICA 4.27: captura voluntaria de audio ambiental "
+        "con AudioRecord, deteccion de energia/graves, pulsos limitados "
+        "y tres niveles de intensidad. Sin archivos de audio, "
+        "se detiene al salir; falta prueba fisica.",
         "Pendientes prioritarios: confirmar notificaciones y alertas "
-        "reales, validar AURORA VOZ, Mostrador y SOS en telefono, "
-        "incorporar musica con vibraciones, fortalecer "
-        "conversaciones, alarmas y traducciones.",
+        "reales, validar AURORA VOZ, Mostrador, SOS y Musica Haptica "
+        "en telefono; fortalecer conversaciones, alarmas y traducciones.",
         "No implementar por ahora avatar interprete, lectura de labios, "
         "videointerpretacion, subtitulos de audio de otras apps, "
         "diccionario de senas ni mapa de accesibilidad. "
@@ -396,13 +411,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.26 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.27 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.26 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.27 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -411,13 +426,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.26-sos-contacto-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.27-musica-haptica-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_26_ARM64.apk"
-    pdf=OUT/"AURORA_4_26_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_27_ARM64.apk"
+    pdf=OUT/"AURORA_4_27_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
