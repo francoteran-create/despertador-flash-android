@@ -1,0 +1,3 @@
+# AURORA 4.27 — entrega música háptica
+
+Programación: pantalla desde COMUNICAR, análisis PCM y graves, tres intensidades de vibración, inicio y parada voluntarios, sin grabaciones ni subida de audio. Las vibraciones son eventos limitados, no representación literal de melodías. Se suspende monitor de fondo para disponer de un solo micrófono. El MASTER debe incluir commit exacto, continuidad y los pendientes de Galaxy S9+. Pruebas físicas pendientes: permiso micrófono, música con graves, silencio, vibración, salir y verificar detención. La próxima prioridad debe ser validar alertas ambientales y comunicación real en Samsung.
