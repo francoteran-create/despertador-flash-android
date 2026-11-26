@@ -157,7 +157,7 @@ public final class SenseActivity extends Activity {
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private GradientDrawable bg(int a,int b){return AuroraDesign.surface(this,a,b,0xff427997,24);}
  private TextView text(String content,int size,int color){TextView t=new TextView(this);t.setText(content);t.setTextSize(size);t.setTextColor(color);t.setPadding(dp(12),dp(12),dp(12),dp(12));return t;}
- private Button button(String content){Button b=new Button(this);b.setText(content);AuroraDesign.action(b,0xff1a4264,0xff292656,0xff4b7898);return b;}
+ private Button button(String content){Button b=new Button(this);b.setText(content);AuroraDesign.neonAction(b);return b;}
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);history=new SenseHistory(this);
   boolean backgroundWasActive=getSharedPreferences("aurora",0).getBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false);
@@ -178,9 +178,8 @@ public final class SenseActivity extends Activity {
   pageScroll=scroll;
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
   root.setPadding(dp(17),dp(14),dp(17),dp(25));
-  root.setBackgroundColor(Color.BLACK);scroll.addView(root);
-  screenFrame=new FrameLayout(this);
-  screenFrame.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
+  root.setBackgroundColor(Color.TRANSPARENT);scroll.addView(root);
+  screenFrame=AuroraDesign.menuFrame(this,scroll);
   setContentView(screenFrame);
   LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);root.addView(top);
   Button back=button("‹");back.setContentDescription("Volver a AURORA");
@@ -197,7 +196,7 @@ public final class SenseActivity extends Activity {
    startActivity(destination);finish();
   });
   root.addView(AuroraDesign.overline(this,"AURORA  /  INTELIGENCIA SENSORIAL"));
-  TextView intro=text(screenMode==MODE_SOUND?"Escuchá lo que sucede a tu alrededor.":"Transcribí y traducí automáticamente, frase por frase.",15,0xffcbddee);
+  TextView intro=text(screenMode==MODE_SOUND?"Escuchá lo que sucede a tu alrededor.":"Transcribí la conversación y traducí cuando lo necesites.",15,0xffcbddee);
   intro.setGravity(Gravity.CENTER);root.addView(intro);
   cloudMascot=new AuroraCloudMascotView(this);
   root.addView(cloudMascot,new LinearLayout.LayoutParams(-1,-2));
@@ -208,9 +207,13 @@ public final class SenseActivity extends Activity {
   visual.setVisibility(View.GONE);
   state=text("MICRÓFONO APAGADO",16,0xff8fe8df);state.setGravity(Gravity.CENTER);
   state.setBackground(bg(0xff0c303f,0xff14264b));root.addView(state);
+  Button settings=button("⚙  CONFIGURACIÓN");root.addView(settings);
+  LinearLayout options=new LinearLayout(this);options.setOrientation(LinearLayout.VERTICAL);
+  options.setVisibility(View.GONE);root.addView(options);
+  settings.setOnClickListener(v->{boolean open=options.getVisibility()!=View.VISIBLE;options.setVisibility(open?View.VISIBLE:View.GONE);settings.setText(open?"⚙  CERRAR CONFIGURACIÓN":"⚙  CONFIGURACIÓN");});
   if(screenMode==MODE_SOUND){
    Button testNotification=button("PROBAR NOTIFICACIÓN EN TELÉFONO · SIN MICRÓFONO");
-   root.addView(testNotification,new LinearLayout.LayoutParams(-1,dp(58)));
+   options.addView(testNotification,new LinearLayout.LayoutParams(-1,dp(58)));
    testNotification.setOnClickListener(v->{
     String report=AuroraPhoneAlerts.post(this,"POSIBLE TIMBRE DE PUERTA",true);
     new android.app.AlertDialog.Builder(this).setTitle("PRUEBA DE NOTIFICACIONES")
@@ -228,9 +231,9 @@ public final class SenseActivity extends Activity {
   String initial="";
   lastTranscript="";
   if(screenMode==MODE_SOUND){
-   root.addView(AuroraDesign.overline(this,"SENSIBILIDAD DE ESCUCHA"));
+   options.addView(AuroraDesign.overline(this,"SENSIBILIDAD DE ESCUCHA"));
    LinearLayout sensitivityRow=new LinearLayout(this);sensitivityRow.setOrientation(LinearLayout.HORIZONTAL);
-   root.addView(sensitivityRow,new LinearLayout.LayoutParams(-1,dp(65)));
+   options.addView(sensitivityRow,new LinearLayout.LayoutParams(-1,dp(65)));
    String[] titles={"ALTA","EQUILIBRADA","PRECISA"};
    final Button[] choices=new Button[3];
    int selectedSensitivity=Math.max(0,Math.min(2,getPreferences(MODE_PRIVATE).getInt("sense_sensitivity",1)));
@@ -256,9 +259,9 @@ public final class SenseActivity extends Activity {
     });
    }
    TextView sensitivityHint=text("Alta: más detecciones · Precisa: menos avisos falsos",13,0xffa8cadd);
-   root.addView(sensitivityHint);
+   options.addView(sensitivityHint);
   }else{
-   root.addView(AuroraDesign.overline(this,"IDIOMA DE LA CONVERSACIÓN"));
+   options.addView(AuroraDesign.overline(this,"IDIOMA DE LA CONVERSACIÓN"));
    languageSelection=AuroraLanguageCatalog.validIndex(
     getPreferences(MODE_PRIVATE).getInt("sense_language",0));
    Spinner sourcePicker=new Spinner(this);
@@ -268,7 +271,7 @@ public final class SenseActivity extends Activity {
    sourcePicker.setAdapter(sourceAdapter);
    sourcePicker.setSelection(languageSelection);
    sourcePicker.setContentDescription("Elegir idioma hablado");
-   root.addView(sourcePicker,new LinearLayout.LayoutParams(-1,dp(58)));
+   options.addView(sourcePicker,new LinearLayout.LayoutParams(-1,dp(58)));
    sourcePicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
     @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
     @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
@@ -292,7 +295,7 @@ public final class SenseActivity extends Activity {
    });
   }
   if(screenMode==MODE_SPEECH){
-   root.addView(AuroraDesign.overline(this,"IDIOMA PARA TRADUCIR CUANDO LO PIDAS"));
+   options.addView(AuroraDesign.overline(this,"IDIOMA PARA TRADUCIR CUANDO LO PIDAS"));
    int preferred=getPreferences(MODE_PRIVATE).getInt("translation_target",-1);
    translationTarget=preferred>=0&&preferred<AuroraLanguageCatalog.count()&&preferred!=languageSelection?
     preferred:AuroraLanguageCatalog.defaultDestination(languageSelection);
@@ -303,7 +306,7 @@ public final class SenseActivity extends Activity {
    translationTargetPicker.setAdapter(targetAdapter);
    translationTargetPicker.setSelection(translationTarget);
    translationTargetPicker.setContentDescription("Elegir idioma de traducción");
-   root.addView(translationTargetPicker,new LinearLayout.LayoutParams(-1,dp(58)));
+   options.addView(translationTargetPicker,new LinearLayout.LayoutParams(-1,dp(58)));
    translationTargetPicker.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
     @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
     @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
