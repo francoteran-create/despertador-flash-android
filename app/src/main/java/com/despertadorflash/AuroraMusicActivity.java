@@ -32,6 +32,7 @@ public final class AuroraMusicActivity extends Activity {
  private static final long MIN_BEAT_INTERVAL_MS=220;
  private final Handler ui=new Handler(Looper.getMainLooper());
  private volatile boolean running=false;
+ private boolean startPending=false;
  private volatile int strength=2;
  private volatile int sensitivity=2;
  private volatile AudioRecord recorder;
@@ -80,7 +81,7 @@ public final class AuroraMusicActivity extends Activity {
   Button test=button("PROBAR VIBRACIÓN");root.addView(test);test.setOnClickListener(v->{if(!running){pulse(300,255);}});
   status=label("Micrófono apagado. Tocá INICIAR para escuchar música.",16);root.addView(status);
   start=button("▶ INICIAR MÚSICA HÁPTICA");root.addView(start);
-  start.setOnClickListener(v->{if(running)stopCapture();else startCapture();});
+  start.setOnClickListener(v->{if(running)stopCapture();else if(startPending)stopCapture();else startCapture();});
   Button stop=button("■ DETENER VIBRACIÓN Y MICRÓFONO");root.addView(stop);
   stop.setOnClickListener(v->stopCapture());
   root.addView(label("No es un sistema de reconocimiento de canciones ni distingue melodías. "
@@ -88,12 +89,14 @@ public final class AuroraMusicActivity extends Activity {
     +"Al salir de esta pantalla se detiene todo.",13));
  }
  private void startCapture(){
-  if(running)return;
+  if(running||startPending)return;
+  if(AlarmEffectsService.activeId>=0){status.setText("Hay una alarma activa. Detenela antes de usar música háptica.");return;}
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
    requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},762);
    status.setText("Autorizá el micrófono y tocá INICIAR otra vez.");return;
   }
   if(vibrator==null||!vibrator.hasVibrator()){status.setText("El teléfono no tiene vibrador disponible.");return;}
+  startPending=true;start.setText("■ CANCELAR INICIO");
   boolean background=getSharedPreferences("aurora",0).getBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false);
   if(background){
    try{startService(new Intent(this,AuroraSoundMonitorService.class).setAction(AuroraSoundMonitorService.STOP));}
@@ -103,12 +106,15 @@ public final class AuroraMusicActivity extends Activity {
   }else beginRecorder();
  }
  private void beginRecorder(){
-  if(isFinishing()||isDestroyed()||running)return;
+  if(!startPending||isFinishing()||isDestroyed()||running)return;
+  startPending=false;start.setText("▶ INICIAR MÚSICA HÁPTICA");
+  if(AlarmEffectsService.activeId>=0){status.setText("Hay una alarma activa.");return;}
+  AudioRecord made=null;
   try{
    int minimum=AudioRecord.getMinBufferSize(SAMPLE_RATE,AudioFormat.CHANNEL_IN_MONO,
       AudioFormat.ENCODING_PCM_16BIT);
    if(minimum<=0){status.setText("Android no admite esta configuración de micrófono.");return;}
-   AudioRecord made=new AudioRecord(MediaRecorder.AudioSource.MIC,SAMPLE_RATE,
+   made=new AudioRecord(MediaRecorder.AudioSource.MIC,SAMPLE_RATE,
       AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT,Math.max(FRAME*4,minimum*2));
    if(made.getState()!=AudioRecord.STATE_INITIALIZED){
     made.release();status.setText("No se pudo iniciar el micrófono.");return;
@@ -122,10 +128,15 @@ public final class AuroraMusicActivity extends Activity {
    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
    start.setText("■ DETENER MÚSICA HÁPTICA");
    status.setText("Escuchando música. La vibración responde a golpes destacados del ritmo.");
-   worker=new Thread(()->analyze(made),"AuroraMusicHaptics");
+   final AudioRecord owned=made;
+   worker=new Thread(()->analyze(owned),"AuroraMusicHaptics");
    worker.start();
-  }catch(SecurityException error){status.setText("Falta autorización para micrófono.");}
-   catch(Exception error){status.setText("Error de micrófono: "+error.getClass().getSimpleName());}
+  }catch(Exception error){
+   if(made!=null){try{made.stop();}catch(Exception ignored){}try{made.release();}catch(Exception ignored){}}
+   recorder=null;running=false;start.setText("▶ INICIAR MÚSICA HÁPTICA");
+   getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+   status.setText(error instanceof SecurityException?"Falta autorización para micrófono.":"Error de micrófono: "+error.getClass().getSimpleName());
+  }
  }
  private void analyze(AudioRecord owned){
   short[] data=new short[FRAME];
@@ -135,6 +146,7 @@ public final class AuroraMusicActivity extends Activity {
   int frames=0;
   int errors=0;
   while(running&&recorder==owned){
+   if(AlarmEffectsService.activeId>=0){ui.post(()->{if(recorder==owned){stopCapture();status.setText("Música detenida por una alarma activa.");}});break;}
    int count;
    try{count=owned.read(data,0,data.length);}catch(Exception ex){break;}
    if(count<=0){if(++errors>5)break;continue;}
@@ -165,7 +177,7 @@ public final class AuroraMusicActivity extends Activity {
    if(frames%5==0){
     final int countBeats=beats;
     final int loud=(int)Math.round(Math.min(100,energy*1700));
-    ui.post(()->{if(running)status.setText("Nivel de sonido: "+loud+" / 100 · Pulsos: "+countBeats);});
+    ui.post(()->{if(running&&recorder==owned)status.setText("Nivel de sonido: "+loud+" / 100 · Pulsos: "+countBeats);});
    }
   }
   if(running&&recorder==owned)ui.post(()->{
@@ -175,7 +187,7 @@ public final class AuroraMusicActivity extends Activity {
   });
  }
  private void pulse(int duration,int amplitude){
-  if(vibrator==null||!vibrator.hasVibrator())return;
+  if(AlarmEffectsService.activeId>=0||vibrator==null||!vibrator.hasVibrator())return;
   try{
    if(Build.VERSION.SDK_INT>=26){int amp=vibrator.hasAmplitudeControl()?amplitude:VibrationEffect.DEFAULT_AMPLITUDE;vibrator.vibrate(VibrationEffect.createOneShot(duration,amp));}
    else vibrator.vibrate(duration);
@@ -196,10 +208,10 @@ public final class AuroraMusicActivity extends Activity {
   return total;
  }
  private void stopCapture(){
-  running=false;
+  startPending=false;running=false;ui.removeCallbacksAndMessages(null);
   AudioRecord old=recorder;recorder=null;
   if(old!=null){try{old.stop();}catch(Exception ignored){}try{old.release();}catch(Exception ignored){}}
-  if(vibrator!=null)vibrator.cancel();
+  if(vibrator!=null&&AlarmEffectsService.activeId<0)vibrator.cancel();
   if(start!=null)start.setText("▶ INICIAR MÚSICA HÁPTICA");
   getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
   if(status!=null)status.setText("Detenido. Micrófono y vibración apagados.");
