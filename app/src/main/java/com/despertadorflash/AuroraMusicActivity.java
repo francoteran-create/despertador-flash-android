@@ -51,8 +51,7 @@ public final class AuroraMusicActivity extends Activity {
  }
  private Button button(String value){
   Button b=new Button(this);b.setText(value);b.setMinHeight(dp(64));
-  AuroraDesign.action(b,0xff11191f,0xff101018,0xff32efff);
-  b.setTextColor(0xffffdf33);
+  AuroraDesign.neonAction(b);
   return b;
  }
  @Override public void onCreate(Bundle saved){
@@ -62,19 +61,8 @@ public final class AuroraMusicActivity extends Activity {
   strength=Math.max(1,Math.min(3,p.getInt("music_strength",2)));
   sensitivity=Math.max(0,Math.min(2,p.getInt("music_sensitivity",2)));
   threshold=Math.max(-65,Math.min(-15,p.getInt("music_threshold",-42)));
-  android.widget.FrameLayout screen=new android.widget.FrameLayout(this);screen.setBackgroundColor(Color.BLACK);
-  android.widget.ImageView mural=new android.widget.ImageView(this);mural.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-  mural.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-  try(java.io.InputStream input=getAssets().open("aurora_mural.jpg.b64")){
-   java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();byte[] block=new byte[2048];int n;
-   while((n=input.read(block))!=-1)bytes.write(block,0,n);
-   byte[] raw=android.util.Base64.decode(bytes.toByteArray(),android.util.Base64.DEFAULT);
-   mural.setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(raw,0,raw.length));
-  }catch(Exception ignored){}
-  screen.addView(mural,new android.widget.FrameLayout.LayoutParams(-1,-1));
-  android.view.View shade=new android.view.View(this);shade.setBackgroundColor(0xd0000000);screen.addView(shade,new android.widget.FrameLayout.LayoutParams(-1,-1));
-  android.widget.ScrollView scroll=new android.widget.ScrollView(this);scroll.setFillViewport(true);screen.addView(scroll,new android.widget.FrameLayout.LayoutParams(-1,-1));
-  LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(16),dp(12),dp(16),dp(18));scroll.addView(root);setContentView(screen);
+  android.widget.ScrollView scroll=new android.widget.ScrollView(this);scroll.setFillViewport(true);
+  LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(16),dp(12),dp(16),dp(18));scroll.addView(root);setContentView(AuroraDesign.menuFrame(this,scroll));
   LinearLayout top=new LinearLayout(this);root.addView(top);
   Button back=button("← VOLVER");top.addView(back,new LinearLayout.LayoutParams(0,-2,1));back.setOnClickListener(v->finish());
   Button settings=button("⚙ AJUSTES");top.addView(settings,new LinearLayout.LayoutParams(0,-2,1));settings.setOnClickListener(v->showSettings());
