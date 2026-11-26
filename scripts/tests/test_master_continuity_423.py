@@ -7,7 +7,7 @@ class MasterContinuity(unittest.TestCase):
   for fragment in ("COMO CONTINUAR EN OTRO CHAT","francoteran-create/despertador-flash-android",
    "aurora-sense-precision-2026-11-10","Rama estable main",
    "unico ZIP","APK ARM64","AURORA VOZ","Modo Mostrador","SOS 4.26",
-   "La estetica queda postergada","+commit","+version"):
+   "Conservar la estética urbana neón aprobada","+commit","+version"):
    self.assertIn(fragment,source)
  def test_instructions_created_before_pdf_build(self):
   self.assertLess(source.index('head("7 | COMO CONTINUAR'),source.index("def footer(canvas,pdf):"))
