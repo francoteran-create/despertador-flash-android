@@ -9,18 +9,16 @@ HERO=(ROOT/"app/src/main/java/com/despertadorflash/AuroraHeroCloudView.java").re
 BUTTON=(ROOT/"app/src/main/java/com/despertadorflash/AuroraHeroCloudButton.java").read_text(encoding="utf-8")
 
 class HeroNavigationTest(unittest.TestCase):
- def test_exact_four_cloud_nav_targets(self):
-  area=MAIN[MAIN.index("void renderMinimalHero(){"):MAIN.index("LinearLayout homeTile(")]
-  self.assertEqual(area.count("addHeroShortcut(upper,"),2)
-  self.assertEqual(area.count("addHeroShortcut(lower,"),2)
-  for title in ('"SONIDOS"','"CONVERSACIÓN"','"ALARMA"','"COMUNICAR"'):
+ def test_neon_navigation_and_real_targets(self):
+  area=MAIN[MAIN.index("void renderMinimalHero(){"):MAIN.index("LinearLayout neonTile(")]
+  self.assertEqual(area.count("neonPair(hero,"),5)
+  for title in ('"DETECCIÓN DE SONIDOS"','"TRANSCRIPCIÓN"','"ALARMA"','"COMUNICAR"','"TEMPORIZADOR"','"SOS"','"REGISTROS"','"SENTIR LA MÚSICA"','"AURORA VOZ"','"MOSTRADOR"'):
    self.assertIn(title,area)
-  self.assertIn("openSense(SenseActivity.MODE_SOUND)",area)
-  self.assertIn("openSense(SenseActivity.MODE_SPEECH)",area)
-  self.assertIn("alarmsPage=true;render()",area)
-  self.assertIn("communicationPage=true;render()",area)
- def test_black_background_on_main_and_sense(self):
-  self.assertIn("hero.setBackgroundColor(Color.BLACK)",MAIN)
+  for target in ("openSense(SenseActivity.MODE_SOUND)","openSense(SenseActivity.MODE_SPEECH)","alarmsPage=true;render()","communicationPage=true;render()","timerPage=true;render()","AuroraSosActivity.class","RecordsActivity.class","AuroraMusicActivity.class","AuroraVoiceActivity.class","AuroraCounterActivity.class"):
+   self.assertIn(target,area)
+ def test_dark_fallback_and_static_mural(self):
+  self.assertIn("screen.setBackgroundColor(Color.BLACK)",MAIN)
+  self.assertIn('getAssets().open("aurora_mural.jpg.b64")',MAIN)
   self.assertIn("root.setBackgroundColor(Color.BLACK)",MAIN)
   self.assertIn("root.setBackgroundColor(Color.BLACK)",SENSE)
   self.assertIn("new AuroraHeroCloudView(this)",MAIN)
@@ -32,6 +30,9 @@ class HeroNavigationTest(unittest.TestCase):
   self.assertIn("setContentDescription(\"Abrir \"+title)",BUTTON)
   self.assertIn("setFocusable(true)",BUTTON)
   self.assertIn("setOnClickListener(v->navigate.run())",MAIN)
+  self.assertIn("tile.setContentDescription(label)",MAIN)
+  self.assertIn("tile.setFocusable(true)",MAIN)
+  self.assertIn("info.setClassName(Button.class.getName())",MAIN)
   self.assertIn('PREF_CHARACTER',MAIN)
   self.assertIn('setSingleChoiceItems',MAIN)
   self.assertIn("Tocá para cambiar de personaje",HERO)
