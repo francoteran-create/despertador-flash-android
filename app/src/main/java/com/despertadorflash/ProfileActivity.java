@@ -31,11 +31,11 @@ public final class ProfileActivity extends Activity {
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private GradientDrawable gradient(int a,int b){return AuroraDesign.surface(this,a,b,0xff447c9d,22);}
  private TextView label(String s,int size){TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(0xffe1f4ff);v.setPadding(dp(8),dp(9),dp(8),dp(5));return v;}
- private Button button(String text){Button b=new Button(this);b.setText(text);AuroraDesign.action(b,0xff244a70,0xff382f68,0xff5589a9);return b;}
+ private Button button(String text){Button b=new Button(this);b.setText(text);AuroraDesign.neonAction(b);return b;}
  private EditText edit(String hint){EditText field=new EditText(this);field.setHint(hint);field.setHintTextColor(0xff94b8cb);field.setTextColor(-1);field.setTextSize(17);field.setSingleLine(true);field.setPadding(dp(14),dp(13),dp(14),dp(13));AuroraDesign.entry(field);return field;}
  @Override public void onCreate(Bundle saved){super.onCreate(saved);prefs=getSharedPreferences(PREF,0);avatarColor=prefs.getInt("avatar_color",0);avatarStyle=prefs.getInt("avatar_style",0);usePhoto=prefs.getBoolean("photo",false);draw();}
  private void draw(){
-  ScrollView scroll=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(18),dp(20),dp(18),dp(28));root.setBackground(new AuroraSkyDrawable());scroll.addView(root);setContentView(scroll);
+  ScrollView scroll=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(18),dp(20),dp(18),dp(28));root.setBackgroundColor(Color.TRANSPARENT);scroll.addView(root);setContentView(AuroraDesign.menuFrame(this,scroll));
   Button back=button("← VOLVER");root.addView(back);back.setOnClickListener(v->finish());
   TextView title=label("MI PERFIL AURORA",28);title.setTextColor(0xffa7f0ff);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);root.addView(title);
   TextView intro=label("Personalizá tu identidad en AURORA. Todos estos datos son opcionales y permanecen en este teléfono.",15);intro.setGravity(Gravity.CENTER);root.addView(intro);

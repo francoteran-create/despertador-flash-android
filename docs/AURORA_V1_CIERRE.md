@@ -27,7 +27,7 @@ Estado de revisión: código acumulativo de la rama main, MASTER interna 4.0. Es
 - Monitorización visual continua, reconocimiento de personas, predicción de peligros o identificación de intenciones.
 - Garantizar detectar incendios, alarmas de humo, emergencias o eventos críticos: no sustituir dispositivos certificados.
 - Agente generativo conectado a un proveedor externo sin servicio seguro, controles de privacidad, costos definidos y autorización del usuario.
-- Rehacer estética, personaje, animaciones o diseño general.
+- Rediseños experimentales, personajes animados o cambios visuales no aprobados. En la rama 4.1 se recuperó el inicio aprobado de 2.8 desde su código histórico; falta validación visual en Galaxy S9+.
 
 ## Condiciones de aceptación antes de distribuir a usuarios
 - [ ] Samsung Galaxy S9+: instalación y apertura sin cierres, prueba en Android real.

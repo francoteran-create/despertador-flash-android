@@ -1,0 +1,1 @@
+AURORA 4.22: la prueba histórica de reloj ahora comprueba el aviso telefónico independiente. Prueba manual: en SONIDOS pulsar PROBAR NOTIFICACIÓN EN TELÉFONO, revisar el reporte y la bandeja Android; después probar sonido real. Los datos de prueba no se guardan como evento de micrófono. No validado aún en Samsung físico.

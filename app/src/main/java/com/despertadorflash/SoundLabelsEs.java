@@ -11,15 +11,20 @@ public final class SoundLabelsEs {
   if(raw==null)return null;
   String s=raw.toLowerCase(Locale.ROOT);
   if(has(s,"doorbell","ding-dong"))return "POSIBLE TIMBRE DE PUERTA";
-  if(has(s,"knock","door slam","sliding door"))return "POSIBLES GOLPES EN UNA PUERTA";
-  if((s.contains("door")&&!s.contains("indoor"))||s.contains("drawer"))return "POSIBLE PUERTA O CAJÓN";
+  if(has(s,"knock"))return "POSIBLES GOLPES O IMPACTOS";
+  if(has(s,"door slam"))return "POSIBLE PORTAZO";
+  if((s.contains("door")&&!has(s,"indoor","outdoor"))||s.contains("drawer"))return "POSIBLE PUERTA O CAJÓN";
   if(has(s,"tap","thump","bang","thud","pounding","hammer","slam"))return "POSIBLES GOLPES O IMPACTOS";
-  if(has(s,"speech","conversation","narration","whisper","babbling","child speech"))return "POSIBLE CONVERSACIÓN";
+  if(has(s,"conversation"))return "POSIBLE CONVERSACIÓN";
+  if(has(s,"speech","narration","whisper","babbling"))return "POSIBLE VOZ HUMANA";
   if(has(s,"shout","scream","yell"))return "POSIBLES GRITOS";
   if(has(s,"laughter","giggle","chuckle"))return "POSIBLES RISAS";
   if(has(s,"baby","crying","sobbing"))return "POSIBLE LLANTO";
-  if(has(s,"dog","bark","howl","whimper"))return "POSIBLE PERRO LADRANDO";
-  if(has(s,"cat","meow","purr"))return "POSIBLE GATO";
+  if(has(s,"bark"))return "POSIBLE PERRO LADRANDO";
+  if(has(s,"dog"))return "POSIBLE PERRO";
+  if(has(s,"howl"))return "POSIBLE AULLIDO";
+  if(has(s,"whimper"))return "POSIBLE GEMIDO";
+  if(word(s,"cat")||has(s,"meow","purr"))return "POSIBLE GATO";
   if(has(s,"bird","chirp","tweet","crow","rooster"))return "POSIBLES AVES";
   if(has(s,"siren"))return "POSIBLE SIRENA";
   if(has(s,"smoke detector","fire alarm"))return "POSIBLE ALARMA DE INCENDIO";
@@ -35,8 +40,9 @@ public final class SoundLabelsEs {
   if(has(s,"motorcycle"))return "POSIBLE MOTO";
   if(has(s,"aircraft","airplane","helicopter"))return "POSIBLE AERONAVE";
   if(has(s,"train","rail"))return "POSIBLE TREN";
+  if(has(s,"french horn","brass instrument","musical horn"))return "POSIBLE MÚSICA";
   if(has(s,"horn","honk"))return "POSIBLE BOCINA";
-  if(has(s,"traffic","engine","vehicle","car","truck","bus","idling"))return "POSIBLE VEHÍCULO";
+  if(has(s,"traffic","engine","vehicle","truck","bus","idling")||word(s,"car"))return "POSIBLE VEHÍCULO";
   if(has(s,"music","singing","guitar","piano","violin","drum","instrument"))return "POSIBLE MÚSICA";
   if(has(s,"applause","clap"))return "POSIBLES APLAUSOS";
   if(has(s,"vacuum","blender","drill","machine","motor","printer","mechanism"))return "POSIBLE MÁQUINA";
@@ -49,4 +55,15 @@ public final class SoundLabelsEs {
   return null;
  }
  private static boolean has(String x,String... words){for(String w:words)if(x.contains(w))return true;return false;}
+ /** Respect whole-word boundaries for short English classifier labels. */
+ private static boolean word(String text,String token){
+  int index=-1;
+  while((index=text.indexOf(token,index+1))>=0){
+   int end=index+token.length();
+   boolean before=index==0||!Character.isLetter(text.charAt(index-1));
+   boolean after=end==text.length()||!Character.isLetter(text.charAt(end));
+   if(before&&after)return true;
+  }
+  return false;
+ }
 }

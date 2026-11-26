@@ -112,30 +112,32 @@ public final class AuroraAssistActivity extends Activity {
   layout.addView(text("PRIVACIDAD: la foto se procesa en el dispositivo y no se guarda en el historial de AURORA. Si usás la cámara, solo analizamos la foto que tomaste. Esto no identifica personas ni garantiza la detección de peligros.",13));
  }
  private void reviewHistory(boolean sounds){
-  if(processing){status.setText("Finalizá la operación actual antes de consultar el historial.");return;}
+  if(processing){status.setText("Finalizá la operación actual antes de consultar la lista.");return;}
+  if(sounds){
+   // Sound events no longer live in TXT files. Read the rolling in-app list.
+   output.setText(SoundDigest.summarizeRecent(RecentSoundEvents.snapshot(this)));
+   status.setText("Últimos 30 sonidos confirmados en AURORA. No se crea un archivo.");
+   return;
+  }
   processing=true;
-  status.setText("Leyendo registros guardados en este teléfono…");
-  final int max=sounds?3:1;
+  status.setText("Leyendo las conversaciones guardadas en este teléfono…");
   imageWorker.execute(()->{
    StringBuilder observations=new StringBuilder();
-   int sessions=0;
    boolean readError=false;
-   for(File file:new SenseHistory(this).list()){
-    if(!file.getName().contains(sounds?"SONIDOS":"CONVERSACION"))continue;
+   File[] files=ConversationRecordFilter.conversations(new SenseHistory(this).list());
+   for(File file:files){
     try{
      observations.append(SenseHistory.read(file)).append("\n");
-     if(++sessions>=max)break;
+     break; // Only the latest saved conversation.
     }catch(IOException ignored){readError=true;}
    }
-   final String review=sounds?SoundDigest.summarize(observations.toString()):
-     ConversationRecall.lastPhrases(observations.toString());
+   final String review=ConversationRecall.lastPhrases(observations.toString());
    final boolean error=readError;
    main.post(()->{
     if(destroyed)return;
     processing=false;
     output.setText(review);
-    status.setText(error?"Algún registro no se pudo leer. Se muestran los registros disponibles.":
-     sounds?"Detecciones registradas localmente; son aproximaciones.":"Palabras transcritas por Android; pueden tener errores.");
+    status.setText(error?"Alguna conversación no se pudo leer.":"Frases transcritas por Android; pueden tener errores.");
    });
   });
  }

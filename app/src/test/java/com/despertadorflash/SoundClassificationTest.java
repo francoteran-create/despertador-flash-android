@@ -12,6 +12,45 @@ public class SoundClassificationTest {
   assertEquals("POSIBLE PERRO LADRANDO",SoundLabelsEs.name("Bark"));
   assertEquals("POSIBLE ALARMA DE INCENDIO",SoundLabelsEs.name("Fire alarm"));
  }
+ @Test public void eventNamesDoNotInventCauses(){
+  assertEquals("POSIBLES GOLPES O IMPACTOS",SoundLabelsEs.name("Knock"));
+  assertEquals("POSIBLE PORTAZO",SoundLabelsEs.name("Door slam"));
+  assertEquals("POSIBLE PUERTA O CAJÓN",SoundLabelsEs.name("Sliding door"));
+  assertEquals("POSIBLE PERRO",SoundLabelsEs.name("Dog"));
+  assertEquals("POSIBLE PERRO LADRANDO",SoundLabelsEs.name("Bark"));
+  assertEquals("POSIBLE AULLIDO",SoundLabelsEs.name("Howl"));
+  assertEquals("POSIBLE CONVERSACIÓN",SoundLabelsEs.name("Conversation"));
+  assertEquals("POSIBLE VOZ HUMANA",SoundLabelsEs.name("Speech"));
+  assertEquals("POSIBLE VOZ HUMANA",SoundLabelsEs.name("Narration, monologue"));
+  assertEquals("POSIBLE MÚSICA",SoundLabelsEs.name("Music"));
+ }
+ @Test public void nearbyUnrelatedWordsDoNotBecomeDoorOrVehicle(){
+  assertNull(SoundLabelsEs.name("Outdoor ambience"));
+  assertNull(SoundLabelsEs.name("Indoor ambience"));
+  assertNull(SoundLabelsEs.name("Carillon"));
+  assertEquals("POSIBLE VEHÍCULO",SoundLabelsEs.name("Car passing by"));
+  assertEquals("POSIBLE PUERTA O CAJÓN",SoundLabelsEs.name("Door"));
+ }
+ @Test public void simultaneousAlertsWithinOneCategoryHaveDifferentTags(){
+  String bell=SoundAlertPreferences.notificationTag("doors","POSIBLE TIMBRE DE PUERTA");
+  String knocks=SoundAlertPreferences.notificationTag("doors","POSIBLES GOLPES EN UNA PUERTA");
+  assertNotEquals(bell,knocks);
+  assertEquals(bell,SoundAlertPreferences.notificationTag("doors","POSIBLE TIMBRE DE PUERTA"));
+  assertTrue(SoundAlertPreferences.isNotificationForCategory(bell,"doors"));
+  assertTrue(SoundAlertPreferences.isNotificationForCategory(knocks,"doors"));
+  assertFalse(SoundAlertPreferences.isNotificationForCategory(knocks,"alarms"));
+  assertFalse(SoundAlertPreferences.isNotificationForCategory("aurora_monitor","doors"));
+  assertFalse(SoundAlertPreferences.isNotificationForCategory(null,"doors"));
+ }
+ @Test public void musicalFrenchHornMustNotBecomeCarHorn(){
+  assertEquals("POSIBLE MÚSICA",SoundLabelsEs.name("French horn"));
+  assertEquals("POSIBLE BOCINA",SoundLabelsEs.name("Vehicle horn, car horn, honking"));
+ }
+ @Test public void catRequiresWholeWordNotEnglishSubstring(){
+  assertEquals("POSIBLE GATO",SoundLabelsEs.name("Cat"));
+  assertEquals("POSIBLE GATO",SoundLabelsEs.name("Cat purring"));
+  assertNull(SoundLabelsEs.name("Location"));
+ }
  @Test public void unknownClassesDoNotPretendRecognition(){
   assertNull(SoundLabelsEs.name(null));
   assertNull(SoundLabelsEs.name("Unknown audio class"));
@@ -27,9 +66,12 @@ public class SoundClassificationTest {
  }
  @Test public void soundCategoriesAreStable(){
   assertEquals("doors",SoundAlertPreferences.category("POSIBLE TIMBRE DE PUERTA"));
+  assertEquals("doors",SoundAlertPreferences.category("POSIBLE PORTAZO"));
   assertEquals("alarms",SoundAlertPreferences.category("POSIBLE SIRENA"));
   assertEquals("people",SoundAlertPreferences.category("POSIBLES GRITOS"));
   assertEquals("pets",SoundAlertPreferences.category("POSIBLE PERRO LADRANDO"));
   assertEquals("other",SoundAlertPreferences.category("POSIBLE MÚSICA"));
+  assertEquals("voices",SoundAlertPreferences.category("POSIBLE VOZ HUMANA"));
+  assertEquals("voices",SoundAlertPreferences.category("POSIBLE CONVERSACIÓN"));
  }
 }

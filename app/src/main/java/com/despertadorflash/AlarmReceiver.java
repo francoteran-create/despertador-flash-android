@@ -12,6 +12,12 @@ public class AlarmReceiver extends BroadcastReceiver {
   boolean snooze=i.getBooleanExtra("snooze",false);
   if(snooze)c.getSharedPreferences("aurora",0).edit().remove("snooze_until"+id).apply();
   else MainActivity.schedule(c,id);
+  c.getSharedPreferences("aurora",0).edit().putLong("last_alarm_delivery"+id,System.currentTimeMillis()).apply();
+  try{
+   Intent effects=new Intent(c,AlarmEffectsService.class).putExtra("id",id);
+   if(Build.VERSION.SDK_INT>=26)c.startForegroundService(effects);else c.startService(effects);
+   return;
+  }catch(RuntimeException ex){android.util.Log.w("Aurora","Servicio de alarma no disponible; usando notificación de respaldo",ex);}
   Intent open=new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("ring",true).putExtra("alarm_id",id);
   PendingIntent tap=PendingIntent.getActivity(c,1000+id,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
   NotificationManager manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -25,6 +31,6 @@ public class AlarmReceiver extends BroadcastReceiver {
   builder.setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("AURORA · Despertador").setContentText("Es hora de despertar").setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setPriority(Notification.PRIORITY_MAX).setAutoCancel(true).setContentIntent(tap).setFullScreenIntent(tap,true).setVibrate(new long[]{0,900,200,900,200,900});
   try{manager.notify(2000+id,builder.build());}catch(SecurityException e){android.util.Log.w("Aurora","Notification permission missing",e);}
   Vibrator v=(Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);
-  if(v!=null&&v.hasVibrator()){long[] pat={0,900,200,900,200,900,200,900};if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(pat,-1));else v.vibrate(pat,-1);}
+  if(c.getSharedPreferences("aurora",0).getBoolean("alarm_vibration"+id,true)&&v!=null&&v.hasVibrator()){long[] pat={0,900,200,900,200,900,200,900};if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createWaveform(pat,-1));else v.vibrate(pat,-1);}
  }
 }

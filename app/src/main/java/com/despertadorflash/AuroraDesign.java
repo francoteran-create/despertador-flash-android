@@ -42,6 +42,29 @@ public final class AuroraDesign {
   card.setElevation(dp(c,6));
   card.setPadding(dp(c,20),dp(c,19),dp(c,20),dp(c,19));
  }
+ public static void neonAction(Button button){
+  action(button,0xff10161c,0xff141321,0xff32efff);
+  button.setTextColor(0xffffdf33);
+ }
+ /** Shared home mural with strong contrast for operational screens. */
+ public static android.widget.FrameLayout menuFrame(Context c,View content){
+  android.widget.FrameLayout screen=new android.widget.FrameLayout(c);
+  screen.setBackgroundColor(Color.BLACK);
+  android.widget.ImageView mural=new android.widget.ImageView(c);
+  mural.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+  mural.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  try(java.io.InputStream input=c.getAssets().open("aurora_mural.jpg.b64")){
+   java.io.ByteArrayOutputStream encoded=new java.io.ByteArrayOutputStream();
+   byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)encoded.write(buffer,0,n);
+   byte[] image=android.util.Base64.decode(encoded.toByteArray(),android.util.Base64.DEFAULT);
+   mural.setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(image,0,image.length));
+  }catch(Exception ignored){}
+  screen.addView(mural,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  View shade=new View(c);shade.setBackgroundColor(0xd0000000);
+  screen.addView(shade,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  screen.addView(content,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  return screen;
+ }
  public static void entry(View field){
   Context c=field.getContext();
   field.setBackground(surface(c,0xff12273d,0xff1a1d3c,0xff496b86,17));

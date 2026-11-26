@@ -7,20 +7,24 @@ package com.despertadorflash;
  * not in a tight loop that drains the battery.
  */
 public final class SpeechRetryController {
- private static final long[] BACKOFF_MS={800,1400,2400,4000,6000,9000};
+ private static final long[] BACKOFF_MS={800,1400,2400,4000,6000,9000,15000,22000,30000};
  private int failures=0;
  public void reset(){failures=0;}
  public int failures(){return failures;}
- public long silenceDelay(){return 650L;}
+ public long silenceDelay(){return 1200L;}
+ /** Keep recovering after the initial failures instead of silently ending
+  * a user's conversation. Delays cap at 30 s to avoid tight Android loops.
+  * Fatal permission/language errors are handled separately by the caller.
+  */
  public long onTemporaryFailure(){
-  int next=failures++;
-  if(next>=BACKOFF_MS.length)return -1L;
-  return BACKOFF_MS[next];
+  int index=Math.min(failures,BACKOFF_MS.length-1);
+  if(failures<Integer.MAX_VALUE)failures++;
+  return BACKOFF_MS[index];
  }
  public static boolean isSilence(int error){return error==6||error==7;} // NO_MATCH or SPEECH_TIMEOUT
  public static boolean isTemporary(int error){
-  return error==1||error==2||error==4||error==8||error==10||error==11;
-  // NETWORK_TIMEOUT, NETWORK, SERVER, RECOGNIZER_BUSY, TOO_MANY_REQUESTS, SERVER_DISCONNECTED
+  return error==1||error==2||error==3||error==4||error==5||error==8||error==10||error==11;
+  // Includes temporary audio/client conditions; permission and language errors remain fatal.
  }
  public static String explanation(int error){
   switch(error){

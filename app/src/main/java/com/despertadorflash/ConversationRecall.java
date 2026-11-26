@@ -18,7 +18,7 @@ public final class ConversationRecall {
   for(String line:record.split("\\r?\\n")){
    // SenseHistory writes: 1. [10:25:01] texto reconocido
    String trimmed=line.trim();
-   if(!trimmed.matches("^[0-9]{1,4}\\. \\[\\d\\d:\\d\\d:\\d\\d\\] .+"))continue;
+    if(!trimmed.matches("^(?:[0-9]{1,4}\\. )?\\[\\d\\d:\\d\\d:\\d\\d\\] .+"))continue;
    if(trimmed.contains("confianza estimada"))continue;
    int endTimestamp=trimmed.indexOf("] ");
    if(endTimestamp<0)continue;
