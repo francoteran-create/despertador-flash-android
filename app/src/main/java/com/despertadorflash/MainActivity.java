@@ -519,12 +519,12 @@ public class MainActivity extends Activity {
  }
  void renderSettingsPage(){
   setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
-  AuroraHeroCloudView preview=new AuroraHeroCloudView(this);root.addView(preview,new LinearLayout.LayoutParams(-1,dp(160)));
+  AuroraHeroCloudView mascotPreview=new AuroraHeroCloudView(this);root.addView(mascotPreview,new LinearLayout.LayoutParams(-1,dp(160)));
   Button mascotChoice=btn("PERSONAJE AURORA");root.addView(mascotChoice);
   mascotChoice.setOnClickListener(v->{
    new AlertDialog.Builder(this).setTitle("Elegí el personaje")
-    .setSingleChoiceItems(new String[]{"Nube urbana","Nube alternativa"},preview.getCharacter(),(dialog,which)->{
-     preview.setCharacter(which);prefs.edit().putInt(AuroraHeroCloudView.PREF_CHARACTER,which).apply();
+    .setSingleChoiceItems(new String[]{"Nube urbana","Nube alternativa"},mascotPreview.getCharacter(),(dialog,which)->{
+     mascotPreview.setCharacter(which);prefs.edit().putInt(AuroraHeroCloudView.PREF_CHARACTER,which).apply();
      Toast.makeText(this,which==0?"Nube urbana elegida":"Nube alternativa elegida",Toast.LENGTH_SHORT).show();
     }).setPositiveButton("CERRAR",null).show();
   });
