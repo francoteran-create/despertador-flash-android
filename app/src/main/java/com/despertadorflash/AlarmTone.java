@@ -36,18 +36,20 @@ public final class AlarmTone {
   }
   return data;
  }
- public void play(int selected,int volume,boolean loop){
-  stop(); if(volume<=0)return;
+ public boolean play(int selected,int volume,boolean loop){
+  stop(); if(volume<=0)return false;
   try{
    short[] pcm=samples(selected);
    track=new AudioTrack.Builder().setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
     .setAudioFormat(new AudioFormat.Builder().setSampleRate(RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
     .setTransferMode(AudioTrack.MODE_STATIC).setBufferSizeInBytes(pcm.length*2).build();
-   if(track.getState()==AudioTrack.STATE_UNINITIALIZED||track.write(pcm,0,pcm.length)!=pcm.length){stop();return;}
+   if(track.getState()==AudioTrack.STATE_UNINITIALIZED||track.write(pcm,0,pcm.length)!=pcm.length){stop();return false;}
    track.setVolume(Math.max(0,Math.min(100,volume))/100f);
-   if(loop)track.setLoopPoints(0,pcm.length,-1);
+   if(loop&&track.setLoopPoints(0,pcm.length,-1)!=AudioTrack.SUCCESS){stop();return false;}
    track.play();
-  }catch(RuntimeException ex){stop();android.util.Log.w("Aurora","No se pudo reproducir alarma",ex);}
+   if(track.getPlayState()!=AudioTrack.PLAYSTATE_PLAYING){stop();return false;}
+   return true;
+  }catch(RuntimeException ex){stop();android.util.Log.w("Aurora","No se pudo reproducir alarma",ex);return false;}
  }
  public void stop(){AudioTrack old=track;track=null;if(old!=null){try{old.stop();}catch(Exception ignored){}try{old.release();}catch(Exception ignored){}}}
 }
