@@ -14,6 +14,23 @@ public final class AlarmEffectsService extends Service {
  private Vibrator vibrator;
  private PowerManager.WakeLock wake;
  private final Runnable timeout=()->stopSelf();
+ private int ledAttempts;
+ private final Runnable ledWatchdog=this::checkLed;
+ private void checkLed(){
+  if(activeId<0||torch==null)return;
+  android.content.SharedPreferences p=getSharedPreferences("aurora",0);
+  if(!torch.isRunning()){
+   if(ledAttempts>=4){
+    p.edit().putString("last_alarm_flash"+activeId,"LED detenido tras 4 intentos: "+torch.getLastError()).apply();
+    return;
+   }
+   ledAttempts++;
+   boolean started=torch.start();
+   p.edit().putString("last_alarm_flash"+activeId,started?"Android aceptó encender LED (intento "+ledAttempts+"); comprobar luz física":"Intento "+ledAttempts+": "+torch.getLastError()).apply();
+   if(!started)android.util.Log.w("Aurora","Flash de alarma: "+torch.getLastError());
+  }
+  handler.postDelayed(ledWatchdog,2000L);
+ }
  @Override public IBinder onBind(Intent i){return null;}
  @Override public int onStartCommand(Intent i,int flags,int startId){
   if(i==null||STOP.equals(i.getAction())){stopSelf();return START_NOT_STICKY;}
@@ -47,20 +64,15 @@ public final class AlarmEffectsService extends Service {
   }
   if(p.getBoolean("alarm_flash"+id,p.getBoolean("torch_alert",true))){
    torch=new TorchFlasher(this);
-   boolean started=torch.start();
-   p.edit().putString("last_alarm_flash"+id,started?"Android aceptó encender el LED; falta confirmar visualmente":torch.getLastError()).apply();
-   if(!started){
-    android.util.Log.w("Aurora","Flash de alarma: "+torch.getLastError());
-    builder.setContentText("Flash no disponible: "+torch.getLastError());
-    try{manager.notify(2500,builder.build());}catch(RuntimeException ignored){}
-   }
+   ledAttempts=0;
+   checkLed();
   }else p.edit().putString("last_alarm_flash"+id,"Desactivado por configuración").apply();
   if(p.getBoolean("alarm_sound"+id,false))tone.play(p.getInt("alarm_tone"+id,0),p.getInt("alarm_volume"+id,75),true);
   handler.postDelayed(timeout,duration*1000L);
   return START_NOT_STICKY;
  }
  private void clearEffects(){
-  handler.removeCallbacks(timeout);
+  handler.removeCallbacks(timeout);handler.removeCallbacks(ledWatchdog);
   tone.stop();
   if(torch!=null){torch.stop();torch=null;}
   if(vibrator!=null){vibrator.cancel();vibrator=null;}
