@@ -16,19 +16,20 @@ public final class TorchFlasher {
  private boolean on=false;
  private String lastError="Sin probar";
  public String getLastError(){return lastError;}
+ public boolean isRunning(){return running;}
  private final Runnable pulse=new Runnable(){
   @Override public void run(){
    if(!running)return;
    try{
     if(camera==null||cameraId==null){stop();return;}
-    on=!on;camera.setTorchMode(cameraId,on);
+    boolean next=!on;camera.setTorchMode(cameraId,next);on=next;
     handler.postDelayed(this,on?400:600);
    }catch(Exception ex){lastError=ex.getClass().getSimpleName()+": "+ex.getMessage();Log.w("Aurora","Flash LED no disponible",ex);stop();}
   }
  };
  public TorchFlasher(Context context){this.context=context.getApplicationContext();}
  public boolean start(){
-  stop();
+  stop();cameraId=null;camera=null;
   if(Build.VERSION.SDK_INT<23){lastError="Android no admite controlar la linterna";return false;}
   if(context.checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){lastError="Permiso de cámara no concedido";return false;}
   try{
