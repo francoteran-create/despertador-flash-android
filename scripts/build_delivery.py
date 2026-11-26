@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.32",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.33",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -95,6 +95,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "flash, vibración y escucha con la pantalla bloqueada: PENDIENTES "
         "en Samsung Galaxy S9+. La rama main estable permanece intacta.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
+    item("NUEVO 4.33", "Tarjetas de alarma compactas con ajustes desplegables; configuración general agrupada por categorías; temporizador personalizado de 1 a 1440 minutos. Se conservan funciones y programación anteriores. Pendiente validar disposición visual y funcionamiento físico. Avatares al final.")
     item("NUEVO 4.32", "FFT local 44,1 kHz, graves/medios/agudos, línea de espectro gruesa multicolor y vibración por ataques sobre umbral dBFS configurable. Sin pulsos periódicos artificiales. Ajustes musicales persistentes; sensibilidad, pruebas de notificación e idiomas agrupados en SONIDOS/CONVERSACIÓN. Mural y paleta neón compartidos en menús, lectura horizontal negra conservada. Usuario informa alarma funcional por ahora; no se modifica su lógica. Falta probar música real y respuesta del motor.")
     item("NUEVO 4.31", "Respaldo V3 con los seis ajustes individuales de cada alarma: LED, vibración, sonido, tono, volumen y duración. Importa V1 y V2 conservando el ajuste general de LED; audio desactivado de forma predeterminada. Valida rangos e integridad. Sin cambios de avatar; sin radar.")
     item("NUEVO 4.30", "Recuperación LED limitada a cuatro intentos; diagnóstico de audio y vibración; inicio de música cancelable y prioridad al despertador. El resultado de Android no confirma el funcionamiento físico. Avatares de inicio y perfil se incorporarán en una etapa posterior.")
@@ -265,7 +266,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.32 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
+        "Instalar AURORA 4.33 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
         "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
         "probar música con graves cercanos y vibración.",
         "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
@@ -345,7 +346,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.32 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.33 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -414,13 +415,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.32 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.33 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.32 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.33 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -429,13 +430,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.32-music-spectrum-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.33-clean-menus-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_32_ARM64.apk"
-    pdf=OUT/"AURORA_4_32_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_33_ARM64.apk"
+    pdf=OUT/"AURORA_4_33_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
