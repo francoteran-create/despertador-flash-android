@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.27",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.28",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -95,6 +95,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "flash, vibración y escucha con la pantalla bloqueada: PENDIENTES "
         "en Samsung Galaxy S9+. La rama main estable permanece intacta.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
+    item("NUEVO 4.28", "Inicio urbano con mural fijo, iconos cian y amarillo, diez accesos activos y ajustes. Fondo provisional de baja resolución; validar legibilidad real. El personaje se selecciona en Ajustes.")
+    item("ALARMA 4.28", "Servicio de primer plano para efectos independientes de la pantalla, programación registrada, diez sonidos opcionales con vista previa, volumen y duración entre 5 y 180 segundos. Vibración, flash y audio configurables por alarma. Pendiente prueba física.")
+    item("MÚSICA 4.28", "Mayor sensibilidad, pulsos de 80 a 180 ms, compatibilidad con motores sin control de amplitud y prueba directa de vibración. Los pulsos no representan melodías literalmente.")
+    add("Las notas de versiones anteriores que siguen son antecedentes; el inicio de cuatro nubes fue sustituido por el diseño neón 4.28.")
     item("CONVERSACIÓN", "transcripción en vivo. La traducción es "
          "VOLUNTARIA: se solicita solo al tocar TRADUCIR ÚLTIMA FRASE.")
     item("TRADUCCIONES PEDIDAS", "la cola secuencial admite hasta "
@@ -224,10 +228,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     item("MODO HORIZONTAL", "Android gestiona la orientación sin reiniciar "
          "esta Activity. Volver a vertical conserva la captura. Al salir "
          "de la app se cierra la sesión para proteger privacidad.")
-    item("LED", "el flash de una alarma depende de que Android abra la "
-         "pantalla de aviso, incluso con el móvil bloqueado. Falta "
-         "probarlo físicamente en S9+; las notificaciones pueden "
-         "estar restringidas.")
+    item("LED", "el servicio de alarma intenta controlar el flash sin abrir la actividad. Android puede restringir la cámara y el servicio; falta validar en S9+ con pantalla bloqueada.")
     item("IDIOMAS PENDIENTES", "probar voz y modelos chino/hindi en "
          "un teléfono real. La interfaz general permanece en español; "
          "suscripción, reloj y mascota final siguen sin implementar.")
@@ -260,7 +261,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.27 BETA ARM64 sin desinstalar la anterior.",
+        "Instalar AURORA 4.28 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
         "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
         "probar música con graves cercanos y vibración.",
         "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
@@ -294,13 +295,9 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "microfono. Revisar bandeja, permiso y estado del canal.",
         "Solo si llega la prueba, iniciar ESCUCHAR y reproducir "
         "sonidos reales. Verificar categoria y evento confirmado.",
-        "Cambiar entre las dos nubes del HERO y comprobar "
-        "distincion visible, descripcion accesible y persistencia.",
-        "Comprobar dos nubes arriba y dos abajo, mascara urbana "
-        "central con acentos violetas. Tocar avatar y elegir "
-        "alternativa, reiniciar y comprobar seleccion.",
-        "Comprobar HERO negro con nube blanca central y exactamente "
-        "cuatro accesos en nube del lado izquierdo.",
+        "En Ajustes cambiar el personaje y comprobar persistencia.",
+        "Verificar mural, contraste, iconos neón, desplazamiento y los diez accesos activos.",
+        "Probar alarma con pantalla bloqueada, vibración, flash, diez sonidos, volumen y duración; probar detener y posponer.",
         "Tocar SONIDOS, CONVERSACION, ALARMA y COMUNICAR; probar "
         "navegacion de regreso y fondos negros.",
         "Emparejar un Wear OS y habilitar notificaciones de AURORA; "
@@ -344,7 +341,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.27 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.28 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -368,7 +365,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "Conserva el trabajo ya programado y las decisiones del MASTER. "
         "No me pidas que repita acuerdos ya documentados.",
         "Prioriza el funcionamiento, la accesibilidad, las pruebas "
-        "y la estabilidad. La estetica queda postergada.",
+        "y la estabilidad. Conservar la estética urbana neón aprobada.",
         "AURORA VOZ: texto a WAV local y compartir con WhatsApp u otra "
         "app esta implementado en codigo; falta probarlo en Galaxy S9+.",
         "Modo Mostrador 4.25: el USUARIO escribe abajo y lee abajo "
@@ -382,6 +379,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "con AudioRecord, deteccion de energia/graves, pulsos limitados "
         "y tres niveles de intensidad. Sin archivos de audio, "
         "se detiene al salir; falta prueba fisica.",
+        "4.28: conservar el inicio neón y el servicio de alarma independiente; validar los diez sonidos y música háptica en S9+.",
         "Pendientes prioritarios: confirmar notificaciones y alertas "
         "reales, validar AURORA VOZ, Mostrador, SOS y Musica Haptica "
         "en telefono; fortalecer conversaciones, alarmas y traducciones.",
@@ -411,13 +409,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.27 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.28 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.27 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.28 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -426,13 +424,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.27-musica-haptica-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.28-alarm-recovery-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_27_ARM64.apk"
-    pdf=OUT/"AURORA_4_27_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_28_ARM64.apk"
+    pdf=OUT/"AURORA_4_28_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
