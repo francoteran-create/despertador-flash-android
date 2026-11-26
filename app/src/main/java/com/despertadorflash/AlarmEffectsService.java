@@ -54,20 +54,31 @@ public final class AlarmEffectsService extends Service {
   try{startForeground(2500,builder.build());}catch(RuntimeException ex){activeId=-1;android.util.Log.e("Aurora","No se pudo iniciar servicio de alarma",ex);stopSelf();return START_NOT_STICKY;}
   int duration=Math.max(5,Math.min(180,p.getInt("alarm_duration"+id,60)));
   try{PowerManager pm=getSystemService(PowerManager.class);wake=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"Aurora:Alarm");wake.acquire((duration+5)*1000L);}catch(RuntimeException ex){android.util.Log.w("Aurora","Wake lock no disponible",ex);}
+  String vibrationStatus="Desactivada";
   if(p.getBoolean("alarm_vibration"+id,true)){
+   vibrationStatus="Motor no disponible";
    try{vibrator=getSystemService(Vibrator.class);long[] pattern={0,900,300,900,300,900,300};
     if(vibrator!=null&&vibrator.hasVibrator()){
      AudioAttributes attrs=new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build();
      if(Build.VERSION.SDK_INT>=26)vibrator.vibrate(VibrationEffect.createWaveform(pattern,0),attrs);else vibrator.vibrate(pattern,0,attrs);
+     vibrationStatus="Orden de vibración enviada a Android";
     }
-   }catch(RuntimeException ex){android.util.Log.w("Aurora","Vibración de alarma no disponible",ex);}
+   }catch(RuntimeException ex){vibrationStatus=ex.getClass().getSimpleName()+": "+ex.getMessage();android.util.Log.w("Aurora","Vibración de alarma no disponible",ex);}
   }
+  p.edit().putString("last_alarm_vibration"+id,vibrationStatus).apply();
   if(p.getBoolean("alarm_flash"+id,p.getBoolean("torch_alert",true))){
    torch=new TorchFlasher(this);
    ledAttempts=0;
    checkLed();
   }else p.edit().putString("last_alarm_flash"+id,"Desactivado por configuración").apply();
-  if(p.getBoolean("alarm_sound"+id,false))tone.play(p.getInt("alarm_tone"+id,0),p.getInt("alarm_volume"+id,75),true);
+  String audioStatus="Desactivado";
+  if(p.getBoolean("alarm_sound"+id,false)){
+   boolean started=tone.play(p.getInt("alarm_tone"+id,0),p.getInt("alarm_volume"+id,75),true);
+   android.media.AudioManager audio=getSystemService(android.media.AudioManager.class);
+   audioStatus=started?"Reproducción iniciada por Android":"AudioTrack no inició (revisar volumen)";
+   if(audio!=null&&audio.getStreamVolume(android.media.AudioManager.STREAM_ALARM)==0)audioStatus+=" · Volumen de alarma del sistema en cero";
+  }
+  p.edit().putString("last_alarm_audio"+id,audioStatus).apply();
   handler.postDelayed(timeout,duration*1000L);
   return START_NOT_STICKY;
  }
