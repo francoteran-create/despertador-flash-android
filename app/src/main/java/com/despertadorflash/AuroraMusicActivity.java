@@ -33,7 +33,8 @@ public final class AuroraMusicActivity extends Activity {
  private final Handler ui=new Handler(Looper.getMainLooper());
  private volatile boolean running=false;
  private volatile int strength=2;
- private AudioRecord recorder;
+ private volatile int sensitivity=2;
+ private volatile AudioRecord recorder;
  private Thread worker;
  private Vibrator vibrator;
  private TextView status,level;
@@ -70,6 +71,13 @@ public final class AuroraMusicActivity extends Activity {
    public void onStartTrackingTouch(SeekBar b){}
    public void onStopTrackingTouch(SeekBar b){}
   });
+  TextView sensitivityLabel=label("Sensibilidad: ALTA",16);root.addView(sensitivityLabel);
+  SeekBar sensitivityBar=new SeekBar(this);sensitivityBar.setMax(2);sensitivityBar.setProgress(2);root.addView(sensitivityBar);
+  sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+   public void onProgressChanged(SeekBar b,int value,boolean user){sensitivity=value;sensitivityLabel.setText("Sensibilidad: "+(value==0?"BAJA":value==1?"MEDIA":"ALTA"));}
+   public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
+  });
+  Button test=button("PROBAR VIBRACIÓN");root.addView(test);test.setOnClickListener(v->{if(!running){pulse(300,255);}});
   status=label("Micrófono apagado. Tocá INICIAR para escuchar música.",16);root.addView(status);
   start=button("▶ INICIAR MÚSICA HÁPTICA");root.addView(start);
   start.setOnClickListener(v->{if(running)stopCapture();else startCapture();});
@@ -140,15 +148,18 @@ public final class AuroraMusicActivity extends Activity {
    bassAverage=bassAverage*.94+bass*.06;
    frames++;
    long now=SystemClock.elapsedRealtime();
-   boolean loudEnough=energy>.018;
-   boolean accented=energy>Math.max(.026,energyAverage*1.50)
-      &&bass>Math.max(.00012,bassAverage*1.35);
-   if(loudEnough&&accented&&now-lastBeat>=MIN_BEAT_INTERVAL_MS){
+   int mode=sensitivity;
+   double floor=mode==2?.003:mode==1?.008:.018;
+   double ratio=mode==2?1.10:mode==1?1.20:1.40;
+   boolean loudEnough=energy>floor;
+   boolean accented=energy>energyAverage*ratio || bass>Math.max(1e-8,bassAverage*ratio);
+   // High sensitivity also renders steady audible music as spaced pulses, not silence.
+   boolean steady=mode==2&&energy>floor*3&&now-lastBeat>=500L;
+   if(loudEnough&&(accented||steady)&&now-lastBeat>=MIN_BEAT_INTERVAL_MS){
     int levelNow=strength;
     int amplitude=levelNow==1?70:levelNow==2?135:200;
-    int duration=levelNow==1?35:levelNow==2?50:70;
-    if(Build.VERSION.SDK_INT>=26)vibrator.vibrate(VibrationEffect.createOneShot(duration,amplitude));
-    else vibrator.vibrate(duration);
+    int duration=levelNow==1?80:levelNow==2?130:180;
+    pulse(duration,amplitude);
     lastBeat=now;beats++;
    }
    if(frames%5==0){
@@ -162,6 +173,13 @@ public final class AuroraMusicActivity extends Activity {
     stopCapture();status.setText("La captura de música se interrumpió. Podés reintentar.");
    }
   });
+ }
+ private void pulse(int duration,int amplitude){
+  if(vibrator==null||!vibrator.hasVibrator())return;
+  try{
+   if(Build.VERSION.SDK_INT>=26){int amp=vibrator.hasAmplitudeControl()?amplitude:VibrationEffect.DEFAULT_AMPLITUDE;vibrator.vibrate(VibrationEffect.createOneShot(duration,amp));}
+   else vibrator.vibrate(duration);
+  }catch(RuntimeException ex){android.util.Log.w("Aurora","Vibración musical no disponible",ex);}
  }
  /** Goertzel power for low frequency musical pulses; no raw audio retained. */
  private static double lowBandPower(short[] data,int n){
