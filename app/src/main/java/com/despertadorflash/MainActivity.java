@@ -952,6 +952,8 @@ public class MainActivity extends Activity {
   String flashState=!prefs.getBoolean("alarm_flash"+id,prefs.getBoolean("torch_alert",true))?"DESACTIVADO":hasPermission(android.Manifest.permission.CAMERA)?"ACTIVADO":"SIN PERMISO DE CÁMARA";
   card.addView(txt("Flash LED: "+flashState+" · Vibración: "+(prefs.getBoolean("alarm_vibration"+id,true)?"SÍ":"NO")+" · Sonido: "+(prefs.getBoolean("alarm_sound"+id,false)?"SÍ":"NO"),14));
   String last=prefs.getString("last_alarm_flash"+id,"Sin prueba programada");card.addView(txt("Último flash: "+last,13));
+  card.addView(txt("Última vibración: "+prefs.getString("last_alarm_vibration"+id,"Sin prueba programada"),13));
+  card.addView(txt("Último sonido: "+prefs.getString("last_alarm_audio"+id,"Sin prueba programada"),13));
   Button effects=btn("Sonido, vibración y flash · "+(id+1));card.addView(effects);effects.setOnClickListener(v->configureAlarmEffects(id));
   root.addView(card);
  }
@@ -965,7 +967,7 @@ public class MainActivity extends Activity {
   Spinner tones=new Spinner(this);tones.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,AlarmTone.NAMES));tones.setSelection(Math.max(0,Math.min(9,prefs.getInt("alarm_tone"+id,0))));panel.addView(tones);
   panel.addView(txt("Volumen (relativo al volumen de alarma de Android)",14));
   SeekBar vol=new SeekBar(this);vol.setMax(100);vol.setProgress(prefs.getInt("alarm_volume"+id,75));panel.addView(vol);
-  Button listen=btn("ESCUCHAR SONIDO");panel.addView(listen);listen.setOnClickListener(v->alarmPreview.play(tones.getSelectedItemPosition(),vol.getProgress(),false));
+  Button listen=btn("ESCUCHAR SONIDO");panel.addView(listen);listen.setOnClickListener(v->{if(!alarmPreview.play(tones.getSelectedItemPosition(),vol.getProgress(),false))Toast.makeText(this,"No se inició el sonido. Revisá el volumen.",Toast.LENGTH_LONG).show();});
   panel.addView(txt("Duración de alerta",16));
   Spinner duration=new Spinner(this);String[] labels={"5 segundos","15 segundos","30 segundos","1 minuto","3 minutos"};duration.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labels));int selected=3;for(int j=0;j<AlarmTone.DURATIONS.length;j++)if(AlarmTone.DURATIONS[j]==prefs.getInt("alarm_duration"+id,60))selected=j;duration.setSelection(selected);panel.addView(duration);
   ScrollView scroll=new ScrollView(this);scroll.addView(panel);
