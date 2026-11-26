@@ -23,6 +23,9 @@ public class MainActivity extends Activity {
  Button btn(String s){Button b=new Button(this);b.setText(s);accent(b,0xff192b45,0xff222b50,0xff4d728e);return b;}
  TextView section(String s){TextView v=txt(s,21);v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
  private final AlarmTone alarmPreview=new AlarmTone();
+ private static final int STARTUP_PERMISSIONS=4210;
+ private boolean startupPermissionDialog=false;
+ private boolean firstSetupScheduled=false;
  boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
  SpeechRecognizer homeRecognizer; boolean homeListening=false; TextView homeTranscript,homeSpeechStatus; Button homeSpeechToggle;
  SenseHistory homeSpeechHistory;
@@ -45,7 +48,54 @@ public class MainActivity extends Activity {
   }else if(pendingTimerLaunch){
    pendingTimerLaunch=false;
    showTimerFinished();
+  }else if(!alarmActive&&!timerAlertActive&&!firstSetupScheduled&&!prefs.getBoolean("permissions_setup_429",false)){
+   firstSetupScheduled=true;
+   flashHandler.post(()->{if(!isFinishing()&&!alarmActive&&!timerAlertActive)showPermissionSetup(true);});
   }
+ }
+ boolean hasPermission(String permission){return checkSelfPermission(permission)==android.content.pm.PackageManager.PERMISSION_GRANTED;}
+ boolean exactReady(){AlarmManager a=getSystemService(AlarmManager.class);return a!=null&&(Build.VERSION.SDK_INT<31||a.canScheduleExactAlarms());}
+ boolean notificationsReady(){NotificationManager n=getSystemService(NotificationManager.class);return n!=null&&n.areNotificationsEnabled()&&(Build.VERSION.SDK_INT<33||hasPermission(android.Manifest.permission.POST_NOTIFICATIONS));}
+ void openPermissionSettings(String action){
+  try{startActivity(new Intent(action,android.net.Uri.parse("package:"+getPackageName())));}
+  catch(RuntimeException e){startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName())));}
+ }
+ void showPermissionSetup(boolean requestMissing){
+  if(startupPermissionDialog||isFinishing()||alarmActive||timerAlertActive)return;
+  java.util.ArrayList<String> missing=new java.util.ArrayList<>();
+  if(!hasPermission(android.Manifest.permission.CAMERA))missing.add(android.Manifest.permission.CAMERA);
+  if(!hasPermission(android.Manifest.permission.RECORD_AUDIO))missing.add(android.Manifest.permission.RECORD_AUDIO);
+  if(Build.VERSION.SDK_INT>=33&&!hasPermission(android.Manifest.permission.POST_NOTIFICATIONS))missing.add(android.Manifest.permission.POST_NOTIFICATIONS);
+  if(requestMissing&&!missing.isEmpty()){
+   startupPermissionDialog=true;
+   new AlertDialog.Builder(this).setTitle("Prepará AURORA")
+    .setMessage("Cámara: necesaria para el flash LED. Micrófono: detección de sonidos, música y transcripción. Notificaciones: avisos. Autorizar no inicia ninguna captura. Podés rechazar permisos y cambiarlos luego.")
+    .setPositiveButton("SOLICITAR PERMISOS",(d,w)->{startupPermissionDialog=false;requestPermissions(missing.toArray(new String[0]),STARTUP_PERMISSIONS);})
+    .setNegativeButton("AHORA NO",(d,w)->{startupPermissionDialog=false;showPermissionSetup(false);})
+    .setOnCancelListener(d->{startupPermissionDialog=false;showPermissionSetup(false);}).show();
+   return;
+  }
+  startupPermissionDialog=true;
+  LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(15),dp(8),dp(15),dp(8));
+  panel.addView(txt("Cámara / flash: "+(hasPermission(android.Manifest.permission.CAMERA)?"AUTORIZADO":"FALTA PERMISO"),16));
+  panel.addView(txt("Micrófono: "+(hasPermission(android.Manifest.permission.RECORD_AUDIO)?"AUTORIZADO":"FALTA PERMISO"),16));
+  panel.addView(txt("Notificaciones: "+(notificationsReady()?"HABILITADAS":"BLOQUEADAS"),16));
+  panel.addView(txt("Alarmas exactas: "+(exactReady()?"PERMITIDAS":"FALTA AUTORIZAR"),16));
+  NotificationManager nm=getSystemService(NotificationManager.class);
+  if(Build.VERSION.SDK_INT>=34)panel.addView(txt("Pantalla completa: "+(nm!=null&&nm.canUseFullScreenIntent()?"PERMITIDA":"RESTRINGIDA"),16));
+  panel.addView(txt("La ubicación para SOS es opcional y se pide únicamente cuando se usa. No se graba audio ni se enciende el flash al conceder permisos.",14));
+  if(!missing.isEmpty()){Button fix=btn("ABRIR PERMISOS DE LA APP");panel.addView(fix);fix.setOnClickListener(v->openPermissionSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS));}
+  if(!notificationsReady()){Button fix=btn("AJUSTES DE NOTIFICACIONES");panel.addView(fix);fix.setOnClickListener(v->{if(Build.VERSION.SDK_INT>=26)startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,getPackageName()));else openPermissionSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);});}
+  if(Build.VERSION.SDK_INT>=31&&!exactReady()){Button fix=btn("AUTORIZAR ALARMAS EXACTAS");panel.addView(fix);fix.setOnClickListener(v->openPermissionSettings(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM));}
+  if(Build.VERSION.SDK_INT>=34&&nm!=null&&!nm.canUseFullScreenIntent()){Button fix=btn("AUTORIZAR PANTALLA COMPLETA");panel.addView(fix);fix.setOnClickListener(v->openPermissionSettings(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT));}
+  Button battery=btn("REVISAR AHORRO DE BATERÍA");panel.addView(battery);battery.setOnClickListener(v->openPermissionSettings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS));
+  ScrollView scroll=new ScrollView(this);scroll.addView(panel);
+  AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Estado de permisos").setView(scroll)
+   .setPositiveButton("CONTINUAR",(d,w)->prefs.edit().putBoolean("permissions_setup_429",true).apply())
+   .setNeutralButton("ACTUALIZAR",null).create();
+  dialog.setOnDismissListener(d->startupPermissionDialog=false);
+  dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{dialog.dismiss();showPermissionSetup(false);}));
+  dialog.show();
  }
  void startTorchAlert(){if(prefs.getBoolean("torch_alert",true)){if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Para usar el flash LED, autorizá Cámara en AURORA",Toast.LENGTH_LONG).show();return;}if(torch!=null&&!torch.start())Toast.makeText(this,"Flash LED: "+torch.getLastError(),Toast.LENGTH_LONG).show();}}
  void releaseAlertWindow(){
@@ -89,7 +139,7 @@ public class MainActivity extends Activity {
   alarmActive=true;
   activeAlarmId=(notificationAlarmId>=0&&notificationAlarmId<5)?notificationAlarmId:-1;
   boolean serviceOwns=activeAlarmId>=0&&AlarmEffectsService.activeId==activeAlarmId;
-  if(!serviceOwns&&(activeAlarmId<0||prefs.getBoolean("alarm_flash"+activeAlarmId,true)))startTorchAlert();
+  if(!serviceOwns){if(activeAlarmId<0)startTorchAlert();else if(prefs.getBoolean("alarm_flash"+activeAlarmId,prefs.getBoolean("torch_alert",true))&&torch!=null)torch.start();}
   getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED|WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON|WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
   LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(22),dp(24),dp(22),dp(24));
   TextView big=txt("¡DESPERTÁ!",38);big.setGravity(Gravity.CENTER);big.setTypeface(null,Typeface.BOLD);panel.addView(big);
@@ -124,7 +174,7 @@ public class MainActivity extends Activity {
   }
  }
  @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false)){long armed=prefs.getLong("armed_at"+id,0L);if(armed==0L||armed<System.currentTimeMillis()-120000L)schedule(this,id);}}}}
- @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if((requestCode==73||requestCode==74)&&grantResults.length>0){Toast.makeText(this,grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED?"Permiso concedido. Volvé a tocar Iniciar escucha continua.":"La escucha continua necesita ese permiso.",Toast.LENGTH_LONG).show();}if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
+ @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==STARTUP_PERMISSIONS){startupPermissionDialog=false;showPermissionSetup(false);return;}if((requestCode==73||requestCode==74)&&grantResults.length>0){Toast.makeText(this,grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED?"Permiso concedido. Volvé a tocar Iniciar escucha continua.":"La escucha continua necesita ese permiso.",Toast.LENGTH_LONG).show();}if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
  private void exportSettings(){
   Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
   intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -829,7 +879,8 @@ public class MainActivity extends Activity {
  Button perm=btn("Permitir alarmas exactas");root.addView(perm);perm.setOnClickListener(v->{if(Build.VERSION.SDK_INT>=31){AlarmManager a=(AlarmManager)getSystemService(ALARM_SERVICE);if(!a.canScheduleExactAlarms())startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,android.net.Uri.parse("package:"+getPackageName())));}});
  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED){Button notificationPermission=btn("Habilitar notificaciones");root.addView(notificationPermission);notificationPermission.setOnClickListener(v->requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},1));}
  if(Build.VERSION.SDK_INT>=34){NotificationManager notificationManager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);if(!notificationManager.canUseFullScreenIntent()){TextView fullWarning=txt("Android restringe las alarmas a pantalla completa. Revisá el permiso de alertas de pantalla completa.",16);fullWarning.setTextColor(0xffffcf70);root.addView(fullWarning);Button fullPermission=btn("Permitir alertas a pantalla completa");root.addView(fullPermission);fullPermission.setOnClickListener(v->startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,android.net.Uri.parse("package:"+getPackageName()))));}}
- Switch torchSwitch=new Switch(this);torchSwitch.setText("Flash LED intermitente en alarmas y temporizador");torchSwitch.setTextColor(Color.WHITE);torchSwitch.setTextSize(17);torchSwitch.setChecked(prefs.getBoolean("torch_alert",true));root.addView(torchSwitch);torchSwitch.setOnCheckedChangeListener((button,enabled)->{prefs.edit().putBoolean("torch_alert",enabled).apply();if(enabled&&Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);if(!enabled&&torch!=null)torch.stop();});
+ Button permissionWizard=btn("REVISAR TODOS LOS PERMISOS");root.addView(permissionWizard);permissionWizard.setOnClickListener(v->showPermissionSetup(true));
+ Switch torchSwitch=new Switch(this);torchSwitch.setText("Flash LED del temporizador y valor inicial de alarmas");torchSwitch.setTextColor(Color.WHITE);torchSwitch.setTextSize(17);torchSwitch.setChecked(prefs.getBoolean("torch_alert",true));root.addView(torchSwitch);torchSwitch.setOnCheckedChangeListener((button,enabled)->{prefs.edit().putBoolean("torch_alert",enabled).apply();if(enabled&&Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);if(!enabled&&torch!=null)torch.stop();});
  if(Build.VERSION.SDK_INT>=23&&prefs.getBoolean("torch_alert",true)&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){Button torchPermission=btn("Autorizar flash LED (Cámara)");root.addView(torchPermission);torchPermission.setOnClickListener(v->requestPermissions(new String[]{android.Manifest.permission.CAMERA},2));}
  root.addView(txt("Aviso: el flash LED intermitente puede afectar a personas fotosensibles. Podés desactivarlo con el interruptor anterior. Si el flash funciona en PRUEBA pero no con la pantalla bloqueada, revisá permisos de notificaciones y alertas a pantalla completa: Android puede no abrir la pantalla de alarma.",13));
  Switch visualFlash=new Switch(this);visualFlash.setText("Destellos visuales (opcional)");visualFlash.setTextColor(Color.WHITE);visualFlash.setTextSize(17);visualFlash.setChecked(prefs.getBoolean("visual_flash",false));root.addView(visualFlash);visualFlash.setOnCheckedChangeListener((button,enabled)->{if(enabled)new AlertDialog.Builder(this).setTitle("Aviso sobre destellos").setMessage("Los cambios rápidos de luz pueden afectar a personas con fotosensibilidad. Activá esta opción solo si es adecuada para vos.").setPositiveButton("Activar",(d,w)->prefs.edit().putBoolean("visual_flash",true).apply()).setNegativeButton("Cancelar",(d,w)->visualFlash.setChecked(false)).show();else prefs.edit().putBoolean("visual_flash",false).apply();});
@@ -865,6 +916,7 @@ public class MainActivity extends Activity {
  void renderAlarmsPage(){
   if(timer!=null){timer.cancel();timer=null;}
   setupPage();pageTitle("MIS ALARMAS");
+  if(!hasPermission(android.Manifest.permission.CAMERA)||!exactReady()||!notificationsReady()){Button fix=btn("REVISAR PERMISOS DE ALARMA");root.addView(fix);fix.setOnClickListener(v->showPermissionSetup(true));}
   root.addView(AuroraDesign.overline(this,"DESPERTADOR  /  MIS HORARIOS"));
   TextView intro=txt("Elegí tus horarios y días. Cada alarma se puede activar, editar o eliminar.",16);
   intro.setTextColor(0xffc2d7ea);root.addView(intro);
@@ -897,13 +949,17 @@ public class MainActivity extends Activity {
  Button days=btn("Días de la alarma · "+(id+1));card.addView(days);days.setOnClickListener(v->{String[] labels={"Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};boolean[] checked=new boolean[7];int mask=prefs.getInt("days"+id,127);for(int j=0;j<7;j++)checked[j]=(mask&(1<<j))!=0;new AlertDialog.Builder(this).setTitle("Elegí los días").setMultiChoiceItems(labels,checked,(d,which,on)->checked[which]=on).setPositiveButton("Guardar",(d,w)->{int msk=0;for(int j=0;j<7;j++)if(checked[j])msk|=(1<<j);prefs.edit().putInt("days"+id,msk).apply();cancelSnooze(this,id);schedule(this,id);if(msk==0)Toast.makeText(this,"Sin días seleccionados: esta alarma no sonará",Toast.LENGTH_LONG).show();}).setNegativeButton("Cancelar",null).show();});
  Button delete=btn("Eliminar alarma · "+(id+1));card.addView(delete);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Eliminar alarma").setMessage("¿Querés eliminar esta alarma?").setPositiveButton("Eliminar",(d,w)->{prefs.edit().putBoolean("on"+id,false).putBoolean("created"+id,false).apply();schedule(this,id);render();}).setNegativeButton("Cancelar",null).show());
  Button edit=btn("Cambiar hora · "+(id+1));card.addView(edit);edit.setOnClickListener(v->new TimePickerDialog(this,(picker,hh,mm)->{prefs.edit().putInt("h"+id,hh).putInt("m"+id,mm).putBoolean("on"+id,true).apply();cancelSnooze(this,id);schedule(this,id);render();},h,m,true).show());
+  String flashState=!prefs.getBoolean("alarm_flash"+id,prefs.getBoolean("torch_alert",true))?"DESACTIVADO":hasPermission(android.Manifest.permission.CAMERA)?"ACTIVADO":"SIN PERMISO DE CÁMARA";
+  card.addView(txt("Flash LED: "+flashState+" · Vibración: "+(prefs.getBoolean("alarm_vibration"+id,true)?"SÍ":"NO")+" · Sonido: "+(prefs.getBoolean("alarm_sound"+id,false)?"SÍ":"NO"),14));
+  String last=prefs.getString("last_alarm_flash"+id,"Sin prueba programada");card.addView(txt("Último flash: "+last,13));
   Button effects=btn("Sonido, vibración y flash · "+(id+1));card.addView(effects);effects.setOnClickListener(v->configureAlarmEffects(id));
   root.addView(card);
  }
  void configureAlarmEffects(int id){
   LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(12),dp(18),dp(12));
   CheckBox vib=new CheckBox(this);vib.setText("Vibración");vib.setChecked(prefs.getBoolean("alarm_vibration"+id,true));panel.addView(vib);
-  CheckBox flash=new CheckBox(this);flash.setText("Flash LED (requiere permiso de Cámara)");flash.setChecked(prefs.getBoolean("alarm_flash"+id,true));panel.addView(flash);
+  CheckBox flash=new CheckBox(this);flash.setText("Flash LED (requiere permiso de Cámara)");flash.setChecked(prefs.getBoolean("alarm_flash"+id,prefs.getBoolean("torch_alert",true)));panel.addView(flash);
+  Button testLed=btn("PROBAR FLASH LED · 5 SEGUNDOS");panel.addView(testLed);testLed.setOnClickListener(v->{if(!hasPermission(android.Manifest.permission.CAMERA)){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);return;}if(torch!=null&&torch.start()){flashHandler.postDelayed(()->{if(torch!=null)torch.stop();},5000);}else Toast.makeText(this,"Flash no disponible: "+(torch==null?"Sin controlador":torch.getLastError()),Toast.LENGTH_LONG).show();});
   CheckBox sound=new CheckBox(this);sound.setText("Sonido de alarma");sound.setChecked(prefs.getBoolean("alarm_sound"+id,false));panel.addView(sound);
   panel.addView(txt("Elegí uno de los 10 sonidos",16));
   Spinner tones=new Spinner(this);tones.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,AlarmTone.NAMES));tones.setSelection(Math.max(0,Math.min(9,prefs.getInt("alarm_tone"+id,0))));panel.addView(tones);
@@ -916,7 +972,7 @@ public class MainActivity extends Activity {
   AlertDialog d=new AlertDialog.Builder(this).setTitle("Configurar alarma "+(id+1)).setView(scroll).setPositiveButton("GUARDAR",(dlg,w)->{
    prefs.edit().putBoolean("alarm_vibration"+id,vib.isChecked()).putBoolean("alarm_flash"+id,flash.isChecked()).putBoolean("alarm_sound"+id,sound.isChecked()).putInt("alarm_tone"+id,tones.getSelectedItemPosition()).putInt("alarm_volume"+id,vol.getProgress()).putInt("alarm_duration"+id,AlarmTone.DURATIONS[duration.getSelectedItemPosition()]).apply();
    if(flash.isChecked()&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);
-  }).setNegativeButton("CANCELAR",null).create();d.setOnDismissListener(x->alarmPreview.stop());d.show();
+  }).setNegativeButton("CANCELAR",null).create();d.setOnDismissListener(x->{alarmPreview.stop();if(torch!=null)torch.stop();if(alarmsPage&&!alarmActive)renderAlarmsPage();});d.show();
  }
  static void cancelSnooze(Context c,int id){
   if(id<0||id>=5)return;
