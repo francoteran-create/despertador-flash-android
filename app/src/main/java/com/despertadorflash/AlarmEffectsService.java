@@ -45,9 +45,16 @@ public final class AlarmEffectsService extends Service {
     }
    }catch(RuntimeException ex){android.util.Log.w("Aurora","Vibración de alarma no disponible",ex);}
   }
-  if(p.getBoolean("torch_alert",true)&&p.getBoolean("alarm_flash"+id,true)){
-   torch=new TorchFlasher(this);if(!torch.start())android.util.Log.w("Aurora","Flash de alarma: "+torch.getLastError());
-  }
+  if(p.getBoolean("alarm_flash"+id,p.getBoolean("torch_alert",true))){
+   torch=new TorchFlasher(this);
+   boolean started=torch.start();
+   p.edit().putString("last_alarm_flash"+id,started?"Android aceptó encender el LED; falta confirmar visualmente":torch.getLastError()).apply();
+   if(!started){
+    android.util.Log.w("Aurora","Flash de alarma: "+torch.getLastError());
+    builder.setContentText("Flash no disponible: "+torch.getLastError());
+    try{manager.notify(2500,builder.build());}catch(RuntimeException ignored){}
+   }
+  }else p.edit().putString("last_alarm_flash"+id,"Desactivado por configuración").apply();
   if(p.getBoolean("alarm_sound"+id,false))tone.play(p.getInt("alarm_tone"+id,0),p.getInt("alarm_volume"+id,75),true);
   handler.postDelayed(timeout,duration*1000L);
   return START_NOT_STICKY;
