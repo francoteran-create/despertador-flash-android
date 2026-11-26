@@ -30,3 +30,10 @@ Registrar licencia, revisión exacta, dependencias y limitaciones antes de reuti
 
 ## Entregas
 Cada incremento de código: pruebas de regresión y Java, CI ARM64, APK + MASTER PDF juntos en ZIP con commit exacto. Mantener estado separado de implementación, CI y pruebas físicas. No abrir release estable hasta cerrar P0 y documentar resultados. Los pendientes se mantienen hasta verificación real, no se cierran por compilar.
+
+## Requisito aprobado: avatar animado persistente
+- En la primera apertura, selector de avatares de cuerpo entero con movimiento, conservando la estética urbana neón aprobada. Guardar localmente la elección confirmada; las próximas aperturas no deben exigir elegir otra vez. Cambiar desde Perfil.
+- En la pantalla de inicio y en los menús y módulos habituales, mostrar la carita del mismo avatar en la esquina superior derecha, con acceso a Perfil. Mantenerla visible sin superponer texto, controles, avisos ni ajustes.
+- Animaciones cortas intermitentes: parpadeo natural, pequeños gestos, sonrisa o movimiento de cabeza; no exigir animación continua. Mantener identidad, ropa, audífono discreto y estilo de cada personaje. Sin auriculares de música ni símbolos de discapacidad.
+- Propuesta técnica a validar: recursos locales ligeros por avatar, animación 2D por capas o fotogramas, programada con pausas; respetar animaciones reducidas del sistema y ahorro de batería. Pausar fuera de pantalla. Excluir de vistas horizontales de lectura inmersiva y pantallas de alarma si distrae o interfiere con controles de seguridad; nunca usar destellos intensos.
+- Mantener como pendiente de la etapa de avatares; no declarar implementado ni modificar la APK 4.30 por esta especificación. Probar persistencia, cambio desde Perfil, navegación, accesibilidad y rendimiento real en Galaxy S9+.
