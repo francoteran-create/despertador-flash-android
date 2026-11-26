@@ -21,7 +21,22 @@ public class MainActivity extends Activity {
  GradientDrawable auroraBackground(int a,int z,int stroke){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{a,z});d.setCornerRadius(dp(20));d.setStroke(dp(1),stroke);return d;}
  void accent(Button b,int a,int z,int line){AuroraDesign.action(b,a,z,line);}
  Button btn(String s){Button b=new Button(this);b.setText(s);AuroraDesign.neonAction(b);return b;}
- TextView section(String s){TextView v=txt(s,21);v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
+ TextView section(String s){TextView v=txt(s,21);v.setTag("aurora_settings_heading");v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
+ // Retain existing controls and listeners; group them only in the settings page.
+ private void collapseSettingsSections(int start){
+  java.util.ArrayList<View> items=new java.util.ArrayList<>();
+  while(root.getChildCount()>start){View child=root.getChildAt(start);root.removeViewAt(start);items.add(child);}
+  LinearLayout body=null;
+  for(View item:items){
+   if(item instanceof TextView&&"aurora_settings_heading".equals(item.getTag())){
+    String name=((TextView)item).getText().toString();
+    Button header=btn("＋  "+name);root.addView(header);
+    LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setPadding(dp(5),dp(3),dp(5),dp(10));group.setVisibility(View.GONE);root.addView(group);
+    header.setOnClickListener(v->{boolean open=group.getVisibility()!=View.VISIBLE;group.setVisibility(open?View.VISIBLE:View.GONE);header.setText((open?"−  ":"＋  ")+name);});
+    body=group;
+   }else if(body!=null)body.addView(item);else root.addView(item);
+  }
+ }
  private final AlarmTone alarmPreview=new AlarmTone();
  private static final int STARTUP_PERMISSIONS=4210;
  private boolean startupPermissionDialog=false;
@@ -459,6 +474,17 @@ public class MainActivity extends Activity {
   one.setOnClickListener(v->{if(countdown(1,counter))counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
   five.setOnClickListener(v->{if(countdown(5,counter))counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
   ten.setOnClickListener(v->{if(countdown(10,counter))counterInfo.setText("CUENTA REGRESIVA ACTIVA");});
+  Button custom=btn("＋  TIEMPO PERSONALIZADO");root.addView(custom);
+  custom.setOnClickListener(v->{
+   LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(8),dp(18),dp(8));
+   EditText minutes=new EditText(this);minutes.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);minutes.setHint("Minutos (1 a 1440)");minutes.setSingleLine(true);panel.addView(minutes);
+   AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Duración personalizada").setView(panel).setNegativeButton("CANCELAR",null).setPositiveButton("INICIAR",null).create();
+   dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(w->{
+    int value;try{value=Integer.parseInt(minutes.getText().toString().trim());}catch(NumberFormatException ex){minutes.setError("Ingresá una cantidad de minutos");return;}
+    if(value<1||value>1440){minutes.setError("Entre 1 y 1440 minutos");return;}
+    dialog.dismiss();if(countdown(value,counter))counterInfo.setText("CUENTA REGRESIVA ACTIVA");
+   }));dialog.show();
+  });
   Button stop=btn("■  DETENER TEMPORIZADOR");
   accent(stop,0xff66364d,0xff42283f,0xffaa6f91);
   root.addView(stop);stop.setOnClickListener(v->{if(timer!=null)timer.cancel();cancelTimer();counter.setText("00:00");counterInfo.setText("TEMPORIZADOR DETENIDO");});
@@ -568,7 +594,9 @@ public class MainActivity extends Activity {
   prefs.edit().putBoolean(AuroraSoundMonitorService.KEY_ACTIVE,false).apply();
  }
  void renderSettingsPage(){
-  setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
+  setupPage();pageTitle("CONFIGURACIÓN");
+  int firstSetting=root.getChildCount();
+  root.addView(section("PERSONALIZACIÓN"));
   AuroraHeroCloudView mascotPreview=new AuroraHeroCloudView(this);root.addView(mascotPreview,new LinearLayout.LayoutParams(-1,dp(160)));
   Button mascotChoice=btn("PERSONAJE AURORA");root.addView(mascotChoice);
   mascotChoice.setOnClickListener(v->{
@@ -859,6 +887,7 @@ public class MainActivity extends Activity {
   });
   root.addView(txt("Recomendado para Galaxy S9+: menos partículas y menos cuadros por segundo, manteniendo las auroras y la respuesta a sonidos.",13));
 
+ root.addView(section("PERMISOS Y ALERTAS DE ALARMA"));
  Button testFlash=btn("⚡  PROBAR FLASH LED · 5 SEGUNDOS");accent(testFlash,0xff752c97,0xff116a92,0xff64e8f5);root.addView(testFlash);testFlash.setOnClickListener(v->{
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(android.Manifest.permission.CAMERA)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.CAMERA},2);Toast.makeText(this,"Autorizá Cámara y volvé a tocar Probar flash",Toast.LENGTH_LONG).show();return;}
   if(torch==null||!torch.start()){new AlertDialog.Builder(this).setTitle("Flash no disponible").setMessage("AURORA no pudo encender la linterna: "+(torch==null?"Control no inicializado":torch.getLastError())+". Comprobá que la cámara esté cerrada y que AURORA tenga permiso de Cámara.").setPositiveButton("Entendido",null).show();return;}
@@ -904,6 +933,7 @@ public class MainActivity extends Activity {
  Button preview=btn("Probar pantalla de alarma");root.addView(preview);preview.setOnClickListener(v->showAlarm());
  Button stopVibration=btn("Detener vibración");root.addView(stopVibration);stopVibration.setOnClickListener(v->stopAlarmEffects());
  root.addView(txt("Aviso: las alertas dependen de los permisos, la batería y las restricciones de Android. Esta aplicación no reemplaza alarmas de emergencia certificadas. La ejecución en segundo plano depende de Android y del fabricante.",13));
+  collapseSettingsSections(firstSetting);
  }
  void showFullMessage(String message){
   final Dialog dialog=new Dialog(this,android.R.style.Theme_Material_Light_NoActionBar_Fullscreen);
@@ -946,15 +976,18 @@ public class MainActivity extends Activity {
  nextLabel.setTextColor(0xffbbd5e6);card.addView(nextLabel);
  Switch sw=new Switch(this);sw.setText(String.format(Locale.getDefault(),"Alarma %d   %02d:%02d",id+1,h,m));sw.setTextColor(Color.WHITE);sw.setTextSize(25);sw.setPadding(dp(9),dp(8),dp(9),dp(8));sw.setChecked(prefs.getBoolean("on"+id,false));card.addView(sw);
  sw.setOnCheckedChangeListener((v,on)->{prefs.edit().putBoolean("on"+id,on).apply();schedule(this,id);if(on&&prefs.getInt("days"+id,127)==0)Toast.makeText(this,"Elegí al menos un día para esta alarma",Toast.LENGTH_LONG).show();});
- Button days=btn("Días de la alarma · "+(id+1));card.addView(days);days.setOnClickListener(v->{String[] labels={"Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};boolean[] checked=new boolean[7];int mask=prefs.getInt("days"+id,127);for(int j=0;j<7;j++)checked[j]=(mask&(1<<j))!=0;new AlertDialog.Builder(this).setTitle("Elegí los días").setMultiChoiceItems(labels,checked,(d,which,on)->checked[which]=on).setPositiveButton("Guardar",(d,w)->{int msk=0;for(int j=0;j<7;j++)if(checked[j])msk|=(1<<j);prefs.edit().putInt("days"+id,msk).apply();cancelSnooze(this,id);schedule(this,id);if(msk==0)Toast.makeText(this,"Sin días seleccionados: esta alarma no sonará",Toast.LENGTH_LONG).show();}).setNegativeButton("Cancelar",null).show();});
- Button delete=btn("Eliminar alarma · "+(id+1));card.addView(delete);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Eliminar alarma").setMessage("¿Querés eliminar esta alarma?").setPositiveButton("Eliminar",(d,w)->{prefs.edit().putBoolean("on"+id,false).putBoolean("created"+id,false).apply();schedule(this,id);render();}).setNegativeButton("Cancelar",null).show());
- Button edit=btn("Cambiar hora · "+(id+1));card.addView(edit);edit.setOnClickListener(v->new TimePickerDialog(this,(picker,hh,mm)->{prefs.edit().putInt("h"+id,hh).putInt("m"+id,mm).putBoolean("on"+id,true).apply();cancelSnooze(this,id);schedule(this,id);render();},h,m,true).show());
+ Button options=btn("⚙  CONFIGURAR ALARMA");card.addView(options);
+ LinearLayout details=new LinearLayout(this);details.setOrientation(LinearLayout.VERTICAL);details.setVisibility(View.GONE);card.addView(details);
+ options.setOnClickListener(v->{boolean open=details.getVisibility()!=View.VISIBLE;details.setVisibility(open?View.VISIBLE:View.GONE);options.setText(open?"⚙  CERRAR CONFIGURACIÓN":"⚙  CONFIGURAR ALARMA");});
+ Button days=btn("Días de la alarma · "+(id+1));details.addView(days);days.setOnClickListener(v->{String[] labels={"Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};boolean[] checked=new boolean[7];int mask=prefs.getInt("days"+id,127);for(int j=0;j<7;j++)checked[j]=(mask&(1<<j))!=0;new AlertDialog.Builder(this).setTitle("Elegí los días").setMultiChoiceItems(labels,checked,(d,which,on)->checked[which]=on).setPositiveButton("Guardar",(d,w)->{int msk=0;for(int j=0;j<7;j++)if(checked[j])msk|=(1<<j);prefs.edit().putInt("days"+id,msk).apply();cancelSnooze(this,id);schedule(this,id);if(msk==0)Toast.makeText(this,"Sin días seleccionados: esta alarma no sonará",Toast.LENGTH_LONG).show();}).setNegativeButton("Cancelar",null).show();});
+ Button delete=btn("Eliminar alarma · "+(id+1));details.addView(delete);delete.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Eliminar alarma").setMessage("¿Querés eliminar esta alarma?").setPositiveButton("Eliminar",(d,w)->{prefs.edit().putBoolean("on"+id,false).putBoolean("created"+id,false).apply();schedule(this,id);render();}).setNegativeButton("Cancelar",null).show());
+ Button edit=btn("Cambiar hora · "+(id+1));details.addView(edit);edit.setOnClickListener(v->new TimePickerDialog(this,(picker,hh,mm)->{prefs.edit().putInt("h"+id,hh).putInt("m"+id,mm).putBoolean("on"+id,true).apply();cancelSnooze(this,id);schedule(this,id);render();},h,m,true).show());
   String flashState=!prefs.getBoolean("alarm_flash"+id,prefs.getBoolean("torch_alert",true))?"DESACTIVADO":hasPermission(android.Manifest.permission.CAMERA)?"ACTIVADO":"SIN PERMISO DE CÁMARA";
-  card.addView(txt("Flash LED: "+flashState+" · Vibración: "+(prefs.getBoolean("alarm_vibration"+id,true)?"SÍ":"NO")+" · Sonido: "+(prefs.getBoolean("alarm_sound"+id,false)?"SÍ":"NO"),14));
-  String last=prefs.getString("last_alarm_flash"+id,"Sin prueba programada");card.addView(txt("Último flash: "+last,13));
-  card.addView(txt("Última vibración: "+prefs.getString("last_alarm_vibration"+id,"Sin prueba programada"),13));
-  card.addView(txt("Último sonido: "+prefs.getString("last_alarm_audio"+id,"Sin prueba programada"),13));
-  Button effects=btn("Sonido, vibración y flash · "+(id+1));card.addView(effects);effects.setOnClickListener(v->configureAlarmEffects(id));
+  details.addView(txt("Flash LED: "+flashState+" · Vibración: "+(prefs.getBoolean("alarm_vibration"+id,true)?"SÍ":"NO")+" · Sonido: "+(prefs.getBoolean("alarm_sound"+id,false)?"SÍ":"NO"),14));
+  String last=prefs.getString("last_alarm_flash"+id,"Sin prueba programada");details.addView(txt("Último flash: "+last,13));
+  details.addView(txt("Última vibración: "+prefs.getString("last_alarm_vibration"+id,"Sin prueba programada"),13));
+  details.addView(txt("Último sonido: "+prefs.getString("last_alarm_audio"+id,"Sin prueba programada"),13));
+  Button effects=btn("Sonido, vibración y flash · "+(id+1));details.addView(effects);effects.setOnClickListener(v->configureAlarmEffects(id));
   root.addView(card);
  }
  void configureAlarmEffects(int id){
