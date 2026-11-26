@@ -6,16 +6,11 @@ main=(root/"app/src/main/java/com/despertadorflash/MainActivity.java").read_text
 hero=(root/"app/src/main/java/com/despertadorflash/AuroraHeroCloudView.java").read_text()
 cloud=(root/"app/src/main/java/com/despertadorflash/AuroraHeroCloudButton.java").read_text()
 class Hero420(unittest.TestCase):
- def test_exactly_two_shortcuts_at_top_and_bottom(self):
-  part=main[main.index("void renderMinimalHero(){"):main.index("LinearLayout homeTile(")]
-  top=part[part.index("LinearLayout upper="):part.index("AuroraHeroCloudView centerCloud=")]
-  bottom=part[part.index("LinearLayout lower="):]
-  self.assertEqual(top.count('addHeroShortcut(upper,'),2)
-  self.assertEqual(bottom.count('addHeroShortcut(lower,'),2)
-  self.assertIn('"SONIDOS"',top)
-  self.assertIn('"CONVERSACIÓN"',top)
-  self.assertIn('"ALARMA"',bottom)
-  self.assertIn('"COMUNICAR"',bottom)
+ def test_neon_home_has_five_pairs_and_primary_routes(self):
+  part=main[main.index("void renderMinimalHero(){"):main.index("LinearLayout neonTile(")]
+  self.assertEqual(part.count('neonPair(hero,'),5)
+  for token in ['"DETECCIÓN DE SONIDOS",2,()->openSense(SenseActivity.MODE_SOUND)', '"TRANSCRIPCIÓN",3,()->openSense(SenseActivity.MODE_SPEECH)', '"ALARMA",0,()->{alarmsPage=true;render();}', '"COMUNICAR",7,()->{communicationPage=true;render();}']:
+   self.assertIn(token,part)
  def test_mascot_two_characters_saved_only_on_selection(self):
   self.assertIn('PREF_CHARACTER="hero_character"',hero)
   self.assertIn('setCharacter(which)',main)
