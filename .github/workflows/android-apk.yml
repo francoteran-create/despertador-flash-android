@@ -51,11 +51,12 @@ jobs:
           apk="${apks[0]}"
           [[ "$apk" == *arm64-v8a* ]]
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta427'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.28 BETA'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.29 BETA'"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta427.photos"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.INTERNET"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.RECORD_AUDIO"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.VIBRATE"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.CAMERA"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
           sha256sum "$apk"
       # The normal workflow validates source and APK; the final delivery is
@@ -69,9 +70,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
         with:
-          name: AURORA-4-28-DOS-ARCHIVOS
+          name: AURORA-4-29-DOS-ARCHIVOS
           path: |
-            dist/AURORA_4_28_ARM64.apk
-            dist/AURORA_4_28_MASTER_ESTADO_Y_PLAN.pdf
+            dist/AURORA_4_29_ARM64.apk
+            dist/AURORA_4_29_MASTER_ESTADO_Y_PLAN.pdf
           if-no-files-found: error
           retention-days: 30
