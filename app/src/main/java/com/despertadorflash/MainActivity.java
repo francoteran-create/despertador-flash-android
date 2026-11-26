@@ -117,7 +117,7 @@ public class MainActivity extends Activity {
    else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
   }
  }
- @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false))schedule(this,id);}}}
+ @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false)&&prefs.getLong("armed_at"+id,0L)==0L)schedule(this,id);}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if((requestCode==73||requestCode==74)&&grantResults.length>0){Toast.makeText(this,grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED?"Permiso concedido. Volvé a tocar Iniciar escucha continua.":"La escucha continua necesita ese permiso.",Toast.LENGTH_LONG).show();}if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
  private void exportSettings(){
   Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -878,11 +878,10 @@ public class MainActivity extends Activity {
  LinearLayout card=auroraCard(0xff16283f,0xff211f3e);
  card.setPadding(dp(16),dp(15),dp(16),dp(13));
  TextView mark=AuroraDesign.overline(this,"ALARMA  "+(id+1));card.addView(mark);
- long next=prefs.getBoolean("on"+id,false)?
-  AlarmPlanner.nextTrigger(System.currentTimeMillis(),h,m,prefs.getInt("days"+id,127),TimeZone.getDefault()):-1L;
+ long next=prefs.getBoolean("on"+id,false)?prefs.getLong("armed_at"+id,0L):-1L;
  TextView nextLabel=txt(next>0?"Próxima fecha prevista: "+
   new java.text.SimpleDateFormat("EEE dd/MM · HH:mm",new Locale("es","AR")).format(new Date(next))+
-  " (según los permisos de Android)":prefs.getBoolean("on"+id,false)?"Sin días seleccionados":"Alarma desactivada",14);
+  " (programada)":prefs.getBoolean("on"+id,false)?"No programada: revisá días y permiso de alarmas exactas":"Alarma desactivada",14);
  nextLabel.setTextColor(0xffbbd5e6);card.addView(nextLabel);
  Switch sw=new Switch(this);sw.setText(String.format(Locale.getDefault(),"Alarma %d   %02d:%02d",id+1,h,m));sw.setTextColor(Color.WHITE);sw.setTextSize(25);sw.setPadding(dp(9),dp(8),dp(9),dp(8));sw.setChecked(prefs.getBoolean("on"+id,false));card.addView(sw);
  sw.setOnCheckedChangeListener((v,on)->{prefs.edit().putBoolean("on"+id,on).apply();schedule(this,id);if(on&&prefs.getInt("days"+id,127)==0)Toast.makeText(this,"Elegí al menos un día para esta alarma",Toast.LENGTH_LONG).show();});
@@ -907,20 +906,24 @@ public class MainActivity extends Activity {
   if(am==null)return;
   Intent alarm=new Intent(c,AlarmReceiver.class).putExtra("id",id);
   PendingIntent event=PendingIntent.getBroadcast(c,id,alarm,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-  am.cancel(event);
   if(!p.getBoolean("on"+id,false)){
+   am.cancel(event);p.edit().remove("armed_at"+id).apply();
    cancelSnooze(c,id);
    return;
   }
   long when=AlarmPlanner.nextTrigger(System.currentTimeMillis(),p.getInt("h"+id,7),
    p.getInt("m"+id,0),p.getInt("days"+id,127),TimeZone.getDefault());
-  if(when<0)return;
+  if(when<0){am.cancel(event);p.edit().remove("armed_at"+id).apply();return;}
   if(Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms()){
-   android.util.Log.w("Aurora","Falta permiso de alarmas exactas");return;
+   p.edit().remove("armed_at"+id).apply();android.util.Log.w("Aurora","Falta permiso de alarmas exactas");return;
   }
   PendingIntent show=PendingIntent.getActivity(c,100+id,new Intent(c,MainActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-  try{am.setAlarmClock(new AlarmManager.AlarmClockInfo(when,show),event);}
-  catch(SecurityException ex){android.util.Log.e("Aurora","No se pudo programar alarma exacta",ex);}
+  try{am.setAlarmClock(new AlarmManager.AlarmClockInfo(when,show),event);p.edit().putLong("armed_at"+id,when).apply();}
+  catch(RuntimeException ex){
+   android.util.Log.w("Aurora","setAlarmClock falló; intentando mecanismo del temporizador",ex);
+   try{am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,when,event);p.edit().putLong("armed_at"+id,when).apply();}
+   catch(RuntimeException fallback){p.edit().remove("armed_at"+id).apply();android.util.Log.e("Aurora","No se pudo programar alarma exacta",fallback);}
+  }
  }
  void cancelTimer(){AlarmManager am=(AlarmManager)getSystemService(ALARM_SERVICE);PendingIntent pi=PendingIntent.getBroadcast(this,3100,new Intent(this,TimerReceiver.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);am.cancel(pi);prefs.edit().remove("timer_end").remove("timer_end_elapsed").remove("timer_boot_count").apply();}
  boolean countdown(int minutes,TextView output){
