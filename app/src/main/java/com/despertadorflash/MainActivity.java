@@ -305,60 +305,54 @@ public class MainActivity extends Activity {
   */
  void renderMinimalHero(){
   stopHomeSpeech();
-  LinearLayout hero=new LinearLayout(this);
-  hero.setOrientation(LinearLayout.VERTICAL);
-  hero.setBackgroundColor(Color.BLACK);
-  getWindow().setStatusBarColor(Color.BLACK);
-  getWindow().setNavigationBarColor(Color.BLACK);
-  hero.setPadding(dp(8),dp(4),dp(8),dp(10));
-  setContentView(hero);
-
-  // Small monochrome brand above four clouds, not a scrollable dashboard.
-  LinearLayout topBar=new LinearLayout(this);
-  topBar.setGravity(Gravity.CENTER_VERTICAL);
-  TextView brand=txt("AURORA",29);
-  brand.setTextColor(Color.WHITE);
-  brand.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));
-  brand.setLetterSpacing(.13f);
+  if(timer!=null){timer.cancel();timer=null;}
+  android.widget.FrameLayout screen=new android.widget.FrameLayout(this);
+  screen.setBackgroundColor(Color.BLACK);
+  android.widget.ImageView mural=new android.widget.ImageView(this);
+  mural.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+  mural.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  try(java.io.InputStream input=getAssets().open("aurora_mural.jpg.b64")){
+   java.io.ByteArrayOutputStream encoded=new java.io.ByteArrayOutputStream();
+   byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)encoded.write(buffer,0,n);
+   byte[] image=android.util.Base64.decode(encoded.toByteArray(),android.util.Base64.DEFAULT);
+   android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(image,0,image.length);
+   if(bitmap!=null)mural.setImageBitmap(bitmap);
+  }catch(Exception e){android.util.Log.w("Aurora","Mural no disponible",e);}
+  screen.addView(mural,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  View shade=new View(this);shade.setBackgroundColor(0x39000000);
+  screen.addView(shade,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);
+  LinearLayout hero=new LinearLayout(this);hero.setOrientation(LinearLayout.VERTICAL);hero.setPadding(dp(13),dp(13),dp(13),dp(22));
+  scroll.addView(hero);screen.addView(scroll,new android.widget.FrameLayout.LayoutParams(-1,-1));setContentView(screen);
+  getWindow().setStatusBarColor(Color.BLACK);getWindow().setNavigationBarColor(Color.BLACK);
+  LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
+  TextView brand=txt("AURORA",42);brand.setGravity(Gravity.CENTER);brand.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD_ITALIC));brand.setTextColor(0xfff1ffff);brand.setShadowLayer(dp(7),0,0,0xff00dfff);
   brand.setContentDescription("AURORA, asistente de accesibilidad sonora");
-  topBar.addView(brand,new LinearLayout.LayoutParams(0,dp(58),1f));
-  Button settings=btn("⚙");
-  settings.setContentDescription("Abrir configuración");
-  settings.setTextColor(Color.WHITE);
-  settings.setBackgroundColor(Color.TRANSPARENT);
-  topBar.addView(settings,new LinearLayout.LayoutParams(dp(55),dp(52)));
-  settings.setOnClickListener(v->{settingsPage=true;render();});
-  hero.addView(topBar,new LinearLayout.LayoutParams(-1,dp(60)));
-
-  // Row 1: SONIDOS and CONVERSACIÓN. Full width and equal touch targets.
-  LinearLayout upper=new LinearLayout(this);
-  upper.setOrientation(LinearLayout.HORIZONTAL);
-  hero.addView(upper,new LinearLayout.LayoutParams(-1,0,1.05f));
-  addHeroShortcut(upper,"SONIDOS",()->openSense(SenseActivity.MODE_SOUND));
-  addHeroShortcut(upper,"CONVERSACIÓN",()->openSense(SenseActivity.MODE_SPEECH));
-
-  // Central mascot. Tap changes between the two approved character options.
-  // The mascot itself never starts a microphone.
-  AuroraHeroCloudView centerCloud=new AuroraHeroCloudView(this);
-  centerCloud.setClickable(true);
-  centerCloud.setOnClickListener(v->new AlertDialog.Builder(this)
-   .setTitle("PERSONAJE AURORA")
-   .setSingleChoiceItems(new String[]{"Nube urbana","Nube alternativa"},
-    centerCloud.getCharacter(),(dialog,which)->{
-     centerCloud.setCharacter(which);
-     prefs.edit().putInt(AuroraHeroCloudView.PREF_CHARACTER,which).apply();
-     Toast.makeText(this,which==0?"Nube urbana elegida":"Nube alternativa elegida",Toast.LENGTH_SHORT).show();
-     dialog.dismiss();
-    })
-   .setNegativeButton("CERRAR",null).show());
-  hero.addView(centerCloud,new LinearLayout.LayoutParams(-1,0,2.10f));
-
-  // Row 2: ALARMA and COMUNICAR. Settings and internal modules stay intact.
-  LinearLayout lower=new LinearLayout(this);
-  lower.setOrientation(LinearLayout.HORIZONTAL);
-  hero.addView(lower,new LinearLayout.LayoutParams(-1,0,1.05f));
-  addHeroShortcut(lower,"ALARMA",()->{alarmsPage=true;render();});
-  addHeroShortcut(lower,"COMUNICAR",()->{communicationPage=true;render();});
+  top.addView(brand,new LinearLayout.LayoutParams(0,dp(76),1));
+  LinearLayout settings=neonTile("AJUSTES",10,()->{settingsPage=true;render();});
+  top.addView(settings,new LinearLayout.LayoutParams(dp(78),dp(76)));hero.addView(top);
+  TextView slogan=txt("TU MUNDO, ACCESIBLE",15);slogan.setGravity(Gravity.CENTER);slogan.setTypeface(null,Typeface.BOLD);slogan.setTextColor(0xffffff49);slogan.setPadding(0,0,0,dp(13));hero.addView(slogan);
+  neonPair(hero,"ALARMA",0,()->{alarmsPage=true;render();},"TEMPORIZADOR",1,()->{timerPage=true;render();});
+  neonPair(hero,"DETECCIÓN DE SONIDOS",2,()->openSense(SenseActivity.MODE_SOUND),"TRANSCRIPCIÓN",3,()->openSense(SenseActivity.MODE_SPEECH));
+  neonPair(hero,"SOS",4,()->startActivity(new Intent(this,AuroraSosActivity.class)),"REGISTROS",5,()->startActivity(new Intent(this,RecordsActivity.class)));
+  neonPair(hero,"SENTIR LA MÚSICA",6,()->startActivity(new Intent(this,AuroraMusicActivity.class)),"COMUNICAR",7,()->{communicationPage=true;render();});
+  neonPair(hero,"AURORA VOZ",8,()->startActivity(new Intent(this,AuroraVoiceActivity.class)),"MOSTRADOR",9,()->startActivity(new Intent(this,AuroraCounterActivity.class)));
+ }
+ LinearLayout neonTile(String label,int icon,Runnable navigate){
+  LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);tile.setGravity(Gravity.CENTER);tile.setPadding(dp(4),dp(6),dp(4),dp(6));
+  tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x55fff94a),AuroraDesign.surface(this,0xe6163438,0xf2061018,0xff25eaff,18),null));
+  tile.setElevation(dp(5));if(Build.VERSION.SDK_INT>=28){tile.setOutlineAmbientShadowColor(0xff00eaff);tile.setOutlineSpotShadowColor(0xff00eaff);}
+  tile.setClickable(true);tile.setFocusable(true);tile.setContentDescription(label);tile.setOnClickListener(v->navigate.run());
+  tile.setAccessibilityDelegate(new View.AccessibilityDelegate(){@Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){super.onInitializeAccessibilityNodeInfo(host,info);info.setClassName(Button.class.getName());}});
+  NeonHomeIcon symbol=new NeonHomeIcon(this,icon);tile.addView(symbol,new LinearLayout.LayoutParams(dp(icon==10?29:52),dp(icon==10?29:52)));
+  TextView name=txt(label,icon==10?10:14);name.setPadding(0,dp(3),0,0);name.setGravity(Gravity.CENTER);name.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));name.setTextColor(Color.WHITE);name.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);tile.addView(name,new LinearLayout.LayoutParams(-1,-2));
+  return tile;
+ }
+ void neonPair(LinearLayout hero,String a,int ai,Runnable ar,String b,int bi,Runnable br){
+  LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
+  LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,dp(108),1);left.rightMargin=dp(8);
+  row.addView(neonTile(a,ai,ar),left);row.addView(neonTile(b,bi,br),new LinearLayout.LayoutParams(0,dp(108),1));
+  LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(9);hero.addView(row,lp);
  }
  void addHeroShortcut(LinearLayout row,String text,Runnable navigate){
   AuroraHeroCloudButton cloud=new AuroraHeroCloudButton(this,text);
