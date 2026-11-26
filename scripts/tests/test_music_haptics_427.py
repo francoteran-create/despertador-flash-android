@@ -15,9 +15,10 @@ class MusicHapticsContract(unittest.TestCase):
   self.assertIn('AudioRecord.getMinBufferSize',M)
   self.assertIn('AudioFormat.ENCODING_PCM_16BIT',M)
   self.assertIn('owned.read(data,0,data.length)',M)
-  self.assertIn('lowBandPower(data,count)',M)
-  self.assertIn('80,125,180',M)
-  self.assertIn('MIN_BEAT_INTERVAL_MS=220',M)
+  self.assertIn('dsp.analyze(data,count,SystemClock.elapsedRealtime(),threshold,sensitivity)',M)
+  self.assertIn('result.beat&&running&&recorder==owned',M)
+  self.assertIn('spectrum.show(result)',M)
+  self.assertNotIn('boolean steady=',M)
   self.assertIn('VibrationEffect.createOneShot',M)
  def test_explicit_onoff_no_recorded_files(self):
   self.assertIn('start.setOnClickListener(v->{if(running)stopCapture();else if(startPending)stopCapture();else startCapture();})',M)
