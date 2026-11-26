@@ -2,13 +2,13 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 70; versionName '4.30-alarm-stability-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 71; versionName '4.31-backup-v3-beta' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // stable user installation. Keep beta427 suffix to preserve beta settings on upgrade.
  buildTypes {
   debug {
    applicationIdSuffix '.beta427'
-   resValue 'string', 'app_name', 'AURORA 4.30 BETA'
+   resValue 'string', 'app_name', 'AURORA 4.31 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
