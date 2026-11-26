@@ -20,7 +20,7 @@ public class MainActivity extends Activity {
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
  GradientDrawable auroraBackground(int a,int z,int stroke){GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{a,z});d.setCornerRadius(dp(20));d.setStroke(dp(1),stroke);return d;}
  void accent(Button b,int a,int z,int line){AuroraDesign.action(b,a,z,line);}
- Button btn(String s){Button b=new Button(this);b.setText(s);accent(b,0xff192b45,0xff222b50,0xff4d728e);return b;}
+ Button btn(String s){Button b=new Button(this);b.setText(s);AuroraDesign.neonAction(b);return b;}
  TextView section(String s){TextView v=txt(s,21);v.setTextColor(0xffa5daf3);v.setTypeface(null,Typeface.BOLD);return v;}
  private final AlarmTone alarmPreview=new AlarmTone();
  private static final int STARTUP_PERMISSIONS=4210;
@@ -334,13 +334,13 @@ public class MainActivity extends Activity {
   if(timer!=null){timer.cancel();timer=null;}
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(18),dp(18),dp(26));
-  root.setBackgroundColor(Color.BLACK);
-  scroll.addView(root);setContentView(scroll);
+  root.setBackgroundColor(Color.TRANSPARENT);
+  scroll.addView(root);setContentView(AuroraDesign.menuFrame(this,scroll));
   getWindow().setStatusBarColor(Color.BLACK);getWindow().setNavigationBarColor(Color.BLACK);
  }
  void pageTitle(String heading){
   Button back=btn("←   VOLVER AL INICIO");root.addView(back);back.setOnClickListener(v->{alarmsPage=false;timerPage=false;communicationPage=false;settingsPage=false;render();});
-  TextView title=txt(heading,27);title.setGravity(Gravity.CENTER);title.setTextColor(Color.WHITE);title.setTypeface(null,Typeface.BOLD);root.addView(title);
+  TextView title=txt(heading,27);title.setGravity(Gravity.CENTER);title.setTextColor(0xffffd633);title.setTypeface(null,Typeface.BOLD);root.addView(title);
  }
  void render(){
   if(alarmsPage){stopHomeSpeech();renderAlarmsPage();return;}
