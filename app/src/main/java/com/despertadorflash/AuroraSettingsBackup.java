@@ -21,9 +21,11 @@ import java.util.Map;
 public final class AuroraSettingsBackup {
  private static final String HEADER_V1="AURORA_CONFIGURACION_V1";
  private static final String HEADER_V2="AURORA_CONFIGURACION_V2";
+ private static final String HEADER_V3="AURORA_CONFIGURACION_V3";
  private static final String CHECKSUM="SHA256=";
  public static final int MAX_IMPORT_BYTES=8192;
  private static final Map<String,Object> DEFAULTS=makeDefaults();
+ private static final Map<String,Object> V2_DEFAULTS=makeV2Defaults();
  private static final Map<String,Object> LEGACY_DEFAULTS=makeLegacyDefaults();
 
  private AuroraSettingsBackup(){}
@@ -36,6 +38,12 @@ public final class AuroraSettingsBackup {
    result.put("h"+i,7);
    result.put("m"+i,0);
    result.put("days"+i,127);
+   result.put("alarm_flash"+i,true);
+   result.put("alarm_vibration"+i,true);
+   result.put("alarm_sound"+i,false);
+   result.put("alarm_tone"+i,0);
+   result.put("alarm_volume"+i,75);
+   result.put("alarm_duration"+i,60);
   }
   for(String group:new String[]{"doors","alarms","people","pets","impacts",
       "phones","traffic","voices","other"}){
@@ -53,8 +61,13 @@ public final class AuroraSettingsBackup {
   return Collections.unmodifiableMap(result);
  }
 
- private static Map<String,Object> makeLegacyDefaults(){
+ private static Map<String,Object> makeV2Defaults(){
   LinkedHashMap<String,Object> old=new LinkedHashMap<>(DEFAULTS);
+  for(int i=0;i<5;i++)for(String prefix:new String[]{"alarm_flash","alarm_vibration","alarm_sound","alarm_tone","alarm_volume","alarm_duration"})old.remove(prefix+i);
+  return Collections.unmodifiableMap(old);
+ }
+ private static Map<String,Object> makeLegacyDefaults(){
+  LinkedHashMap<String,Object> old=new LinkedHashMap<>(V2_DEFAULTS);
   old.remove("monitor_sound_vibration");
   old.remove("monitor_sound_flash");
   return Collections.unmodifiableMap(old);
@@ -64,7 +77,7 @@ public final class AuroraSettingsBackup {
   if(saved==null)throw new IllegalArgumentException("Configuracion inexistente");
   Map<String,Object> result=new LinkedHashMap<>();
   for(String key:DEFAULTS.keySet()){
-   Object value=saved.containsKey(key)?saved.get(key):DEFAULTS.get(key);
+   Object value=saved.containsKey(key)?saved.get(key):key.startsWith("alarm_flash")&&saved.containsKey("torch_alert")?saved.get("torch_alert"):DEFAULTS.get(key);
    validate(key,value);
    result.put(key,value);
   }
@@ -84,11 +97,14 @@ public final class AuroraSettingsBackup {
   else if(key.startsWith("m")&&!key.equals("monitor_sensitivity")){
    if(n<0||n>59)throw new IllegalArgumentException("Minutos fuera de rango");
   }else if(key.startsWith("days")){if(n<0||n>127)throw new IllegalArgumentException("Dias fuera de rango");}
+  else if(key.startsWith("alarm_tone")){if(n<0||n>9)throw new IllegalArgumentException("Tono fuera de rango");}
+  else if(key.startsWith("alarm_volume")){if(n<0||n>100)throw new IllegalArgumentException("Volumen fuera de rango");}
+  else if(key.startsWith("alarm_duration")){if(n!=5&&n!=15&&n!=30&&n!=60&&n!=180)throw new IllegalArgumentException("Duracion no admitida");}
   else if(key.equals("monitor_sensitivity")){if(n<0||n>2)throw new IllegalArgumentException("Sensibilidad fuera de rango");}
  }
 
  public static String serialize(Map<String,?> current){
-  return serializeExact(normalize(current),HEADER_V2,DEFAULTS);
+  return serializeExact(normalize(current),HEADER_V3,DEFAULTS);
  }
  private static String serializeExact(Map<String,?> current,String header,
    Map<String,Object> schema){
@@ -114,7 +130,7 @@ public final class AuroraSettingsBackup {
    throw new IllegalArgumentException("Formato o version de copia no reconocido");
   String header=lines[0];
   Map<String,Object> schema=header.equals(HEADER_V1)?LEGACY_DEFAULTS:
-   header.equals(HEADER_V2)?DEFAULTS:null;
+   header.equals(HEADER_V2)?V2_DEFAULTS:header.equals(HEADER_V3)?DEFAULTS:null;
   if(schema==null)throw new IllegalArgumentException("Version de copia no reconocida");
   LinkedHashMap<String,Object> raw=new LinkedHashMap<>();
   for(int n=1;n<lines.length-2;n++){
@@ -144,7 +160,7 @@ public final class AuroraSettingsBackup {
   if(!MessageDigest.isEqual(canonical.getBytes(StandardCharsets.UTF_8),
     file.getBytes(StandardCharsets.UTF_8)))
    throw new IllegalArgumentException("Checksum incorrecto o archivo modificado");
-  // V1 backups have no sound-LED options. Flash stays OFF by default.
+  // Older backups inherit the global alarm LED setting, never silently enable audio.
   return normalize(raw);
  }
  private static String hexDigest(String text){
