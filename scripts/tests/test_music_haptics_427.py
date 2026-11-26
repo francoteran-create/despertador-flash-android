@@ -20,7 +20,7 @@ class MusicHapticsContract(unittest.TestCase):
   self.assertIn('MIN_BEAT_INTERVAL_MS=220',M)
   self.assertIn('VibrationEffect.createOneShot',M)
  def test_explicit_onoff_no_recorded_files(self):
-  self.assertIn('start.setOnClickListener(v->{if(running)stopCapture();else startCapture();})',M)
+  self.assertIn('start.setOnClickListener(v->{if(running)stopCapture();else if(startPending)stopCapture();else startCapture();})',M)
   self.assertIn('onPause(){super.onPause();stopCapture()',M)
   self.assertIn('vibrator.cancel()',M)
   self.assertIn('old.stop()',M)
