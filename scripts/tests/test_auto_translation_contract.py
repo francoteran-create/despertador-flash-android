@@ -50,7 +50,7 @@ class AutoTranslationContract(unittest.TestCase):
     def test_main_page_links_to_single_translation_flow(self):
         # 4.19 HERO has one direct Conversation cloud; saved conversations
         # remain reachable from the Conversation module itself.
-        self.assertIn('addHeroShortcut(upper,"CONVERSACIÓN",()->openSense(SenseActivity.MODE_SPEECH))',self.home)
+        self.assertIn('"TRANSCRIPCIÓN",3,()->openSense(SenseActivity.MODE_SPEECH)',self.home)
         self.assertIn('openSense(SenseActivity.MODE_SPEECH)',self.home)
         self.assertIn('TRADUCIR ÚLTIMA FRASE',self.sense)
 
