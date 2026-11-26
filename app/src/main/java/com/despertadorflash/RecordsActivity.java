@@ -30,10 +30,10 @@ public final class RecordsActivity extends Activity {
  private boolean showLegacySounds=false;
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextSize(size);v.setTextColor(Color.WHITE);v.setPadding(dp(10),dp(10),dp(10),dp(10));return v;}
- private Button btn(String name){Button b=new Button(this);b.setText(name);AuroraDesign.action(b,0xff163e5a,0xff282857,0xff477e9c);return b;}
+ private Button btn(String name){Button b=new Button(this);b.setText(name);AuroraDesign.neonAction(b);return b;}
  @Override public void onCreate(Bundle saved){super.onCreate(saved);history=new SenseHistory(this);destination=new SavedFolderManager(this);draw();}
  private void draw(){
-  ScrollView sc=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(16),dp(18),dp(16),dp(24));root.setBackground(new AuroraSkyDrawable());sc.addView(root);setContentView(sc);
+  ScrollView sc=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(16),dp(18),dp(16),dp(24));root.setBackgroundColor(Color.TRANSPARENT);sc.addView(root);setContentView(AuroraDesign.menuFrame(this,sc));
   Button back=btn("← VOLVER");root.addView(back);back.setOnClickListener(v->finish());
   TextView title=txt("CONVERSACIONES GUARDADAS",25);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);title.setTextColor(0xffb2f4ff);root.addView(title);
   root.addView(txt("Releé y respaldá tus conversaciones transcritas. Los sonidos recientes se ven en SONIDOS y ya no generan archivos.",15));
