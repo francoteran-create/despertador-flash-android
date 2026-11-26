@@ -2,13 +2,13 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 72; versionName '4.32-music-spectrum-beta' }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 73; versionName '4.33-clean-menus-beta' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // stable user installation. Keep beta427 suffix to preserve beta settings on upgrade.
  buildTypes {
   debug {
    applicationIdSuffix '.beta427'
-   resValue 'string', 'app_name', 'AURORA 4.32 BETA'
+   resValue 'string', 'app_name', 'AURORA 4.33 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
