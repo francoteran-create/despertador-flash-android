@@ -519,6 +519,15 @@ public class MainActivity extends Activity {
  }
  void renderSettingsPage(){
   setupPage();pageTitle("CONFIGURACIÓN Y PRUEBAS");
+  AuroraHeroCloudView preview=new AuroraHeroCloudView(this);root.addView(preview,new LinearLayout.LayoutParams(-1,dp(160)));
+  Button mascotChoice=btn("PERSONAJE AURORA");root.addView(mascotChoice);
+  mascotChoice.setOnClickListener(v->{
+   new AlertDialog.Builder(this).setTitle("Elegí el personaje")
+    .setSingleChoiceItems(new String[]{"Nube urbana","Nube alternativa"},preview.getCharacter(),(dialog,which)->{
+     preview.setCharacter(which);prefs.edit().putInt(AuroraHeroCloudView.PREF_CHARACTER,which).apply();
+     Toast.makeText(this,which==0?"Nube urbana elegida":"Nube alternativa elegida",Toast.LENGTH_SHORT).show();
+    }).setPositiveButton("CERRAR",null).show();
+  });
   root.addView(section("DIAGNÓSTICO RÁPIDO DE NOTIFICACIONES"));
   root.addView(txt("Primero probá un aviso del teléfono sin micrófono ni smartwatch. "+
    "Si no llega, el problema es de permisos o de configuración Android; "+
