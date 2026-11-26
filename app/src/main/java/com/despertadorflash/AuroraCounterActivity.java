@@ -47,7 +47,7 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
  private Button button(String s){
   Button b=new Button(this);b.setText(s);b.setTextColor(Color.WHITE);
   b.setTextSize(14);b.setMinHeight(dp(48));
-  b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff412e50));
+  AuroraDesign.neonAction(b);
   return b;
  }
  private LinearLayout vertical(){
