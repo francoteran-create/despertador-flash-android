@@ -32,11 +32,11 @@ public final class AuroraSosActivity extends Activity {
  private TextView status;
  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  private TextView text(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.WHITE);t.setPadding(dp(5),dp(10),dp(5),dp(10));return t;}
- private Button button(String s){Button b=new Button(this);b.setText(s);b.setTextColor(Color.WHITE);b.setMinHeight(dp(58));b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff582c41));return b;}
+ private Button button(String s){Button b=new Button(this);b.setText(s);AuroraDesign.neonAction(b);return b;}
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);
-  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.BLACK);
-  LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(12),dp(16),dp(30));scroll.addView(panel);setContentView(scroll);
+  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.TRANSPARENT);
+  LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(12),dp(16),dp(30));scroll.addView(panel);setContentView(AuroraDesign.menuFrame(this,scroll));
   Button back=button("← VOLVER A COMUNICAR");panel.addView(back);back.setOnClickListener(v->finish());
   TextView heading=text("SOS · CONTACTO DE CONFIANZA",25);heading.setGravity(Gravity.CENTER);panel.addView(heading);
   panel.addView(text("Esta opción prepara un mensaje para una persona elegida. No llama a emergencias ni envía nada automáticamente. En peligro inmediato, utilizá el servicio local de emergencias.",15));
