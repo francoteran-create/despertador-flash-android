@@ -228,7 +228,7 @@ public class MainActivity extends Activity {
     new AlertDialog.Builder(this)
      .setTitle("Confirmar restauración de AURORA")
      .setMessage("Se encontraron "+alarmCount+" alarmas configuradas. "
-      +"Esta operación reemplazará las 5 posiciones de alarmas y las preferencias de notificación, flash y sensibilidad de esta instalación. "
+      +"Esta operación reemplazará las 5 posiciones de alarmas, sus ajustes de flash, vibración, sonido, tono, volumen y duración, y las preferencias de notificación y sensibilidad. "
       +"Los registros y el perfil NO serán modificados. ¿Querés continuar?")
      .setNegativeButton("CANCELAR",null)
      .setPositiveButton("RESTAURAR",(dialog,choice)->applyRestoredSettings(recovered))
@@ -252,7 +252,7 @@ public class MainActivity extends Activity {
    return;
   }
   for(int id=0;id<5;id++){cancelSnooze(this,id);schedule(this,id);}
-  Toast.makeText(this,"Ajustes restaurados. Revisá permisos y alarmas.",Toast.LENGTH_LONG).show();
+  Toast.makeText(this,"Ajustes restaurados, incluidos efectos individuales. Revisá permisos y alarmas.",Toast.LENGTH_LONG).show();
   settingsPage=true;render();
  }
 
