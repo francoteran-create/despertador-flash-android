@@ -19,8 +19,8 @@ class HeroNavigationTest(unittest.TestCase):
  def test_dark_fallback_and_static_mural(self):
   self.assertIn("screen.setBackgroundColor(Color.BLACK)",MAIN)
   self.assertIn('getAssets().open("aurora_mural.jpg.b64")',MAIN)
-  self.assertIn("root.setBackgroundColor(Color.BLACK)",MAIN)
-  self.assertIn("root.setBackgroundColor(Color.BLACK)",SENSE)
+  self.assertIn("AuroraDesign.menuFrame(this,scroll)",MAIN)
+  self.assertIn("screenFrame=AuroraDesign.menuFrame(this,scroll)",SENSE)
   self.assertIn("new AuroraHeroCloudView(this)",MAIN)
  def test_no_old_home_panels_in_hero(self):
   area=MAIN[MAIN.index("void renderMinimalHero(){"):MAIN.index("LinearLayout homeTile(")]
