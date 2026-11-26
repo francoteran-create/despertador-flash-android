@@ -42,14 +42,14 @@ public final class AuroraVoiceActivity extends Activity implements TextToSpeech.
  }
  private Button button(String value){
   Button b=new Button(this);b.setText(value);b.setTextColor(Color.WHITE);
-  b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff40304f));
+  AuroraDesign.neonAction(b);
   b.setMinHeight(dp(58));return b;
  }
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);
-  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.BLACK);
+  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.TRANSPARENT);
   LinearLayout panel=new LinearLayout(this);panel.setPadding(dp(16),dp(16),dp(16),dp(30));
-  panel.setOrientation(LinearLayout.VERTICAL);scroll.addView(panel);setContentView(scroll);
+  panel.setOrientation(LinearLayout.VERTICAL);scroll.addView(panel);setContentView(AuroraDesign.menuFrame(this,scroll));
   Button back=button("← VOLVER A COMUNICAR");panel.addView(back);back.setOnClickListener(v->finish());
   TextView heading=text("AURORA VOZ",29);heading.setGravity(Gravity.CENTER);
   panel.addView(heading);
