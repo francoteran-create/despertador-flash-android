@@ -57,7 +57,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.29",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.30",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -95,6 +95,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "flash, vibración y escucha con la pantalla bloqueada: PENDIENTES "
         "en Samsung Galaxy S9+. La rama main estable permanece intacta.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
+    item("NUEVO 4.30", "Recuperación LED limitada a cuatro intentos; diagnóstico de audio y vibración; inicio de música cancelable y prioridad al despertador. El resultado de Android no confirma el funcionamiento físico. Avatares de inicio y perfil se incorporarán en una etapa posterior.")
     item("NUEVO 4.29", "Primer inicio solicita permisos de cámara, micrófono y notificaciones según Android. Guía de alarmas exactas, pantalla completa y batería. Flash individual de alarma prevalece sobre valor inicial general; prueba LED directa y último resultado técnico. No inicia captura al conceder permisos. Ubicación SOS opcional a pedido. Falta confirmar LED físico del S9+.")
     item("NUEVO 4.28", "Inicio urbano con mural fijo, iconos cian y amarillo, diez accesos activos y ajustes. Fondo provisional de baja resolución; validar legibilidad real. El personaje se selecciona en Ajustes.")
     item("ALARMA 4.28", "Servicio de primer plano para efectos independientes de la pantalla, programación registrada, diez sonidos opcionales con vista previa, volumen y duración entre 5 y 180 segundos. Vibración, flash y audio configurables por alarma. Pendiente prueba física.")
@@ -262,7 +263,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.29 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
+        "Instalar AURORA 4.30 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
         "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
         "probar música con graves cercanos y vibración.",
         "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
@@ -342,7 +343,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
     add("Solamente dos archivos para el usuario: "
-        "AURORA 4.29 APK ARM64 y este MASTER PDF. No se adjuntan "
+        "AURORA 4.30 APK ARM64 y este MASTER PDF. No se adjuntan "
         "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
@@ -411,13 +412,13 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.29 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.30 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.29 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.30 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def main():
@@ -426,13 +427,13 @@ def main():
     m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
     if m is None:raise RuntimeError("Falta versionName")
     version=m.group(1)
-    if version!="4.29-permissions-flash-beta":raise RuntimeError("Versión inesperada")
+    if version!="4.30-alarm-stability-beta":raise RuntimeError("Versión inesperada")
     built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
     if len(built)!=1 or "arm64-v8a" not in built[0].name:
         raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
     OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_29_ARM64.apk"
-    pdf=OUT/"AURORA_4_29_MASTER_ESTADO_Y_PLAN.pdf"
+    apk=OUT/"AURORA_4_30_ARM64.apk"
+    pdf=OUT/"AURORA_4_30_MASTER_ESTADO_Y_PLAN.pdf"
     shutil.copy2(built[0],apk)
     create_master(pdf,commit,version,apk)
     if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
