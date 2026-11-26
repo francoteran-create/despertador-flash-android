@@ -27,9 +27,11 @@ import android.widget.TextView;
  * Never saves, streams, uploads or records audio to a file.
  */
 public final class AuroraMusicActivity extends Activity {
- private static final int SAMPLE_RATE=16000;
- private static final int FRAME=1024;
- private static final long MIN_BEAT_INTERVAL_MS=220;
+ private static final int SAMPLE_RATE=MusicSpectrum.RATE;
+ private static final int FRAME=MusicSpectrum.FRAME;
+ private volatile int threshold=-42;
+ private MusicSpectrumView spectrum;
+ private TextView bands;
  private final Handler ui=new Handler(Looper.getMainLooper());
  private volatile boolean running=false;
  private boolean startPending=false;
@@ -49,44 +51,61 @@ public final class AuroraMusicActivity extends Activity {
  }
  private Button button(String value){
   Button b=new Button(this);b.setText(value);b.setMinHeight(dp(64));
-  b.setTextColor(Color.WHITE);
-  b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff343257));
+  AuroraDesign.action(b,0xff11191f,0xff101018,0xff32efff);
+  b.setTextColor(0xffffdf33);
   return b;
  }
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);
   vibrator=(Vibrator)getSystemService(VIBRATOR_SERVICE);
-  LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
-  root.setBackgroundColor(Color.BLACK);root.setPadding(dp(18),dp(22),dp(18),dp(24));setContentView(root);
-  Button back=button("← VOLVER A AURORA");root.addView(back);back.setOnClickListener(v->finish());
-  root.addView(label("SENTIR LA MÚSICA",28));
-  root.addView(label("AURORA escucha el ritmo del ambiente y lo convierte en pulsos de vibración. "
-    +"Usalo con música cerca del teléfono. La intensidad es limitada para cuidar la batería. "
-    +"No se guarda ni se envía audio.",16));
-  level=label("Nivel: MEDIO",19);root.addView(level);
-  SeekBar slider=new SeekBar(this);slider.setMax(2);slider.setProgress(1);root.addView(slider);
-  slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-   public void onProgressChanged(SeekBar b,int value,boolean fromUser){
-    strength=value+1;level.setText("Nivel: "+(strength==1?"SUAVE":strength==2?"MEDIO":"FUERTE"));
-   }
-   public void onStartTrackingTouch(SeekBar b){}
-   public void onStopTrackingTouch(SeekBar b){}
-  });
-  TextView sensitivityLabel=label("Sensibilidad: ALTA",16);root.addView(sensitivityLabel);
-  SeekBar sensitivityBar=new SeekBar(this);sensitivityBar.setMax(2);sensitivityBar.setProgress(2);root.addView(sensitivityBar);
-  sensitivityBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-   public void onProgressChanged(SeekBar b,int value,boolean user){sensitivity=value;sensitivityLabel.setText("Sensibilidad: "+(value==0?"BAJA":value==1?"MEDIA":"ALTA"));}
-   public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
-  });
-  Button test=button("PROBAR VIBRACIÓN");root.addView(test);test.setOnClickListener(v->{if(!running){pulse(300,255);}});
-  status=label("Micrófono apagado. Tocá INICIAR para escuchar música.",16);root.addView(status);
+  android.content.SharedPreferences p=getSharedPreferences("aurora",0);
+  strength=Math.max(1,Math.min(3,p.getInt("music_strength",2)));
+  sensitivity=Math.max(0,Math.min(2,p.getInt("music_sensitivity",2)));
+  threshold=Math.max(-65,Math.min(-15,p.getInt("music_threshold",-42)));
+  android.widget.FrameLayout screen=new android.widget.FrameLayout(this);screen.setBackgroundColor(Color.BLACK);
+  android.widget.ImageView mural=new android.widget.ImageView(this);mural.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+  mural.setImportantForAccessibility(android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  try(java.io.InputStream input=getAssets().open("aurora_mural.jpg.b64")){
+   java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();byte[] block=new byte[2048];int n;
+   while((n=input.read(block))!=-1)bytes.write(block,0,n);
+   byte[] raw=android.util.Base64.decode(bytes.toByteArray(),android.util.Base64.DEFAULT);
+   mural.setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(raw,0,raw.length));
+  }catch(Exception ignored){}
+  screen.addView(mural,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  android.view.View shade=new android.view.View(this);shade.setBackgroundColor(0xd0000000);screen.addView(shade,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  android.widget.ScrollView scroll=new android.widget.ScrollView(this);scroll.setFillViewport(true);screen.addView(scroll,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(16),dp(12),dp(16),dp(18));scroll.addView(root);setContentView(screen);
+  LinearLayout top=new LinearLayout(this);root.addView(top);
+  Button back=button("← VOLVER");top.addView(back,new LinearLayout.LayoutParams(0,-2,1));back.setOnClickListener(v->finish());
+  Button settings=button("⚙ AJUSTES");top.addView(settings,new LinearLayout.LayoutParams(0,-2,1));settings.setOnClickListener(v->showSettings());
+  NeonHomeIcon symbol=new NeonHomeIcon(this,6);LinearLayout.LayoutParams icon=new LinearLayout.LayoutParams(dp(64),dp(64));icon.gravity=Gravity.CENTER;root.addView(symbol,icon);
+  TextView title=label("SENTIR LA MÚSICA",27);title.setTextColor(0xffffd633);root.addView(title);
+  spectrum=new MusicSpectrumView(this);root.addView(spectrum,new LinearLayout.LayoutParams(-1,dp(250)));
+  bands=label("GRAVES  ·  MEDIOS  ·  AGUDOS",15);bands.setTextColor(0xff32efff);root.addView(bands);
+  status=label("Micrófono apagado",16);root.addView(status);
   start=button("▶ INICIAR MÚSICA HÁPTICA");root.addView(start);
   start.setOnClickListener(v->{if(running)stopCapture();else if(startPending)stopCapture();else startCapture();});
-  Button stop=button("■ DETENER VIBRACIÓN Y MICRÓFONO");root.addView(stop);
-  stop.setOnClickListener(v->stopCapture());
-  root.addView(label("No es un sistema de reconocimiento de canciones ni distingue melodías. "
-    +"Los pulsos dependen de los graves, el ritmo y la vibración disponible en tu teléfono. "
-    +"Al salir de esta pantalla se detiene todo.",13));
+ }
+ private void showSettings(){
+  LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(10),dp(18),dp(12));panel.setBackgroundColor(0xff101018);
+  android.content.SharedPreferences p=getSharedPreferences("aurora",0);
+  slider(panel,"Intensidad",2,strength-1,v->{strength=v+1;p.edit().putInt("music_strength",strength).apply();},v->new String[]{"SUAVE","MEDIA","FUERTE"}[v]);
+  slider(panel,"Sensibilidad de ritmo",2,sensitivity,v->{sensitivity=v;p.edit().putInt("music_sensitivity",v).apply();},v->new String[]{"BAJA","MEDIA","ALTA"}[v]);
+  slider(panel,"Umbral digital",50,threshold+65,v->{threshold=v-65;p.edit().putInt("music_threshold",threshold).apply();},v->(v-65)+" dBFS");
+  Button test=button("PROBAR VIBRACIÓN");panel.addView(test);test.setOnClickListener(v->{if(!running&&!startPending)pulse(250,255);});
+  panel.addView(label("Nivel relativo del micrófono (dBFS), no decibeles ambientales calibrados. Vibración por ataques musicales, no pulsos inventados. No se guarda ni envía audio.",13));
+  android.widget.ScrollView scroll=new android.widget.ScrollView(this);scroll.addView(panel);
+  new android.app.AlertDialog.Builder(this).setTitle("Configuración de música").setView(scroll).setPositiveButton("LISTO",null).show();
+ }
+ private interface Change{void set(int value);}
+ private interface Format{String text(int value);}
+ private void slider(LinearLayout panel,String name,int max,int initial,Change change,Format format){
+  TextView label=label(name+": "+format.text(initial),16);panel.addView(label);
+  SeekBar bar=new SeekBar(this);bar.setMax(max);bar.setProgress(initial);panel.addView(bar);
+  bar.setContentDescription(name);bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+   public void onProgressChanged(SeekBar b,int value,boolean user){change.set(value);label.setText(name+": "+format.text(value));}
+   public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
+  });
  }
  private void startCapture(){
   if(running||startPending)return;
@@ -140,45 +159,24 @@ public final class AuroraMusicActivity extends Activity {
  }
  private void analyze(AudioRecord owned){
   short[] data=new short[FRAME];
-  double energyAverage=0;
-  double bassAverage=0;
-  long lastBeat=0;
-  int frames=0;
+  MusicSpectrum dsp=new MusicSpectrum();
   int errors=0;
   while(running&&recorder==owned){
    if(AlarmEffectsService.activeId>=0){ui.post(()->{if(recorder==owned){stopCapture();status.setText("Música detenida por una alarma activa.");}});break;}
    int count;
    try{count=owned.read(data,0,data.length);}catch(Exception ex){break;}
-   if(count<=0){if(++errors>5)break;continue;}
-   errors=0;
-   double energy=0;
-   for(int i=0;i<count;i++){double sample=data[i]/32768.0;energy+=sample*sample;}
-   energy=Math.sqrt(energy/count);
-   double bass=lowBandPower(data,count);
-   if(frames==0){energyAverage=energy;bassAverage=bass;}
-   energyAverage=energyAverage*.94+energy*.06;
-   bassAverage=bassAverage*.94+bass*.06;
-   frames++;
-   long now=SystemClock.elapsedRealtime();
-   int mode=sensitivity;
-   double floor=mode==2?.003:mode==1?.008:.018;
-   double ratio=mode==2?1.10:mode==1?1.20:1.40;
-   boolean loudEnough=energy>floor;
-   boolean accented=energy>energyAverage*ratio || bass>Math.max(1e-8,bassAverage*ratio);
-   // High sensitivity also renders steady audible music as spaced pulses, not silence.
-   boolean steady=mode==2&&energy>floor*3&&now-lastBeat>=500L;
-   if(loudEnough&&(accented||steady)&&now-lastBeat>=MIN_BEAT_INTERVAL_MS){
-    int levelNow=strength;
-    int amplitude=levelNow==1?70:levelNow==2?135:200;
-    int duration=levelNow==1?80:levelNow==2?130:180;
-    pulse(duration,amplitude);
-    lastBeat=now;beats++;
+   if(count<=0){if(++errors>5)break;continue;}errors=0;
+   MusicSpectrum.Result result=dsp.analyze(data,count,SystemClock.elapsedRealtime(),threshold,sensitivity);
+   if(result.beat&&running&&recorder==owned){
+    int s=strength;int duration=result.band==0?80:result.band==1?55:40;
+    pulse(duration+(s-1)*10,s==1?90:s==2?175:255);beats++;
    }
-   if(frames%5==0){
-    final int countBeats=beats;
-    final int loud=(int)Math.round(Math.min(100,energy*1700));
-    ui.post(()->{if(running&&recorder==owned)status.setText("Nivel de sonido: "+loud+" / 100 · Pulsos: "+countBeats);});
-   }
+   final int total=beats;
+   ui.post(()->{if(running&&recorder==owned){
+    spectrum.show(result);
+    bands.setText(String.format(java.util.Locale.ROOT,"G %.0f  ·  M %.0f  ·  A %.0f dBFS",result.bass,result.mid,result.treble));
+    status.setText(String.format(java.util.Locale.ROOT,"%.0f dBFS · Umbral %d · Pulsos %d",result.db,threshold,total));
+   }});
   }
   if(running&&recorder==owned)ui.post(()->{
    if(running&&recorder==owned){
@@ -193,20 +191,6 @@ public final class AuroraMusicActivity extends Activity {
    else vibrator.vibrate(duration);
   }catch(RuntimeException ex){android.util.Log.w("Aurora","Vibración musical no disponible",ex);}
  }
- /** Goertzel power for low frequency musical pulses; no raw audio retained. */
- private static double lowBandPower(short[] data,int n){
-  double total=0;
-  for(int hz:new int[]{80,125,180}){
-   double w=2*Math.PI*hz/SAMPLE_RATE;
-   double coeff=2*Math.cos(w),s1=0,s2=0;
-   for(int i=0;i<n;i++){
-    double s=(data[i]/32768.0)+coeff*s1-s2;s2=s1;s1=s;
-   }
-   double power=s1*s1+s2*s2-coeff*s1*s2;
-   total+=Math.max(0,power)/(n*n);
-  }
-  return total;
- }
  private void stopCapture(){
   startPending=false;running=false;ui.removeCallbacksAndMessages(null);
   AudioRecord old=recorder;recorder=null;
@@ -214,6 +198,7 @@ public final class AuroraMusicActivity extends Activity {
   if(vibrator!=null&&AlarmEffectsService.activeId<0)vibrator.cancel();
   if(start!=null)start.setText("▶ INICIAR MÚSICA HÁPTICA");
   getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+  if(spectrum!=null)spectrum.reset();
   if(status!=null)status.setText("Detenido. Micrófono y vibración apagados.");
  }
  @Override protected void onPause(){super.onPause();stopCapture();ui.removeCallbacksAndMessages(null);}
