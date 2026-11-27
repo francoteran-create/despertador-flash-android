@@ -1,0 +1,10 @@
+# Desarrollo de AURORA
+
+- Creá ramas por cambio desde la base acordada. Abrí una propuesta de cambios con alcance, resultados verificables y pruebas pendientes. Conservá la rama base hasta que se autorice la fusión.
+- Preservá los motores de alarma, temporizador, flash, vibración, audio y traducción, sus permisos, el formato de los datos y las preferencias instaladas. Revisá el impacto sobre servicios, receptores, arranque y ejecución en segundo plano.
+- Conservá el soporte de Android 10 (API 29) y Samsung Galaxy S9+ ARM64. Mantené el mínimo actual salvo decisión explícita. Validá las APIs recientes con rutas compatibles. La beta conserva el identificador com.despertadorflash.beta427.
+- En UI, verificá TalkBack, contraste, tamaño de texto, controles táctiles de al menos 48 dp y escala de animación del sistema. La interfaz debe seguir siendo operable con las animaciones desactivadas.
+- Ejecutá las pruebas Python con `python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'`, y las pruebas Java y compilaciones con Gradle 8.7 y Temurin 17. Para cambios de UI compilá también `:app:assembleDebugAndroidTest` y ejecutá `:app:connectedDebugAndroidTest` en un dispositivo ARM64 de prueba cuando esté disponible. Usá un perfil de pruebas desechable.
+- Incrementá versionCode para cada versión distribuida y sincronizá versionName, etiqueta beta, documentación, verificación de CI y nombres de entrega. Usá la firma de distribución autorizada para actualizaciones. Informá cuando una APK de desarrollo tenga una firma diferente.
+- Cada entrega exige un MASTER PDF actualizado y un único ZIP que contenga la APK completa ARM64 y ese MASTER. El PDF registra el commit exacto, versión, firma, SHA-256 de la APK, pruebas ejecutadas y pendientes reales. Verificá firma, paquete, ABI única e integridad del ZIP antes de publicarlo. Conservá los binarios fuera de Git.
+- Documentá pruebas físicas y capturas solo cuando se hayan realizado. Identificá cada dispositivo o emulador y su versión de Android en el MASTER o la propuesta.

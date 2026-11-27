@@ -28,7 +28,7 @@
 <activity android:name=".AuroraCounterActivity" android:exported="false" android:windowSoftInputMode="adjustResize"/>
 <activity android:name=".AuroraVoiceActivity" android:exported="false"/>
 <activity android:name=".AuroraAssistActivity" android:exported="false"/>
-<activity android:name=".ProfileActivity" android:exported="false"/>
+<activity android:name=".ProfileActivity" android:exported="false" android:windowSoftInputMode="adjustResize"/>
 <activity android:name=".RecordsActivity" android:exported="false"/>
 <activity android:name=".SenseActivity" android:exported="false" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"/>
 <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>

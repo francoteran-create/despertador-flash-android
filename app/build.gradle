@@ -1,14 +1,23 @@
-plugins { id 'com.android.application' }
+plugins {
+ id 'com.android.application'
+ id 'org.jetbrains.kotlin.android'
+ id 'org.jetbrains.kotlin.plugin.compose'
+}
 android {
  namespace 'com.despertadorflash'
  compileSdk 35
- defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 73; versionName '4.33-clean-menus-beta' }
+ buildFeatures { compose true }
+ compileOptions {
+  sourceCompatibility JavaVersion.VERSION_17
+  targetCompatibility JavaVersion.VERSION_17
+ }
+ defaultConfig { applicationId 'com.despertadorflash'; minSdk 24; targetSdk 35; versionCode 74; versionName '4.34-compose-pilot-beta'; testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner' }
  // Debug beta deliberately coexists with stable AURORA: never overwrite the
  // stable user installation. Keep beta427 suffix to preserve beta settings on upgrade.
  buildTypes {
   debug {
    applicationIdSuffix '.beta427'
-   resValue 'string', 'app_name', 'AURORA 4.33 BETA'
+   resValue 'string', 'app_name', 'AURORA 4.34 BETA'
   }
   release {
    resValue 'string', 'app_name', 'AURORA'
@@ -25,7 +34,15 @@ android {
   }
  }
 }
+kotlin { compilerOptions { jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 } }
 dependencies {
+ implementation platform('androidx.compose:compose-bom:2025.02.00')
+ implementation 'androidx.activity:activity-compose:1.10.0'
+ implementation 'androidx.compose.material3:material3'
+ androidTestImplementation platform('androidx.compose:compose-bom:2025.02.00')
+ androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+ androidTestImplementation 'androidx.test:runner:1.6.2'
+ androidTestImplementation 'androidx.test.ext:junit:1.2.1'
  implementation 'com.google.mediapipe:tasks-audio:1.2.2'
  implementation 'com.google.mlkit:translate:17.0.3'
  implementation 'com.google.mlkit:image-labeling:17.0.9'
