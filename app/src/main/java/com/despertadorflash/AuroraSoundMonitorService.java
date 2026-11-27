@@ -21,6 +21,10 @@ import java.util.concurrent.Executors;
 /** Explicitly started foreground microphone monitor. Never auto-start on boot. */
 public final class AuroraSoundMonitorService extends Service {
  public static final String START="com.despertadorflash.START_MONITOR",STOP="com.despertadorflash.STOP_MONITOR";
+ public static final String START_GAME="com.despertadorflash.START_GAME_MONITOR",STOP_GAME="com.despertadorflash.STOP_GAME_MONITOR";
+ public static final String KEY_GAME_LAST="monitor_game_last_elapsed",KEY_GAME_ACTIVE="monitor_game_active";
+ private volatile boolean gamePresentation;
+ private boolean gameOwnsCapture;
  public static final String KEY_ACTIVE="monitor_active", KEY_LAST="monitor_last_sound", KEY_ERROR="monitor_last_error", KEY_HEARTBEAT="monitor_heartbeat", KEY_STARTED="monitor_started";
  private static final String CHANNEL="aurora_monitor", EVENTS="aurora_monitor_events";
  private static final int FOREGROUND_ID=5400;
@@ -38,12 +42,23 @@ public final class AuroraSoundMonitorService extends Service {
  private long lastAlertsCheckAt=0L;
  @Override public void onCreate(){super.onCreate();createChannels();
   // Reset any stale status from a previous process termination; no automatic restart.
-  getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();
+  getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).putBoolean(KEY_GAME_ACTIVE,false).apply();
  }
  @Override public int onStartCommand(Intent intent,int flags,int startId){
-  if(intent!=null&&STOP.equals(intent.getAction())){shutdown();stopSelf();return START_NOT_STICKY;}
-  if(intent==null||!START.equals(intent.getAction())){stopSelf();return START_NOT_STICKY;}
-  if(listening)return START_NOT_STICKY;
+  String action=intent==null?null:intent.getAction();
+  if(STOP.equals(action)){shutdown();stopSelf();return START_NOT_STICKY;}
+  if(STOP_GAME.equals(action)){
+   if(gameOwnsCapture||!listening){shutdown();stopSelf();}
+   else setGamePresentation(false);
+   return START_NOT_STICKY;
+  }
+  boolean forGame=START_GAME.equals(action);
+  if(!forGame&&!START.equals(action)){stopSelf();return START_NOT_STICKY;}
+  if(listening){
+   if(forGame)setGamePresentation(true);
+   else gameOwnsCapture=false;
+   return START_NOT_STICKY;
+  }
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
    getSharedPreferences("aurora",0).edit().putString(KEY_ERROR,"El permiso de micrófono está desactivado").apply();
    Log.w("AURORA","No se inicia escucha sin permiso de micrófono");stopSelf();return START_NOT_STICKY;
@@ -67,6 +82,8 @@ public final class AuroraSoundMonitorService extends Service {
    Log.e("AURORA","No se pudo iniciar servicio de micrófono",ex);stopSelf();return START_NOT_STICKY;
   }
   soundFeedback=new SoundEventFeedback(this);
+  gameOwnsCapture=forGame;
+  setGamePresentation(forGame);
   listening=true;sessionId++;gate.reset();lastHeartbeatAt=0L;lastAlertsCheckAt=0L;lastClassifierCallbackElapsed=0L;
   final long run=sessionId;
   getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,true).remove(KEY_ERROR)
@@ -75,6 +92,10 @@ public final class AuroraSoundMonitorService extends Service {
   // Sound events remain in the bounded in-app list; no TXT is opened.
   worker.execute(()->classifyLoop(run));
   return START_NOT_STICKY; // Do not restart microphone capture without user interaction.
+ }
+ private void setGamePresentation(boolean active){
+  gamePresentation=active;
+  getSharedPreferences("aurora",0).edit().putBoolean(KEY_GAME_ACTIVE,active).apply();
  }
  private void createChannels(){
   if(Build.VERSION.SDK_INT<26)return;
@@ -241,12 +262,20 @@ public final class AuroraSoundMonitorService extends Service {
   eventWorker.execute(()->{
    if(!listening||sessionId!=run)return;
    RecentSoundEvents.add(this,found,percent);
-   getSharedPreferences("aurora",0).edit().putString(KEY_LAST,found+" · puntaje IA "+percent+"/100").apply();
+   android.content.SharedPreferences.Editor event=getSharedPreferences("aurora",0).edit()
+    .putString(KEY_LAST,found+" · puntaje IA "+percent+"/100");
+   boolean game=gamePresentation;
+   if(game)event.putLong(KEY_GAME_LAST,SystemClock.elapsedRealtime());
+   event.apply();
    if(!listening||sessionId!=run)return;
    if(!SoundAlertPreferences.isEnabled(this,found))return;
    // The optional LED is not a notification: attempt it for every confirmed,
    // enabled event even if posting the visible notification fails.
    // Feedback itself checks user opt-in, CAMERA permission and cooldown.
+   if(game){
+    if(soundFeedback!=null)soundFeedback.onConfirmed(found,true);
+    return; // The game HUD presents the detection without a second vibration from a channel.
+   }
    if(soundFeedback!=null)soundFeedback.onConfirmed(found,false);
    if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
    NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
@@ -268,6 +297,7 @@ public final class AuroraSoundMonitorService extends Service {
   });
  }
  private synchronized void shutdown(){
+  setGamePresentation(false);gameOwnsCapture=false;
   if(soundFeedback!=null){soundFeedback.stop();soundFeedback=null;}
   if(!listening){getSharedPreferences("aurora",0).edit().putBoolean(KEY_ACTIVE,false).apply();return;}
   listening=false;sessionId++;

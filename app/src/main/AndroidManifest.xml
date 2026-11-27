@@ -24,6 +24,7 @@
  <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/aurora_photo_paths"/>
 </provider>
 <activity android:name=".AuroraMusicActivity" android:exported="false"/>
+<activity android:name=".NeonGamesActivity" android:exported="false"/>
 <activity android:name=".AuroraSosActivity" android:exported="false"/>
 <activity android:name=".AuroraCounterActivity" android:exported="false" android:windowSoftInputMode="adjustResize"/>
 <activity android:name=".AuroraVoiceActivity" android:exported="false"/>

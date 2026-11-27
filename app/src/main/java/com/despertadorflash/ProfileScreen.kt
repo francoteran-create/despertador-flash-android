@@ -118,11 +118,15 @@ internal fun ProfileScreen(
                         OutlinedButton(onClick = onBirthday, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                             Text(draft.birth.ifBlank { "Elegir fecha" })
                         }
+                        if (draft.birth.isNotBlank()) {
+                            TextButton(onClick = { onDraft(draft.copy(birth = "")) },
+                                modifier = Modifier.heightIn(min = 48.dp)) { Text("Quitar fecha de nacimiento") }
+                        }
                         ProfileField(draft.contact, "Contacto de confianza", "profileContact") { onDraft(draft.copy(contact = it)) }
                     }
                     ProfileFold("Accesibilidad y preferencias") {
                         Text("Certificado Único de Discapacidad (CUD)", style = MaterialTheme.typography.titleSmall)
-                        Text("Declaración opcional. No hace falta adjuntar el certificado.", color = secondaryInk)
+                        Text("Estado opcional y privado, guardado en este dispositivo. No se verifica ni se adjunta documentación.", color = secondaryInk)
                         Box {
                             OutlinedButton(
                                 onClick = { cudMenu = true },

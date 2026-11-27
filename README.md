@@ -5,6 +5,14 @@ sonidos del entorno, recibir avisos, usar alarmas y convertir voz en texto.
 El reconocimiento de sonidos es probabilístico y NO sustituye dispositivos
 certificados de seguridad ni servicios de emergencia.
 
+## AURORA 4.38 · Neón y Juegos
+
+La entrada muestra el mismo logo durante dos segundos y continúa con un saludo
+local con avatar y nombre del perfil. La fecha de nacimiento puede quitarse
+desde el perfil y el estado del CUD sigue siendo opcional y privado.
+El menú Juegos ofrece Bloques de neón con escucha ambiental voluntaria mediante
+el monitor YAMNet existente. El juego y su récord funcionan sin conexión.
+
 ## AURORA 4.37 · Global Clean Neon UX
 
 El icono abre una entrada animada breve y después el menú. El onboarding
