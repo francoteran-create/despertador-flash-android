@@ -7,7 +7,7 @@ apk=${apks[0]}
 tools="${ANDROID_HOME:?Definí ANDROID_HOME}/build-tools/35.0.0"
 badging=$("$tools/aapt" dump badging "$apk")
 grep -F "package: name='com.despertadorflash.beta427'" <<< "$badging"
-grep -F "application-label:'AURORA 4.37 BETA'" <<< "$badging"
+grep -F "application-label:'AURORA 4.38 BETA'" <<< "$badging"
 grep -Fx "native-code: 'arm64-v8a'" <<< "$badging"
 grep -Fx "sdkVersion:'24'" <<< "$badging"
 manifest=$("$tools/aapt" dump xmltree "$apk" AndroidManifest.xml)

@@ -5,7 +5,7 @@ on:
   push:
     branches: [main, aurora-sense-precision-2026-11-10]
   pull_request:
-    branches: [main, aurora-sense-precision-2026-11-10, aurora-4.34-compose-pilot, aurora-4.35-neon-experience, aurora-4.36-slim-neon]
+    branches: [main, aurora-sense-precision-2026-11-10, aurora-4.34-compose-pilot, aurora-4.35-neon-experience, aurora-4.36-slim-neon, aurora-4.37-global-clean-neon]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -56,8 +56,8 @@ jobs:
           python3 scripts/build_delivery.py --branch "$AURORA_BRANCH"
       - uses: actions/upload-artifact@v4
         with:
-          name: AURORA-4.37-GLOBAL-CLEAN-NEON-ARM64
-          path: dist/AURORA_4_37_GLOBAL_CLEAN_NEON_ARM64.zip
+          name: AURORA-4.38-NEON-JUEGOS-ARM64
+          path: dist/AURORA_4_38_NEON_JUEGOS_ARM64.zip
           if-no-files-found: error
           compression-level: 0
           retention-days: 30

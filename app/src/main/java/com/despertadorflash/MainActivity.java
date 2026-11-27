@@ -425,6 +425,8 @@ public class MainActivity extends Activity {
   neonPair(hero,"DETECCIÓN DE SONIDOS",2,()->openSense(SenseActivity.MODE_SOUND),"TRANSCRIPCIÓN",3,()->openSense(SenseActivity.MODE_SPEECH));
   neonPair(hero,"ALARMA",0,()->{alarmsPage=true;render();},"TEMPORIZADOR",1,()->{timerPage=true;render();});
   neonPair(hero,"SOS",4,()->startActivity(new Intent(this,AuroraSosActivity.class)),"REGISTROS",5,()->startActivity(new Intent(this,RecordsActivity.class)));
+  Button games=btn("JUEGOS");hero.addView(games);
+  games.setOnClickListener(v->startActivity(new Intent(this,NeonGamesActivity.class)));
   LinearLayout more=AuroraDesign.disclosure(hero,"Más funciones");
   neonPair(more,"SENTIR LA MÚSICA",6,()->startActivity(new Intent(this,AuroraMusicActivity.class)),"COMUNICAR",7,()->{communicationPage=true;render();});
   neonPair(more,"AURORA VOZ",8,()->startActivity(new Intent(this,AuroraVoiceActivity.class)),"MOSTRADOR",9,()->startActivity(new Intent(this,AuroraCounterActivity.class)));

@@ -36,6 +36,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -264,6 +266,14 @@ internal fun neonPhase(active: Boolean = true): FloatState {
     return phase
 }
 
+private val openingTint = Array(21) { i ->
+    val gain = .58f + i * .027f
+    ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+        gain, 0f, 0f, 0f, 0f, 0f, gain, 0f, 0f, 0f,
+        0f, 0f, gain, 0f, 0f, 0f, 0f, 0f, 1f, 0f
+    )))
+}
+
 private data class LogoLayers(val original: Bitmap, val luminance: Bitmap)
 
 private fun logoMask(bitmap: Bitmap): Bitmap {
@@ -298,17 +308,30 @@ internal fun NeonLogo(asset: String, modifier: Modifier, opening: Boolean = fals
                 translationY = 1.5.dp.toPx() * wave
                 rotationZ = .5f * wave
             }) {
-                Image(remember(logo) { logo.original.asImageBitmap() }, "AURORA",
-                    Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                val source = remember(logo) { logo.original.asImageBitmap() }
+                val tint by remember(opening, phase) {
+                    derivedStateOf {
+                        val value = phase.floatValue
+                        if (opening && value > 0f) {
+                            val intensity = (value / .42f).coerceIn(0f, 1f)
+                            openingTint[(intensity * 20).toInt()]
+                        } else null
+                    }
+                }
+                Image(source, "AURORA", Modifier.fillMaxSize(), contentScale = ContentScale.Fit, colorFilter = tint)
                 Image(remember(logo) { logo.luminance.asImageBitmap() }, null,
                     Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
-                            val progress = if (opening) .16f + phase.floatValue * 2.85f else phase.floatValue
+                            if (opening && phase.floatValue == 0f) {
+                                drawRect(Color.Transparent, blendMode = BlendMode.SrcIn)
+                                return@drawWithContent
+                            }
+                            val progress = if (opening) (phase.floatValue * 2.6f).coerceIn(0f, 1.3f) else phase.floatValue
                             val center = size.width * (-.20f + 1.40f * progress)
                             drawRect(
                                 Brush.linearGradient(
-                                    listOf(Color.Transparent, cyan.copy(alpha = .34f), yellow.copy(alpha = .38f), Color.Transparent),
+                                    listOf(Color.Transparent, cyan.copy(alpha = if (opening) .68f else .34f), yellow.copy(alpha = if (opening) .74f else .38f), Color.Transparent),
                                     Offset(center - size.width * .14f, 0f),
                                     Offset(center + size.width * .14f, size.height * .52f)
                                 ),

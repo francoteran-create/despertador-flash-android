@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.speech.tts.TextToSpeech;
 import android.view.Gravity;
 import android.view.WindowManager;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -108,6 +109,14 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
   Button close=button("← VOLVER A COMUNICAR");
   user.addView(close,new LinearLayout.LayoutParams(-1,dp(48)));
   close.setOnClickListener(v->finish());
+  if(state!=null){
+   typed.setText(state.getString("counter_draft",""));
+   if(typed.length()>0)typed.setSelection(typed.length());
+   facingMessage.setText(state.getString("counter_sent",facingMessage.getText().toString()));
+   replyTranscript.setText(state.getString("counter_reply",replyTranscript.getText().toString()));
+  }
+  androidx.core.view.ViewCompat.setAccessibilityHeading(facingMessage,true);
+  replyTranscript.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
   voice=new TextToSpeech(getApplicationContext(),this);
   say.setEnabled(true); // reports readiness when user presses the button
  }
@@ -169,6 +178,18 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
    SpeechRecognizer old=recognizer;recognizer=null;
    try{old.cancel();old.destroy();}catch(RuntimeException ignored){}
   }
+ }
+ @Override protected void onSaveInstanceState(Bundle out){
+  super.onSaveInstanceState(out);
+  out.putString("counter_draft",typed.getText().toString());
+  out.putString("counter_sent",facingMessage.getText().toString());
+  out.putString("counter_reply",replyTranscript.getText().toString());
+ }
+ @Override protected void onStop(){
+  stopListening();
+  if(voice!=null)voice.stop();
+  status.setText("Micrófono apagado");
+  super.onStop();
  }
  @Override public void onBackPressed(){stopListening();super.onBackPressed();}
  @Override protected void onDestroy(){

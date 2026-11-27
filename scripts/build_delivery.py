@@ -27,7 +27,7 @@ from reportlab.platypus import (
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/"dist"
 REPO="francoteran-create/despertador-flash-android"
-BASE_BRANCH="aurora-4.36-slim-neon"
+BASE_BRANCH="aurora-4.37-global-clean-neon"
 BASE_APK_BYTES=143562983
 AUDITED_BRANCH="aurora-sense-precision-2026-11-10"
 
@@ -58,7 +58,7 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.37 · Global Clean Neon UX",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.38 · Neón y Juegos",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -91,14 +91,16 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
     story.append(table)
     current_bytes = apk.stat().st_size
     reduction = (1 - current_bytes / BASE_APK_BYTES) * 100
-    delta = current_bytes - 99_551_146
-    add(f"APK ARM64. Esta versión: {current_bytes:,} bytes. Diferencia respecto de 4.36 local: {delta:+,} bytes. Reducción frente a 4.35 local: {reduction:.2f}%.")
+    delta = current_bytes - 99_215_354
+    add(f"APK ARM64. Esta versión: {current_bytes:,} bytes. Diferencia respecto de 4.37 local: {delta:+,} bytes. Reducción frente a 4.35 local: {reduction:.2f}%.")
     add("Derivados WebP de 720 × 900, calidad 94 con conversión Sharp YUV. Los 32 originales de 1080 × 1350 quedan en el commit base db8ed5d. Comparación digital a 432 × 540 sobre el contenido: PSNR mínimo 34,27 dB y mediana 36,17 dB.")
     add("R8 y resource shrinking se evaluaron por composición. DEX, tabla y recursos sumaban cerca de 13,5 MB antes del piloto, mientras que las bibliotecas nativas ocupaban 69,6 MB. La entrega conserva el empaquetado probado de los motores. Se requiere validación Android de JNI, traducción, OCR y audio antes de activar shrinking.")
     head("1 | ESTADO REAL DE ESTA ENTREGA")
     add(evidence)
     add("Pendiente ejecutar las pruebas instrumentadas y validar el perfil, TalkBack y el hardware en Samsung Galaxy S9+ con Android 10.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
+    item("NUEVO 4.38", "La apertura conserva el arte original, con dos segundos de iluminación y barrido en las letras. Saluda con avatar, nombre visible y género de perfil cuando se declaró. Usa la fecha privada del perfil para felicitar el cumpleaños. CUD sigue siendo una declaración opcional local. Mostrador recupera textos al recrearse y libera micrófono y voz al dejar la pantalla.")
+    item("JUEGOS 4.38", "Bloques de neón es un juego original en Compose con ritmo fijo, récord local, efectos de líneas, pausa y reinicio. Escuchar reutiliza el monitor YAMNet y muestra los sonidos fuera del tablero; las alertas de vibración y flash conservan la configuración. Pruebas instrumentadas y revisión física pendientes.")
     item("NUEVO 4.37", "La apertura desde el icono muestra AURORA y pasa al inicio automáticamente. El onboarding conserva su decisión anterior. Las alarmas y el temporizador llegan directo a su aviso. El mural vectorial del menú usa grafiti y luz sobre negro. Transcripción muestra el avatar, el texto y un solo control de escucha. Idiomas, traducción, historial y diagnóstico están en Opciones. Se reorganizaron Perfil, Registros, AURORA Voz, SOS, Asistente, Música, Comunicación, Alarmas y Temporizador.")
     add("Pendiente ejecutar en Android las pruebas instrumentadas de apertura, reingreso, lectura, avatar, menús y accesibilidad. No se generaron capturas ni se midió RAM o batería.")
     item("NUEVO 4.36", "Escuchar sonidos en Compose y Material 3, onda basada en el mismo PCM que recibe YAMNet, arte vectorial neón y etiquetas de confianza. La escucha se inicia desde el botón. Se conservan historial, avisos, sensibilidad, diagnóstico y registros. Las animaciones reducen su movimiento según Android y se suspenden fuera de la pantalla activa. Peso y pruebas locales documentados; RAM, batería, latencia, capturas y ejecución física pendientes.")
@@ -275,7 +277,7 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.37 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
+        "Instalar AURORA 4.38 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
         "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
         "probar música con graves cercanos y vibración.",
         "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
@@ -422,13 +424,13 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.37 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.38 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.37 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.38 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def test_evidence() -> str:
@@ -458,7 +460,7 @@ def main():
     branch = args.branch or git("rev-parse", "--abbrev-ref", "HEAD")
     version_text = (ROOT / "app/build.gradle").read_text(encoding="utf-8")
     version = re.search(r"versionName\s+'([^']+)'", version_text)
-    if not version or version[1] != "4.37-global-clean-neon-beta":
+    if not version or version[1] != "4.38-neon-juegos-beta":
         raise RuntimeError("Versión de entrega inesperada")
     built = list((ROOT / "app/build/outputs/apk/debug").glob("*.apk"))
     if len(built) != 1 or "arm64-v8a" not in built[0].name or built[0].stat().st_size < 10_000_000:
@@ -493,11 +495,11 @@ def main():
     evidence = test_evidence()
 
     OUT.mkdir(exist_ok=True)
-    target = OUT / "AURORA_4_37_GLOBAL_CLEAN_NEON_ARM64.zip"
-    apk_name = "AURORA_4_37_ARM64.apk"
+    target = OUT / "AURORA_4_38_NEON_JUEGOS_ARM64.zip"
+    apk_name = "AURORA_4_38_ARM64.apk"
     with TemporaryDirectory(dir=OUT) as directory:
         staging = Path(directory)
-        pdf = staging / "AURORA_4_37_MASTER.pdf"
+        pdf = staging / "AURORA_4_38_MASTER.pdf"
         create_master(pdf, commit, branch, version[1], built[0], evidence)
         if not pdf.read_bytes().startswith(b"%PDF-"):
             raise RuntimeError("El MASTER no es un PDF válido")
