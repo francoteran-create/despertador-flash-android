@@ -13,7 +13,7 @@ class NeonGamesTest {
         compose.onNodeWithText("Jugar contra La Rusa").performClick()
         compose.onNodeWithText("Micrófono apagado").assertIsDisplayed()
         compose.onNodeWithText("ESCUCHAR").assertHasClickAction()
-        compose.onNodeWithText("Vos  0").assertIsDisplayed()
+        compose.onNodeWithTag("trucoScore").assertIsDisplayed()
         compose.onNodeWithText("Mano: vos").assertIsDisplayed()
     }
 

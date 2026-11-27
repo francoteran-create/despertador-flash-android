@@ -43,6 +43,7 @@ import java.util.Locale
 internal data class ProfileDraft(
     val name: String = "",
     val nickname: String = "",
+    val displayName: String = "",
     val birth: String = "",
     val contact: String = "",
     val notes: String = "",
@@ -121,6 +122,11 @@ internal fun ProfileScreen(
                     ProfileSection {
                         SectionTitle("Datos personales")
                         Text("Todos los campos son opcionales.", color = secondaryInk)
+                        ProfileField(draft.displayName, "Tu nombre para mostrar", "profileDisplayName") {
+                            onDraft(draft.copy(displayName = it))
+                        }
+                        val shown = preferredDisplayName(draft.displayName, draft.nickname, draft.name)
+                        if (shown.isNotBlank()) Text("AURORA te llama $shown", color = cyan)
                         ProfileField(draft.name, "Nombre", "profileName") { onDraft(draft.copy(name = it)) }
                         ProfileField(draft.nickname, "Apodo", "profileNickname") { onDraft(draft.copy(nickname = it)) }
                     }
@@ -280,7 +286,7 @@ private fun ProfilePortrait(draft: ProfileDraft, portrait: ProfileAvatar, modifi
                     cornerRadius = CornerRadius(size.width * .12f))
             }
         } else {
-            val identity = draft.nickname.ifBlank { draft.name }.trim()
+            val identity = preferredDisplayName(draft.displayName, draft.nickname, draft.name)
             val initials = remember(identity) {
                 val words = identity.split(Regex("\\s+")).filter(String::isNotEmpty)
                 if (words.isEmpty()) "A" else listOf(words.first(), words.last())

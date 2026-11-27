@@ -93,6 +93,7 @@ class NeonGamesActivity : ComponentActivity() {
     private val trucoPrefs by lazy { getSharedPreferences("aurora_truco", MODE_PRIVATE) }
     private var voice: TextToSpeech? = null
     private var voiceReady = false
+    private var pendingVoice: Pair<String, Long>? = null
     @Volatile private var quietUntil = 0L
     private var audioHandoff: Job? = null
     private var attached by mutableStateOf(false)
@@ -118,12 +119,13 @@ class NeonGamesActivity : ComponentActivity() {
         model.record = maxOf(model.record, scores.getInt("record", 0))
         model.blockHaptics = scores.getBoolean("haptics", false)
         setContent {
+            val playerName = remember { NeonIdentity.displayName(this@NeonGamesActivity) }
             MaterialTheme(colorScheme = darkColorScheme(primary = yellow, secondary = cyan, tertiary = magenta,
                 onPrimary = Color.Black, background = Color.Black, surface = nearBlack,
                 onSurface = Color.White)) {
                 Surface(Modifier.fillMaxSize(), color = Color.Black) {
                     when (model.screen) {
-                        1 -> BlockScreen(model, microphone, detected, listening || attached, ::toggleListening, ::openSector,
+                        1 -> BlockScreen(model, playerName, microphone, detected, listening || attached, ::toggleListening, ::openSector,
                             onHaptics = { model.blockHaptics = it; scores.edit().putBoolean("haptics", it).apply() },
                             achieved = {
                                 if (it > model.record) {
@@ -133,7 +135,7 @@ class NeonGamesActivity : ComponentActivity() {
                             })
                         2 -> TrucoScreen(model.truco, trucoPrefs, microphone, detected, listening || attached || handingOff,
                             ::toggleListening, ::openSector, ::speakTruco)
-                        else -> GamesCover(model.record, ::finish, onBlocks = {
+                        else -> GamesCover(model.record, playerName, ::finish, onBlocks = {
                             model.update { reset(model.clock()) }
                             model.pause(false)
                             model.session++
@@ -157,6 +159,7 @@ class NeonGamesActivity : ComponentActivity() {
 
     override fun onPause() {
         model.truco.paused = true
+        pendingVoice = null
         voice?.stop()
         stopGameListening()
         super.onPause()
@@ -170,6 +173,7 @@ class NeonGamesActivity : ComponentActivity() {
 
     private fun openSector() {
         stopGameListening()
+        pendingVoice = null
         voice?.stop()
         model.pause(true)
         model.screen = 0
@@ -184,20 +188,29 @@ class NeonGamesActivity : ComponentActivity() {
     private fun speakTruco(line: String, enabled: Boolean) {
         if (!enabled || attached || handingOff || settings.getBoolean(AuroraSoundMonitorService.KEY_ACTIVE, false)) return
         if (voice == null) {
+            pendingVoice = line to SystemClock.elapsedRealtime()
             voice = TextToSpeech(applicationContext) { result ->
-                val engine = voice ?: return@TextToSpeech
-                if (result == TextToSpeech.SUCCESS) {
-                    val spanish = engine.voices.orEmpty().filter {
-                        it.locale.language == "es" && !it.isNetworkConnectionRequired &&
-                            TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features
-                    }.sortedByDescending { it.locale == Locale("es", "AR") }.firstOrNull()
-                    voiceReady = spanish != null && engine.setVoice(spanish) == TextToSpeech.SUCCESS
-                    engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                        override fun onStart(utteranceId: String?) = Unit
-                        override fun onDone(utteranceId: String?) { quietUntil = SystemClock.elapsedRealtime() + 320 }
-                        @Deprecated("Android legacy callback")
-                        override fun onError(utteranceId: String?) { quietUntil = SystemClock.elapsedRealtime() + 320 }
-                    })
+                runOnUiThread {
+                    val engine = voice ?: return@runOnUiThread
+                    if (result == TextToSpeech.SUCCESS) {
+                        val spanish = engine.voices.orEmpty().filter {
+                            it.locale.language == "es" && !it.isNetworkConnectionRequired &&
+                                TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features
+                        }.sortedByDescending { it.locale == Locale("es", "AR") }.firstOrNull()
+                        voiceReady = spanish != null && engine.setVoice(spanish) == TextToSpeech.SUCCESS
+                        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                            override fun onStart(utteranceId: String?) = Unit
+                            override fun onDone(utteranceId: String?) { quietUntil = SystemClock.elapsedRealtime() + 320 }
+                            @Deprecated("Android legacy callback")
+                            override fun onError(utteranceId: String?) { quietUntil = SystemClock.elapsedRealtime() + 320 }
+                        })
+                    }
+                    val queued = pendingVoice
+                    pendingVoice = null
+                    if (queued != null && voiceReady && model.screen == 2 && model.truco.match != null &&
+                        SystemClock.elapsedRealtime() - queued.second < 1700L) {
+                        speakTruco(queued.first, trucoPrefs.getBoolean("voice", false))
+                    }
                 }
             }
             return
@@ -223,6 +236,7 @@ class NeonGamesActivity : ComponentActivity() {
     }
 
     private fun startGameListening() {
+        pendingVoice = null
         if (AlarmEffectsService.activeId >= 0) {
             microphone = "Detené la alarma para escuchar"
             return
@@ -286,7 +300,7 @@ internal val blockColors = listOf(Color.Black, cyan, yellow, magenta, Color(0xFF
 
 @Composable
 private fun BlockScreen(
-    model: NeonGameModel, microphone: String, detected: String, listening: Boolean,
+    model: NeonGameModel, playerName: String, microphone: String, detected: String, listening: Boolean,
     toggleMic: () -> Unit, finish: () -> Unit, onHaptics: (Boolean) -> Unit, achieved: (Int) -> Unit
 ) {
     val game = model.game
@@ -334,13 +348,13 @@ private fun BlockScreen(
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     GameBoard(game, updates, effect, Modifier.weight(1f).fillMaxHeight())
                     Column(Modifier.weight(.9f).fillMaxHeight().verticalScroll(rememberScrollState())) {
-                        GameDetails(game.score, game.next, model.record, microphone, detected, listening, toggleMic)
+                        GameDetails(game.score, game.next, model.record, playerName, microphone, detected, listening, toggleMic)
                         PlayControls(model)
                     }
                 }
             } else {
                 Column(Modifier.fillMaxSize()) {
-                    GameDetails(game.score, game.next, model.record, microphone, detected, listening, toggleMic)
+                    GameDetails(game.score, game.next, model.record, playerName, microphone, detected, listening, toggleMic)
                     GameBoard(game, updates, effect, Modifier.weight(1f).fillMaxWidth())
                     PlayControls(model)
                 }
@@ -364,10 +378,12 @@ private fun BlockScreen(
 }
 
 @Composable
-private fun GameDetails(score: Int, next: BlockShape, record: Int, microphone: String, detected: String, listening: Boolean, toggle: () -> Unit) {
+private fun GameDetails(score: Int, next: BlockShape, record: Int, playerName: String, microphone: String, detected: String, listening: Boolean, toggle: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween) {
-        Column {
+        Column(Modifier.weight(1f)) {
+            if (playerName.isNotBlank()) Text(playerName, color = cyan, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium)
             Text("Puntos  $score", color = yellow, fontFamily = graffiti, fontSize = 20.sp)
             Text("Récord  $record", color = cyan, style = MaterialTheme.typography.labelMedium)
         }

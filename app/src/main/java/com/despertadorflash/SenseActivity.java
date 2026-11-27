@@ -507,10 +507,7 @@ public final class SenseActivity extends ComponentActivity {
  }
  private void updateConversationIdentity(){
   if(conversationStage==null)return;
-  android.content.SharedPreferences p=getSharedPreferences("aurora_profile",MODE_PRIVATE);
-  String name=p.getString("nickname","");
-  if(name==null||name.trim().isEmpty())name=p.getString("name","");
-  conversationStage.identity(NeonIdentity.menuPortrait(this,dp(50)),name==null?"":name);
+  conversationStage.identity(NeonIdentity.menuPortrait(this,dp(50)),NeonIdentity.displayName(this));
  }
  private void updateConversationStage(){
   if(conversationStage!=null)conversationStage.update(result.getText().toString(),

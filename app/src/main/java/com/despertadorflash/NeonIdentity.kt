@@ -33,6 +33,9 @@ internal data class NeonDraft(val gender: NeonGender? = null, val name: String =
         canContinue() && catalog.forGender(requireNotNull(gender)).any { it.id == avatar }
 }
 
+internal fun preferredDisplayName(explicit: String?, nickname: String?, name: String?): String =
+    listOf(explicit, nickname, name).firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotEmpty) }.orEmpty()
+
 internal object NeonIdentity {
     private var loaded = false
     private var cached: NeonCatalog? = null
@@ -76,20 +79,27 @@ internal object NeonIdentity {
             ?.let { bitmap(context, it.asset, pixels) }
     }
 
+    @JvmStatic
+    fun displayName(context: Context): String = preferences(context).let {
+        preferredDisplayName(it.getString("display_name", null), it.getString("nickname", null), it.getString("name", null))
+    }
+
     fun savedDraft(context: Context): NeonDraft {
         val prefs = preferences(context)
         val avatar = prefs.getString("neon_avatar", null)
         return NeonDraft(
             NeonGender.entries.firstOrNull { it.name == prefs.getString("neon_gender", null) }
                 ?: if (avatar != null) NeonGender.PRIVATE else null,
-            prefs.getString("name", "").orEmpty(),
+            displayName(context),
             avatar
         )
     }
 
     fun save(context: Context, draft: NeonDraft) {
-        preferences(context).edit()
-            .putString("name", draft.name.trim())
+        val prefs = preferences(context)
+        val editor = prefs.edit()
+        if (prefs.getString("name", "").isNullOrBlank()) editor.putString("name", draft.name.trim())
+        editor.putString("display_name", draft.name.trim())
             .putString("neon_gender", draft.gender?.takeUnless { it == NeonGender.PRIVATE }?.name)
             .putString("neon_avatar", draft.avatar)
             .remove("neon_legacy_portrait")

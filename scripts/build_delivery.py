@@ -27,7 +27,7 @@ from reportlab.platypus import (
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/"dist"
 REPO="francoteran-create/despertador-flash-android"
-BASE_BRANCH="aurora-4.38-neon-juegos"
+BASE_BRANCH="aurora-4.39-gaming"
 BASE_APK_BYTES=143562983
 AUDITED_BRANCH="aurora-sense-precision-2026-11-10"
 
@@ -58,7 +58,7 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.39 · Gaming Experience",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.40 · Truco personalidad y legibilidad",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -91,14 +91,17 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
     story.append(table)
     current_bytes = apk.stat().st_size
     reduction = (1 - current_bytes / BASE_APK_BYTES) * 100
-    delta = current_bytes - 99_264_530
-    add(f"APK ARM64. Esta versión: {current_bytes:,} bytes. Diferencia respecto de 4.38 local: {delta:+,} bytes. Reducción frente a 4.35 local: {reduction:.2f}%.")
+    delta = current_bytes - 99_399_478
+    add(f"APK ARM64. Esta versión: {current_bytes:,} bytes. Diferencia respecto de 4.39 local: {delta:+,} bytes. Reducción frente a 4.35 local: {reduction:.2f}%.")
     add("Derivados WebP de 720 × 900, calidad 94 con conversión Sharp YUV. Los 32 originales de 1080 × 1350 quedan en el commit base db8ed5d. Comparación digital a 432 × 540 sobre el contenido: PSNR mínimo 34,27 dB y mediana 36,17 dB.")
     add("R8 y resource shrinking se evaluaron por composición. DEX, tabla y recursos sumaban cerca de 13,5 MB antes del piloto, mientras que las bibliotecas nativas ocupaban 69,6 MB. La entrega conserva el empaquetado probado de los motores. Se requiere validación Android de JNI, traducción, OCR y audio antes de activar shrinking.")
     head("1 | ESTADO REAL DE ESTA ENTREGA")
     add(evidence)
     add("Pendiente ejecutar las pruebas instrumentadas y validar el perfil, TalkBack y el hardware en Samsung Galaxy S9+ con Android 10.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
+    item("NUEVO 4.40", "Rival de Truco con frases según jugadas, marcador, cantadas, desenlace e intención. Las cantadas se conservan y las cargadas tienen límite y enfriamiento. Subtítulos y voz opcional respetan la escucha ambiental. Cartas de mesa y mano se ajustan al ancho, con dibujos, valores y palos más legibles y una franja separada para el subtítulo.")
+    item("IDENTIDAD 4.40", "Bienvenida con el avatar completo, centrado y sin marco, con aparición suave. El contenedor usa el 90% del ancho y deja espacio simétrico para el saludo. Se preservan la introducción de dos segundos, los 32 avatares, el logo y las reglas de cumpleaños. El género elegido tiene borde, iluminación y marca de selección. El nombre para mostrar tiene campo y vista previa, y se reutiliza en perfil, entrada y juegos con respaldo de apodos y nombres previos.")
+    add("Las pruebas JVM cubren los contextos, el límite de intervención y anchos representativos de 320, 360 y 411 dp. Compilaron las pruebas de distribución Android. La revisión visual y táctil en un Galaxy S9+ sigue pendiente.")
     item("NUEVO 4.39", "Bloques agrega caída instantánea, pulsación lateral sostenida, sombra y fijación de 450 ms con renovaciones limitadas. El pulso háptico del juego es opcional e independiente de las alertas.")
     item("TRUCO ARGENTINO", "Mesa vectorial, baraja de 40 cartas, uno contra uno a 15 o 30, Flor opcional, envido y sus variantes, Truco y sus escalones, pardas y mazo. Falta envido usa el tramo de malas o buenas. IA offline de tres niveles con cartas propias y públicas. Subtítulos configurables, voz local opcional y exclusión entre voz y micrófono ambiental. No hay red multijugador.")
     item("AUDITORÍA 4.38", "Ampliación de foto o avatar, copia privada de PDF o imagen de CUD con eliminación voluntaria, división en Mostrador y celebración anual de 4 s con globos, confeti y fuegos vectoriales. La entrada original de 2 s y la bienvenida se conservan.")
@@ -281,7 +284,7 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.39 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
+        "Instalar AURORA 4.40 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
         "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
         "probar música con graves cercanos y vibración.",
         "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
@@ -428,13 +431,13 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.39 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.40 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.39 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.40 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def test_evidence() -> str:
@@ -464,7 +467,7 @@ def main():
     branch = args.branch or git("rev-parse", "--abbrev-ref", "HEAD")
     version_text = (ROOT / "app/build.gradle").read_text(encoding="utf-8")
     version = re.search(r"versionName\s+'([^']+)'", version_text)
-    if not version or version[1] != "4.39-gaming-beta":
+    if not version or version[1] != "4.40-truco-legibilidad-beta":
         raise RuntimeError("Versión de entrega inesperada")
     built = list((ROOT / "app/build/outputs/apk/debug").glob("*.apk"))
     if len(built) != 1 or "arm64-v8a" not in built[0].name or built[0].stat().st_size < 10_000_000:
@@ -499,11 +502,11 @@ def main():
     evidence = test_evidence()
 
     OUT.mkdir(exist_ok=True)
-    target = OUT / "AURORA_4_39_GAMING_ARM64.zip"
-    apk_name = "AURORA_4_39_ARM64.apk"
+    target = OUT / "AURORA_4_40_TRUCO_LEGIBILIDAD_ARM64.zip"
+    apk_name = "AURORA_4_40_ARM64.apk"
     with TemporaryDirectory(dir=OUT) as directory:
         staging = Path(directory)
-        pdf = staging / "AURORA_4_39_MASTER.pdf"
+        pdf = staging / "AURORA_4_40_MASTER.pdf"
         create_master(pdf, commit, branch, version[1], built[0], evidence)
         if not pdf.read_bytes().startswith(b"%PDF-"):
             raise RuntimeError("El MASTER no es un PDF válido")
