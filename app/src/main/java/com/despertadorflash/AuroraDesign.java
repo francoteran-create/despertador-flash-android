@@ -15,7 +15,7 @@ import android.widget.TextView;
 /** Shared native UI system: glass surfaces, ripple controls and high contrast. */
 public final class AuroraDesign {
  private AuroraDesign(){}
- public static final int INK=0xff080e22, CYAN=0xff8cf5f4, SOFT=0xffc6d6f2;
+ public static final int INK=Color.BLACK, CYAN=0xff39edff, SOFT=0xffc6d6f2;
  public static int dp(Context c,float n){return Math.round(c.getResources().getDisplayMetrics().density*n);}
  public static GradientDrawable surface(Context context,int start,int end,int border,int radius){
   GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{start,end});
@@ -43,31 +43,52 @@ public final class AuroraDesign {
   card.setPadding(dp(c,20),dp(c,19),dp(c,20),dp(c,19));
  }
  public static void neonAction(Button button){
-  action(button,0xff10161c,0xff141321,0xff32efff);
+  action(button,0xff10141a,0xff14111a,0xff37d8ed);
   button.setTextColor(0xffffdf33);
  }
- /** Shared home mural with strong contrast for operational screens. */
+ /** Functional screens keep the whole canvas black, including scroll gaps. */
  public static android.widget.FrameLayout menuFrame(Context c,View content){
   android.widget.FrameLayout screen=new android.widget.FrameLayout(c);
-  screen.setBackgroundColor(Color.BLACK);
-  android.widget.ImageView mural=new android.widget.ImageView(c);
-  mural.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-  mural.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-  try(java.io.InputStream input=c.getAssets().open("aurora_mural.jpg.b64")){
-   java.io.ByteArrayOutputStream encoded=new java.io.ByteArrayOutputStream();
-   byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)encoded.write(buffer,0,n);
-   byte[] image=android.util.Base64.decode(encoded.toByteArray(),android.util.Base64.DEFAULT);
-   mural.setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(image,0,image.length));
-  }catch(Exception ignored){}
-  screen.addView(mural,new android.widget.FrameLayout.LayoutParams(-1,-1));
-  View shade=new View(c);shade.setBackgroundColor(0xd0000000);
-  screen.addView(shade,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  screen.setBackgroundColor(INK);
   screen.addView(content,new android.widget.FrameLayout.LayoutParams(-1,-1));
   return screen;
  }
+ public static void headline(TextView title){
+  title.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(title.getContext(),R.font.permanent_marker));
+  title.setTextColor(Color.WHITE);
+  androidx.core.view.ViewCompat.setAccessibilityHeading(title,true);
+ }
+ public static LinearLayout heading(LinearLayout parent,String title,Runnable onBack){
+  Context c=parent.getContext();
+  LinearLayout bar=new LinearLayout(c);bar.setGravity(Gravity.CENTER_VERTICAL);
+  Button back=new Button(c);back.setText("‹");back.setContentDescription("Volver");
+  neonAction(back);back.setMinWidth(dp(c,48));back.setPadding(0,0,0,0);
+  bar.addView(back,new LinearLayout.LayoutParams(dp(c,48),-2));back.setOnClickListener(v->onBack.run());
+  TextView label=new TextView(c);label.setText(title);label.setTextSize(23);
+  headline(label);label.setGravity(Gravity.CENTER);label.setPadding(dp(c,8),dp(c,10),0,dp(c,10));
+  bar.addView(label,new LinearLayout.LayoutParams(0,-2,1f));
+  parent.addView(bar);
+  return bar;
+ }
+ /** Groups existing native controls without resetting their listeners or values. */
+ public static LinearLayout disclosure(LinearLayout parent,String label){
+  Context c=parent.getContext();
+  LinearLayout section=new LinearLayout(c);section.setOrientation(LinearLayout.VERTICAL);
+  section.setVisibility(View.GONE);
+  Button control=new Button(c);neonAction(control);control.setText("＋  "+label);
+  control.setOnClickListener(v->{
+   boolean open=section.getVisibility()!=View.VISIBLE;
+   section.setVisibility(open?View.VISIBLE:View.GONE);
+   control.setText((open?"−  ":"＋  ")+label);
+   control.setSelected(open);
+   if(android.os.Build.VERSION.SDK_INT>=30)control.setStateDescription(open?"Expandido":"Contraído");
+  });
+  parent.addView(control);parent.addView(section);
+  return section;
+ }
  public static void entry(View field){
   Context c=field.getContext();
-  field.setBackground(surface(c,0xff12273d,0xff1a1d3c,0xff496b86,17));
+  field.setBackground(surface(c,0xff11151b,0xff111219,0xff42636b,17));
   field.setPadding(dp(c,16),dp(c,13),dp(c,16),dp(c,13));
  }
  public static TextView overline(Context c,String t){

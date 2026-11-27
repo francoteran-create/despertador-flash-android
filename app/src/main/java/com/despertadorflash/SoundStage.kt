@@ -120,7 +120,6 @@ internal fun SoundStageScreen(
     active: Boolean, status: String, detail: String, readings: List<SoundStageReading>,
     wave: State<FloatArray>, signalPresent: Boolean, action: (String) -> Unit
 ) {
-    var options by remember { mutableStateOf(false) }
     MaterialTheme(colorScheme = stageColors) {
         Surface(Modifier.fillMaxSize(), color = Color.Black) {
             BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 16.dp)) {
@@ -153,16 +152,7 @@ internal fun SoundStageScreen(
                         }
                     }
                     Box(Modifier.align(Alignment.End)) {
-                        TextButton(
-                            onClick = { options = true },
-                            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                                .semantics { contentDescription = "Opciones de sonidos" }.testTag("soundOptions")
-                        ) { Text("•••", color = cyan, fontSize = 20.sp) }
-                        DropdownMenu(expanded = options, onDismissRequest = { options = false }) {
-                            secondaries.forEach { (id, label) ->
-                                DropdownMenuItem(text = { Text(label) }, onClick = { options = false; action(id) })
-                            }
-                        }
+                        NeonOverflow("Opciones de sonidos", secondaries, action)
                     }
                 }
             }
@@ -247,14 +237,17 @@ private fun SignalWave(wave: State<FloatArray>, modifier: Modifier) {
 }
 
 @Composable
-private fun StageControl(start: Boolean, enabled: Boolean, activate: () -> Unit) {
+internal fun StageControl(
+    start: Boolean, enabled: Boolean, startLabel: String = "Escuchar", stopLabel: String = "Detener",
+    activate: () -> Unit
+) {
     val interactions = remember { MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
     val focused by interactions.collectIsFocusedAsState()
     val scale by animateFloatAsState(if (pressed) .96f else 1f, label = "Control de escucha")
     val tint = if (start) cyan else magenta
     val shape = RoundedCornerShape(21.dp)
-    val title = if (start) "Escuchar" else "Detener"
+    val title = if (start) startLabel else stopLabel
     Button(
         onClick = activate, enabled = enabled, interactionSource = interactions, shape = shape,
         colors = ButtonDefaults.buttonColors(

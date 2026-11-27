@@ -62,7 +62,7 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
 
   // Upper half faces the hearing staff member across the counter.
   LinearLayout staff=vertical();staff.setGravity(Gravity.CENTER);
-  staff.setBackgroundColor(0xff12121b);
+  staff.setBackgroundColor(Color.BLACK);
   staff.setRotation(180f);
   screen.addView(staff,new LinearLayout.LayoutParams(-1,0,1f));
   staff.addView(label("PERSONA DE ENFRENTE",14));

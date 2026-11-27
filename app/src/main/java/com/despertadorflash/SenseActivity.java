@@ -112,6 +112,7 @@ public final class SenseActivity extends ComponentActivity {
  private LinearLayout root;
  private ScrollView pageScroll;
  private SoundStage soundStage;
+ private ConversationStage conversationStage;
  private final java.util.Map<String,java.util.List<View>> stagePanels=new java.util.LinkedHashMap<>();
  private final java.util.Map<String,Long> stageAccepted=new java.util.HashMap<>();
  private volatile boolean soundScreenVisible;
@@ -184,6 +185,7 @@ public final class SenseActivity extends ComponentActivity {
   if(screenMode==MODE_SOUND){
    attachSoundStage();
   }else{
+   attachConversationStage();
    // Let Android release the previous microphone owner before acquiring it here.
    main.postDelayed(()->{if(!isFinishing()&&getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))toggle(screenMode);},backgroundWasActive?550L:0L);
   }
@@ -213,8 +215,10 @@ public final class SenseActivity extends ComponentActivity {
   root.addView(AuroraDesign.overline(this,"AURORA  /  INTELIGENCIA SENSORIAL"));
   TextView intro=text(screenMode==MODE_SOUND?"Escuchá lo que sucede a tu alrededor.":"Transcribí la conversación y traducí cuando lo necesites.",15,0xffcbddee);
   intro.setGravity(Gravity.CENTER);root.addView(intro);
-  cloudMascot=new AuroraCloudMascotView(this);
-  root.addView(cloudMascot,new LinearLayout.LayoutParams(-1,-2));
+  if(screenMode==MODE_SOUND){
+   cloudMascot=new AuroraCloudMascotView(this);
+   root.addView(cloudMascot,new LinearLayout.LayoutParams(-1,-2));
+  }
   visual=new AuroraVisualEngineView(this,screenMode==MODE_SOUND?AuroraVisualEngineView.SOUND:AuroraVisualEngineView.SPEECH);
   LinearLayout.LayoutParams vis=new LinearLayout.LayoutParams(-1,-2);vis.bottomMargin=dp(6);root.addView(visual,vis);
   // Old decorative renderer is kept in code; portrait instead displays
@@ -474,6 +478,10 @@ public final class SenseActivity extends ComponentActivity {
    Button testTranslation=button("PROBAR TRADUCTOR CON TEXTO ESCRITO");
    root.addView(testTranslation);
    testTranslation.setOnClickListener(v->showManualTranslationTest());
+   stagePanels.put("languages",java.util.Collections.singletonList(options));
+   stagePanels.put("translation",java.util.Arrays.asList(translationOriginal,translationStatus,translateButton));
+   stagePanels.put("history",java.util.Arrays.asList(eventsScroll,openSaved));
+   stagePanels.put("diagnostic",java.util.Arrays.asList(detail,diagnostic,testTranslation));
   }
   TextView safety=text("Las detecciones son aproximadas. AURORA no sustituye las alarmas certificadas ni los dispositivos de emergencia.",13,0xffc3d6eb);
   root.addView(safety);
@@ -487,7 +495,47 @@ public final class SenseActivity extends ComponentActivity {
   result.addTextChangedListener(mirror);
   state.addTextChangedListener(mirror);
   if(translationResult!=null)translationResult.addTextChangedListener(mirror);
+  if(translationStatus!=null)translationStatus.addTextChangedListener(mirror);
   syncWideText();
+ }
+ private void attachConversationStage(){
+  conversationStage=new ConversationStage(this);
+  pageScroll.setVisibility(View.GONE);
+  screenFrame.addView(conversationStage.getView(),new FrameLayout.LayoutParams(-1,-1));
+  updateConversationIdentity();
+  updateConversationStage();
+ }
+ private void updateConversationIdentity(){
+  if(conversationStage==null)return;
+  android.content.SharedPreferences p=getSharedPreferences("aurora_profile",MODE_PRIVATE);
+  String name=p.getString("nickname","");
+  if(name==null||name.trim().isEmpty())name=p.getString("name","");
+  conversationStage.identity(NeonIdentity.menuPortrait(this,dp(50)),name==null?"":name);
+ }
+ private void updateConversationStage(){
+  if(conversationStage!=null)conversationStage.update(result.getText().toString(),
+   state.getText().toString(),translationResult.getText().toString(),mode==MODE_SPEECH,manualTranslationRequested,
+   translationStatus.getText().toString());
+ }
+ void performConversationAction(String action){
+  switch(action){
+   case "start": if(mode!=MODE_SPEECH&&requestedMode==MODE_NONE)toggle(MODE_SPEECH);break;
+   case "stop": stopAll(true);break;
+   case "back": if(wideMode)leaveWideMode();else finish();break;
+   case "profile":startActivity(new Intent(this,ProfileActivity.class));break;
+   case "records":startActivity(new Intent(this,RecordsActivity.class));break;
+   case "assist":startActivity(new Intent(this,AuroraAssistActivity.class));break;
+   case "sounds":
+    stopAll(true);
+    startActivity(new Intent(this,SenseActivity.class).putExtra(EXTRA_MODE,MODE_SOUND));
+    finish();
+    break;
+   case "rotate": if(wideMode)leaveWideMode();else enterWideMode();break;
+   case "languages":showStagePanel(action,"Idiomas");break;
+   case "translation":showStagePanel(action,"Traducción a pedido");break;
+   case "history":showStagePanel(action,"Historial de esta conversación");break;
+   case "diagnostic":showStagePanel(action,"Diagnóstico y pruebas");break;
+  }
  }
  private void attachSoundStage(){
   soundStage=new SoundStage(this);
@@ -522,6 +570,7 @@ public final class SenseActivity extends ComponentActivity {
  @Override protected void onResume(){
   super.onResume();
   soundScreenVisible=true;
+  updateConversationIdentity();
   if(legacySpectrum&&wideSpectrum!=null)wideSpectrum.setListening(stageMotionEnabled&&soundRunning);
  }
  @Override protected void onPause(){
@@ -570,15 +619,18 @@ public final class SenseActivity extends ComponentActivity {
   for(View child:children){
    if(child.getParent() instanceof android.view.ViewGroup)((android.view.ViewGroup)child.getParent()).removeView(child);
    list.addView(child);
-   child.setVisibility(View.VISIBLE);
+   if(child!=openSaved)child.setVisibility(View.VISIBLE);
   }
   scroll.addView(list);
   android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this).setTitle(title)
    .setView(scroll).setPositiveButton("Cerrar",null).create();
-  if("history".equals(name)){
+  if("history".equals(name)&&screenMode==MODE_SOUND){
    stageHistoryOpen=true;
    showRecentSounds();
    dialog.setOnDismissListener(d->stageHistoryOpen=false);
+  }
+  if("translation".equals(name)){
+   translateButton.setOnClickListener(v->{translateLast();if(manualTranslationRequested)dialog.dismiss();});
   }
   dialog.show();
  }
@@ -636,6 +688,7 @@ public final class SenseActivity extends ComponentActivity {
   back.setOnClickListener(v->leaveWideMode());
  }
  private void syncWideText(){
+  updateConversationStage();
   if(screenMode==MODE_SPEECH){
    if(wideOriginal!=null&&result!=null)wideOriginal.setText(result.getText());
    if(wideTranslation!=null&&translationResult!=null)wideTranslation.setText(translationResult.getText());
@@ -646,7 +699,7 @@ public final class SenseActivity extends ComponentActivity {
  private void enterWideMode(){
   if(wideOverlay==null||wideMode)return;
   wideMode=true;
-  if(soundStage!=null&&!legacySpectrum){
+  if(conversationStage!=null||soundStage!=null&&!legacySpectrum){
    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
    return;
   }
@@ -663,7 +716,7 @@ public final class SenseActivity extends ComponentActivity {
  private void leaveWideMode(){
   if(!wideMode)return;
   wideMode=false;
-  if(soundStage!=null&&!legacySpectrum){
+  if(conversationStage!=null||soundStage!=null&&!legacySpectrum){
    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
    return;
   }
@@ -1512,6 +1565,7 @@ public final class SenseActivity extends ComponentActivity {
   AudioRecord record=audioRecord;if(record!=null){try{record.stop();}catch(Exception ignored){}}
   if(show){state.setText("MICRÓFONO APAGADO");detail.setText("Escucha detenida. Ninguna función está capturando audio.");}updateModeVisibility();
   updateStageStatus();
+  updateConversationStage();
  }
  @Override protected void onStop(){
   soundScreenVisible=false;
