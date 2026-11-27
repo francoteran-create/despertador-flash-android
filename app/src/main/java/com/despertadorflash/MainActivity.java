@@ -15,6 +15,7 @@ import java.util.*;
 public class MainActivity extends Activity {
  static final String PREF="aurora";
  private static final int EXPORT_SETTINGS=9201,IMPORT_SETTINGS=9202;
+ static final String ACTION_OPEN_HOME="com.despertadorflash.OPEN_HOME";
  static final String EXTRA_SETTINGS_SECTION="aurora_settings_section";
  private String openedSettingsSection;
  LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch; boolean alarmsPage=false; boolean timerPage=false; boolean communicationPage=false; boolean settingsPage=false;
@@ -188,6 +189,10 @@ public class MainActivity extends Activity {
   super.onNewIntent(i);setIntent(i);
   pendingAlarmLaunch=i.getBooleanExtra("ring",false);
   pendingTimerLaunch=i.getBooleanExtra("timer_finished",false);
+  if(ACTION_OPEN_HOME.equals(i.getAction())&&!alarmActive&&!timerAlertActive&&!pendingAlarmLaunch&&!pendingTimerLaunch){
+   alarmsPage=false;timerPage=false;communicationPage=false;settingsPage=false;
+   render();
+  }
   if(Build.VERSION.SDK_INT>=27&&(pendingAlarmLaunch||pendingTimerLaunch)){setShowWhenLocked(true);setTurnScreenOn(true);}
   if(hasWindowFocus()){
    if(pendingAlarmLaunch){pendingAlarmLaunch=false;showAlarm(i.getIntExtra("alarm_id",-1));}
@@ -368,8 +373,7 @@ public class MainActivity extends Activity {
   getWindow().setStatusBarColor(Color.BLACK);getWindow().setNavigationBarColor(Color.BLACK);
  }
  void pageTitle(String heading){
-  Button back=btn("←   VOLVER AL INICIO");root.addView(back);back.setOnClickListener(v->{alarmsPage=false;timerPage=false;communicationPage=false;settingsPage=false;render();});
-  TextView title=txt(heading,27);title.setGravity(Gravity.CENTER);title.setTextColor(0xffffd633);title.setTypeface(null,Typeface.BOLD);root.addView(title);
+  AuroraDesign.heading(root,heading,()->{alarmsPage=false;timerPage=false;communicationPage=false;settingsPage=false;render();});
  }
  void render(){
   if(alarmsPage){stopHomeSpeech();renderAlarmsPage();return;}
@@ -387,25 +391,13 @@ public class MainActivity extends Activity {
   if(timer!=null){timer.cancel();timer=null;}
   android.widget.FrameLayout screen=new android.widget.FrameLayout(this);
   screen.setBackgroundColor(Color.BLACK);
-  android.widget.ImageView mural=new android.widget.ImageView(this);
-  mural.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-  mural.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-  try(java.io.InputStream input=getAssets().open("aurora_mural.jpg.b64")){
-   java.io.ByteArrayOutputStream encoded=new java.io.ByteArrayOutputStream();
-   byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)encoded.write(buffer,0,n);
-   byte[] image=android.util.Base64.decode(encoded.toByteArray(),android.util.Base64.DEFAULT);
-   android.graphics.Bitmap bitmap=android.graphics.BitmapFactory.decodeByteArray(image,0,image.length);
-   if(bitmap!=null)mural.setImageBitmap(bitmap);
-  }catch(Exception e){android.util.Log.w("Aurora","Mural no disponible",e);}
-  screen.addView(mural,new android.widget.FrameLayout.LayoutParams(-1,-1));
-  View shade=new View(this);shade.setBackgroundColor(0x39000000);
-  screen.addView(shade,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  screen.addView(new NeonMuralView(this),new android.widget.FrameLayout.LayoutParams(-1,-1));
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);
   LinearLayout hero=new LinearLayout(this);hero.setOrientation(LinearLayout.VERTICAL);hero.setPadding(dp(13),dp(13),dp(13),dp(22));
   scroll.addView(hero);screen.addView(scroll,new android.widget.FrameLayout.LayoutParams(-1,-1));setContentView(screen);
   getWindow().setStatusBarColor(Color.BLACK);getWindow().setNavigationBarColor(Color.BLACK);
   LinearLayout top=new LinearLayout(this);top.setGravity(Gravity.CENTER_VERTICAL);
-  TextView brand=txt("AURORA",42);brand.setGravity(Gravity.CENTER);brand.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD_ITALIC));brand.setTextColor(0xfff1ffff);brand.setShadowLayer(dp(7),0,0,0xff00dfff);
+  TextView brand=txt("AURORA",42);brand.setGravity(Gravity.CENTER);AuroraDesign.headline(brand);brand.setShadowLayer(dp(7),0,0,0xff00dfff);
   brand.setContentDescription("AURORA, asistente de accesibilidad sonora");
   top.addView(brand,new LinearLayout.LayoutParams(0,dp(76),1));
   LinearLayout settings=neonTile("AJUSTES",10,()->{settingsPage=true;render();});
@@ -430,12 +422,12 @@ public class MainActivity extends Activity {
   portraitSize.leftMargin=dp(8);top.addView(profileAction,portraitSize);
   refreshProfileShortcut();
   hero.addView(top);
-  TextView slogan=txt("TU MUNDO, ACCESIBLE",15);slogan.setGravity(Gravity.CENTER);slogan.setTypeface(null,Typeface.BOLD);slogan.setTextColor(0xffffff49);slogan.setPadding(0,0,0,dp(13));hero.addView(slogan);
-  neonPair(hero,"ALARMA",0,()->{alarmsPage=true;render();},"TEMPORIZADOR",1,()->{timerPage=true;render();});
   neonPair(hero,"DETECCIÓN DE SONIDOS",2,()->openSense(SenseActivity.MODE_SOUND),"TRANSCRIPCIÓN",3,()->openSense(SenseActivity.MODE_SPEECH));
+  neonPair(hero,"ALARMA",0,()->{alarmsPage=true;render();},"TEMPORIZADOR",1,()->{timerPage=true;render();});
   neonPair(hero,"SOS",4,()->startActivity(new Intent(this,AuroraSosActivity.class)),"REGISTROS",5,()->startActivity(new Intent(this,RecordsActivity.class)));
-  neonPair(hero,"SENTIR LA MÚSICA",6,()->startActivity(new Intent(this,AuroraMusicActivity.class)),"COMUNICAR",7,()->{communicationPage=true;render();});
-  neonPair(hero,"AURORA VOZ",8,()->startActivity(new Intent(this,AuroraVoiceActivity.class)),"MOSTRADOR",9,()->startActivity(new Intent(this,AuroraCounterActivity.class)));
+  LinearLayout more=AuroraDesign.disclosure(hero,"Más funciones");
+  neonPair(more,"SENTIR LA MÚSICA",6,()->startActivity(new Intent(this,AuroraMusicActivity.class)),"COMUNICAR",7,()->{communicationPage=true;render();});
+  neonPair(more,"AURORA VOZ",8,()->startActivity(new Intent(this,AuroraVoiceActivity.class)),"MOSTRADOR",9,()->startActivity(new Intent(this,AuroraCounterActivity.class)));
  }
  private void refreshProfileShortcut(){
   if(profileShortcut==null)return;
@@ -446,7 +438,7 @@ public class MainActivity extends Activity {
  }
  LinearLayout neonTile(String label,int icon,Runnable navigate){
   LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);tile.setGravity(Gravity.CENTER);tile.setPadding(dp(4),dp(6),dp(4),dp(6));
-  tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x55fff94a),AuroraDesign.surface(this,0xf012242b,0xf2070b14,0xff25eaff,20),null));
+  tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x55fff94a),AuroraDesign.surface(this,0xe615202b,0xe6090913,icon==4?0xffffbf37:icon%2==0?0xff36d6ea:0xffd05cad,20),null));
   tile.setElevation(dp(5));if(Build.VERSION.SDK_INT>=28){tile.setOutlineAmbientShadowColor(0xff00eaff);tile.setOutlineSpotShadowColor(0xff00eaff);}
   tile.setClickable(true);tile.setFocusable(true);tile.setContentDescription(label);tile.setOnClickListener(v->navigate.run());
   tile.setAccessibilityDelegate(new View.AccessibilityDelegate(){@Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){super.onInitializeAccessibilityNodeInfo(host,info);info.setClassName(Button.class.getName());}});
@@ -478,11 +470,8 @@ public class MainActivity extends Activity {
  }
  void renderTimerPage(){
   setupPage();pageTitle("TEMPORIZADOR");
-  root.addView(AuroraDesign.overline(this,"CONTROL DE TIEMPO  /  AURORA"));
-  LinearLayout timerCard=auroraCard(0xff132e41,0xff1c1f40);
+  LinearLayout timerCard=auroraCard(0xff0c1015,0xff101019);
   timerCard.setGravity(Gravity.CENTER_HORIZONTAL);
-  TextView caption=txt("CUENTA REGRESIVA",14);caption.setTextColor(0xff94e9e9);
-  caption.setGravity(Gravity.CENTER);timerCard.addView(caption);
   long savedEnd=prefs.getLong("timer_end",0);
   int currentBoot=Settings.Global.getInt(getContentResolver(),Settings.Global.BOOT_COUNT,-1);
   long safeElapsed=TimerBootClock.elapsedDeadlineForBoot(prefs.getLong("timer_end_elapsed",0L),
@@ -534,9 +523,6 @@ public class MainActivity extends Activity {
  }
  void renderCommunicationPage(){
   setupPage();pageTitle("COMUNICACIÓN");
-  root.addView(AuroraDesign.overline(this,"EXPRESATE DE LA FORMA QUE PREFIERAS"));
-  TextView intro=txt("Mensajes claros, con un solo toque y sin depender del audio.",17);
-  intro.setTextColor(0xffc6def0);root.addView(intro);
   LinearLayout quick=new LinearLayout(this);quick.setOrientation(LinearLayout.HORIZONTAL);root.addView(quick);
   LinearLayout sound=homeTile("◖))","SONIDOS","Detectar ambiente",0xff102f43,0xff1a3551);
   LinearLayout speech=homeTile("◉","CONVERSAR","Voz a texto",0xff272041,0xff17374e);
@@ -544,17 +530,18 @@ public class MainActivity extends Activity {
   quick.addView(sound,half1);quick.addView(speech,new LinearLayout.LayoutParams(0,dp(155),1f));
   sound.setOnClickListener(v->openSense(SenseActivity.MODE_SOUND));
   speech.setOnClickListener(v->openSense(SenseActivity.MODE_SPEECH));
+  LinearLayout tools=AuroraDesign.disclosure(root,"Más herramientas de comunicación");
   Button music=btn("SENTIR LA MÚSICA · VIBRACIÓN POR RITMO");
-  root.addView(music,new LinearLayout.LayoutParams(-1,dp(66)));
+  tools.addView(music,new LinearLayout.LayoutParams(-1,dp(66)));
   music.setOnClickListener(v->startActivity(new Intent(this,AuroraMusicActivity.class)));
   Button sos=btn("SOS · AVISAR A UN CONTACTO DE CONFIANZA");
-  root.addView(sos,new LinearLayout.LayoutParams(-1,dp(65)));
+  tools.addView(sos,new LinearLayout.LayoutParams(-1,dp(65)));
   sos.setOnClickListener(v->startActivity(new Intent(this,AuroraSosActivity.class)));
   Button counter=btn("MODO MOSTRADOR · CONVERSAR CARA A CARA");
-  root.addView(counter,new LinearLayout.LayoutParams(-1,dp(66)));
+  tools.addView(counter,new LinearLayout.LayoutParams(-1,dp(66)));
   counter.setOnClickListener(v->startActivity(new Intent(this,AuroraCounterActivity.class)));
   Button auroraVoice=btn("AURORA VOZ · TEXTO A AUDIO Y WHATSAPP");
-  root.addView(auroraVoice,new LinearLayout.LayoutParams(-1,dp(66)));
+  tools.addView(auroraVoice,new LinearLayout.LayoutParams(-1,dp(66)));
   auroraVoice.setOnClickListener(v->startActivity(new Intent(this,AuroraVoiceActivity.class)));
   root.addView(AuroraDesign.overline(this,"MENSAJE PERSONALIZADO"));
   EditText msg=new EditText(this);msg.setTextColor(Color.WHITE);
@@ -568,17 +555,14 @@ public class MainActivity extends Activity {
    if(!message.isEmpty())showFullMessage(message);
    else Toast.makeText(this,"Escribí un mensaje primero",Toast.LENGTH_SHORT).show();
   });
-  root.addView(AuroraDesign.overline(this,"FRASES RÁPIDAS"));
-  LinearLayout phrases=new LinearLayout(this);phrases.setOrientation(LinearLayout.VERTICAL);
-  root.addView(phrases);
+  LinearLayout phrases=AuroraDesign.disclosure(root,"Frases rápidas");
   phrasePair(phrases,"SÍ","NO","SÍ","NO");
   phrasePair(phrases,"NECESITO AYUDA","ESTOY BIEN","NECESITO AYUDA","ESTOY BIEN");
   phrasePair(phrases,"POR FAVOR, ESCRIBÍ","REPETÍ DESPACIO","POR FAVOR, ESCRIBÍ LO QUE DECÍS","POR FAVOR, REPETÍ MÁS DESPACIO");
   Button urgent=btn("¡LLAMÁ A EMERGENCIAS!");
   accent(urgent,0xff82373f,0xff5b263d,0xffdf848c);
   root.addView(urgent);urgent.setOnClickListener(v->showFullMessage("LLAMÁ A EMERGENCIAS"));
-  root.addView(AuroraDesign.overline(this,"TU ESPACIO"));
-  LinearLayout myTools=new LinearLayout(this);myTools.setOrientation(LinearLayout.HORIZONTAL);root.addView(myTools);
+  LinearLayout myTools=new LinearLayout(this);myTools.setOrientation(LinearLayout.HORIZONTAL);tools.addView(myTools);
   Button profile=btn("◉  MI PERFIL");
   Button records=btn("📁  REGISTROS");
   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(62),1f);lp.rightMargin=dp(9);myTools.addView(profile,lp);
@@ -988,10 +972,6 @@ public class MainActivity extends Activity {
   if(timer!=null){timer.cancel();timer=null;}
   setupPage();pageTitle("MIS ALARMAS");
   if(!hasPermission(android.Manifest.permission.CAMERA)||!exactReady()||!notificationsReady()){Button fix=btn("REVISAR PERMISOS DE ALARMA");root.addView(fix);fix.setOnClickListener(v->showPermissionSetup(true));}
-  root.addView(AuroraDesign.overline(this,"DESPERTADOR  /  MIS HORARIOS"));
-  TextView intro=txt("Elegí tus horarios y días. Cada alarma se puede activar, editar o eliminar.",16);
-  intro.setTextColor(0xffc2d7ea);root.addView(intro);
-  Button timerTool=btn("⌛  TEMPORIZADOR Y PRUEBAS");root.addView(timerTool);timerTool.setOnClickListener(v->{alarmsPage=false;timerPage=true;render();});
   int count=0;
   for(int id=0;id<5;id++)if(prefs.getBoolean("created"+id,false)){alarmRow(id);count++;}
   if(count==0)root.addView(txt("Todavía no creaste ninguna alarma.",18));
@@ -1004,6 +984,8 @@ public class MainActivity extends Activity {
     schedule(this,id);render();
    },now.get(Calendar.HOUR_OF_DAY),now.get(Calendar.MINUTE),true).show();
   });}
+  LinearLayout tools=AuroraDesign.disclosure(root,"Herramientas de alarma");
+  Button timerTool=btn("Temporizador y pruebas");tools.addView(timerTool);timerTool.setOnClickListener(v->{alarmsPage=false;timerPage=true;render();});
  }
  void alarmRow(int id){
  int h=prefs.getInt("h"+id,7),m=prefs.getInt("m"+id,0);

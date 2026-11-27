@@ -5,6 +5,18 @@ sonidos del entorno, recibir avisos, usar alarmas y convertir voz en texto.
 El reconocimiento de sonidos es probabilístico y NO sustituye dispositivos
 certificados de seguridad ni servicios de emergencia.
 
+## AURORA 4.37 · Global Clean Neon UX
+
+El icono abre una entrada animada breve y después el menú. El onboarding
+conserva la selección y el perfil existentes. Alarmas y temporizador siguen
+entrando de forma directa a sus avisos. El mural principal se dibuja al tamaño
+de pantalla, sin un bitmap HD adicional.
+
+Transcripción presenta el avatar y el texto, con idiomas, traducción a pedido,
+historial y diagnóstico en Opciones. Perfil, conversaciones guardadas, voz,
+comunicación, SOS, música y otras herramientas usan paneles y encabezados
+compartidos.
+
 ## AURORA 4.36 · Slim & Neon Experience
 
 Escuchar sonidos presenta una onda de micrófono reutilizando el PCM de YAMNet,

@@ -37,25 +37,27 @@ public final class AuroraSosActivity extends Activity {
   super.onCreate(saved);
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.TRANSPARENT);
   LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(12),dp(16),dp(30));scroll.addView(panel);setContentView(AuroraDesign.menuFrame(this,scroll));
-  Button back=button("← VOLVER A COMUNICAR");panel.addView(back);back.setOnClickListener(v->finish());
-  TextView heading=text("SOS · CONTACTO DE CONFIANZA",25);heading.setGravity(Gravity.CENTER);panel.addView(heading);
+  AuroraDesign.heading(panel,"SOS",()->finish());
   panel.addView(text("Esta opción prepara un mensaje para una persona elegida. No llama a emergencias ni envía nada automáticamente. En peligro inmediato, utilizá el servicio local de emergencias.",15));
   phone=new EditText(this);phone.setTextColor(Color.WHITE);phone.setHintTextColor(0xffaaaaaa);phone.setHint("Número del contacto, con código de área");phone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
   phone.setText(getSharedPreferences(PREF,MODE_PRIVATE).getString("contact",""));panel.addView(phone);
-  Button save=button("GUARDAR ESTE CONTACTO EN EL TELÉFONO");panel.addView(save);
+  LinearLayout options=new LinearLayout(this);options.setOrientation(LinearLayout.VERTICAL);
+  Button save=button("GUARDAR ESTE CONTACTO EN EL TELÉFONO");options.addView(save);
   save.setOnClickListener(v->{String n=phone.getText().toString().trim();if(!n.matches("[+0-9() .-]{6,24}")){status.setText("Revisá el número. No se guardó.");return;}getSharedPreferences(PREF,MODE_PRIVATE).edit().putString("contact",n).apply();status.setText("Contacto guardado solo en AURORA de este teléfono.");});
   panel.addView(text("MENSAJE QUE RECIBIRÁ TU CONTACTO",17));
   message=new EditText(this);message.setTextColor(Color.WHITE);message.setHintTextColor(0xffaaaaaa);message.setMinLines(3);message.setTextSize(19);
   message.setText("Soy una persona sorda o con discapacidad auditiva. Necesito ayuda. Por favor, respondeme por mensaje de texto.");
   panel.addView(message);
-  withLocation=new CheckBox(this);withLocation.setText("Agregar mi ubicación reciente, solo si la autorizo");withLocation.setTextColor(Color.WHITE);withLocation.setChecked(false);panel.addView(withLocation);
+  withLocation=new CheckBox(this);withLocation.setText("Agregar mi ubicación reciente, solo si la autorizo");withLocation.setTextColor(Color.WHITE);withLocation.setChecked(false);options.addView(withLocation);
   withLocation.setOnCheckedChangeListener((b,checked)->{if(checked&&Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)!=PackageManager.PERMISSION_GRANTED&&checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},704);}});
   status=text("El envío requiere confirmación dentro de la aplicación de mensajes.",14);panel.addView(status);
   Button sms=button("PREPARAR SMS · REVISAR Y CONFIRMAR");panel.addView(sms);
   sms.setOnClickListener(v->prepare(false));
   Button share=button("COMPARTIR MENSAJE EN OTRA APP");panel.addView(share);
   share.setOnClickListener(v->prepare(true));
-  panel.addView(text("Importante: SOS no verifica que el destinatario haya recibido el mensaje. La posición, si está disponible, puede ser aproximada. La confirmación final del envío siempre sucede fuera de AURORA.",13));
+  LinearLayout extras=AuroraDesign.disclosure(panel,"Contacto y ubicación");
+  extras.addView(options);
+  extras.addView(text("Importante: SOS no verifica que el destinatario haya recibido el mensaje. La posición, si está disponible, puede ser aproximada. La confirmación final del envío siempre sucede fuera de AURORA.",13));
  }
  private Location recentPosition(){
   if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)!=PackageManager.PERMISSION_GRANTED&&checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)return null;

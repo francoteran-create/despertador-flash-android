@@ -8,7 +8,7 @@ cloud=(root/"app/src/main/java/com/despertadorflash/AuroraHeroCloudButton.java")
 class Hero420(unittest.TestCase):
  def test_neon_home_has_five_pairs_and_primary_routes(self):
   part=main[main.index("void renderMinimalHero(){"):main.index("LinearLayout neonTile(")]
-  self.assertEqual(part.count('neonPair(hero,'),5)
+  self.assertEqual(part.count('neonPair(hero,') + part.count('neonPair(more,'),5)
   for token in ['"DETECCIÓN DE SONIDOS",2,()->openSense(SenseActivity.MODE_SOUND)', '"TRANSCRIPCIÓN",3,()->openSense(SenseActivity.MODE_SPEECH)', '"ALARMA",0,()->{alarmsPage=true;render();}', '"COMUNICAR",7,()->{communicationPage=true;render();}']:
    self.assertIn(token,part)
  def test_mascot_two_characters_saved_only_on_selection(self):

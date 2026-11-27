@@ -63,11 +63,9 @@ public final class AuroraMusicActivity extends Activity {
   threshold=Math.max(-65,Math.min(-15,p.getInt("music_threshold",-42)));
   android.widget.ScrollView scroll=new android.widget.ScrollView(this);scroll.setFillViewport(true);
   LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(16),dp(12),dp(16),dp(18));scroll.addView(root);setContentView(AuroraDesign.menuFrame(this,scroll));
-  LinearLayout top=new LinearLayout(this);root.addView(top);
-  Button back=button("← VOLVER");top.addView(back,new LinearLayout.LayoutParams(0,-2,1));back.setOnClickListener(v->finish());
-  Button settings=button("⚙ AJUSTES");top.addView(settings,new LinearLayout.LayoutParams(0,-2,1));settings.setOnClickListener(v->showSettings());
-  NeonHomeIcon symbol=new NeonHomeIcon(this,6);LinearLayout.LayoutParams icon=new LinearLayout.LayoutParams(dp(64),dp(64));icon.gravity=Gravity.CENTER;root.addView(symbol,icon);
-  TextView title=label("SENTIR LA MÚSICA",27);title.setTextColor(0xffffd633);root.addView(title);
+  LinearLayout top=AuroraDesign.heading(root,"Sentir la música",()->finish());
+  Button settings=button("•••");settings.setContentDescription("Ajustes de música");
+  top.addView(settings,new LinearLayout.LayoutParams(dp(52),-2));settings.setOnClickListener(v->showSettings());
   spectrum=new MusicSpectrumView(this);root.addView(spectrum,new LinearLayout.LayoutParams(-1,dp(250)));
   bands=label("GRAVES  ·  MEDIOS  ·  AGUDOS",15);bands.setTextColor(0xff32efff);root.addView(bands);
   status=label("Micrófono apagado",16);root.addView(status);

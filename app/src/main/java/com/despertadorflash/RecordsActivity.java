@@ -34,22 +34,20 @@ public final class RecordsActivity extends Activity {
  @Override public void onCreate(Bundle saved){super.onCreate(saved);history=new SenseHistory(this);destination=new SavedFolderManager(this);draw();}
  private void draw(){
   ScrollView sc=new ScrollView(this);LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(dp(16),dp(18),dp(16),dp(24));root.setBackgroundColor(Color.TRANSPARENT);sc.addView(root);setContentView(AuroraDesign.menuFrame(this,sc));
-  Button back=btn("← VOLVER");root.addView(back);back.setOnClickListener(v->finish());
-  TextView title=txt("CONVERSACIONES GUARDADAS",25);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);title.setTextColor(0xffb2f4ff);root.addView(title);
-  root.addView(txt("Releé y respaldá tus conversaciones transcritas. Los sonidos recientes se ven en SONIDOS y ya no generan archivos.",15));
-  folderStatus=txt("",14);folderStatus.setTextColor(0xffc0e2ef);root.addView(folderStatus);
-  Button select=btn("📁  ELEGIR CARPETA DEL TELÉFONO");root.addView(select);select.setOnClickListener(v->chooseFolder());
+  AuroraDesign.heading(root,"Conversaciones",()->finish());
+  LinearLayout tools=AuroraDesign.disclosure(root,"Carpeta y respaldos");
+  folderStatus=txt("",14);folderStatus.setTextColor(0xffc0e2ef);tools.addView(folderStatus);
+  Button select=btn("📁  ELEGIR CARPETA DEL TELÉFONO");tools.addView(select);select.setOnClickListener(v->chooseFolder());
   Button backup=btn("RESPALDAR Y VERIFICAR CONVERSACIONES");
-  root.addView(backup);backup.setOnClickListener(v->{
+  tools.addView(backup);backup.setOnClickListener(v->{
    if(destination.selectedFolder()==null){chooseFolder();return;}
    backupAndVerify();
   });
-  Button browse=btn("↗  BUSCAR ARCHIVOS EN LA CARPETA ELEGIDA");root.addView(browse);browse.setOnClickListener(v->browseFolder());
-  root.addView(AuroraDesign.overline(this,"EXPLORADOR DE CONVERSACIONES"));
+  Button browse=btn("↗  BUSCAR ARCHIVOS EN LA CARPETA ELEGIDA");tools.addView(browse);browse.setOnClickListener(v->browseFolder());
   Switch archive=new Switch(this);
   archive.setText("Mostrar archivos antiguos de sonidos");
   archive.setTextSize(14);archive.setTextColor(0xffd2e8f4);
-  archive.setChecked(false);root.addView(archive);
+  archive.setChecked(false);tools.addView(archive);
   archive.setOnCheckedChangeListener((control,enabled)->{
    showLegacySounds=enabled;refresh();
   });

@@ -50,10 +50,7 @@ public final class AuroraVoiceActivity extends Activity implements TextToSpeech.
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.TRANSPARENT);
   LinearLayout panel=new LinearLayout(this);panel.setPadding(dp(16),dp(16),dp(16),dp(30));
   panel.setOrientation(LinearLayout.VERTICAL);scroll.addView(panel);setContentView(AuroraDesign.menuFrame(this,scroll));
-  Button back=button("← VOLVER A COMUNICAR");panel.addView(back);back.setOnClickListener(v->finish());
-  TextView heading=text("AURORA VOZ",29);heading.setGravity(Gravity.CENTER);
-  panel.addView(heading);
-  panel.addView(text("Escribí un mensaje. AURORA lo convierte en un archivo de voz que podés escuchar y adjuntar a un chat.",15));
+  AuroraDesign.heading(panel,"AURORA Voz",()->finish());
   input=new EditText(this);input.setTextColor(Color.WHITE);input.setHintTextColor(0xffbbbbbb);
   input.setHint("Escribí tu mensaje");input.setTextSize(20);
   input.setMinLines(3);input.setMaxLines(7);input.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xffbd77d9));
@@ -63,22 +60,23 @@ public final class AuroraVoiceActivity extends Activity implements TextToSpeech.
    public void onTextChanged(CharSequence s,int start,int before,int count){clearOldAudio();}
    public void afterTextChanged(android.text.Editable e){}
   });
-  panel.addView(text("FRASES RÁPIDAS",17));
-  String[] labels={"Soy una persona sorda. Respondeme por escrito.","Estoy llegando en diez minutos.","Necesito ayuda.","Gracias, ¿podés repetirlo por escrito?"};
-  for(String phrase:labels){
-   Button sample=button(phrase);panel.addView(sample);
-   sample.setOnClickListener(v->input.setText(phrase));
-  }
   state=text("Preparando voz del teléfono…",15);state.setTextColor(0xffd6b4f0);panel.addView(state);
   create=button("1 · GENERAR AUDIO");panel.addView(create);
-  preview=button("2 · ESCUCHAR AUDIO");panel.addView(preview);
-  whatsapp=button("3 · ABRIR WHATSAPP CON AUDIO");panel.addView(whatsapp);
-  share=button("COMPARTIR CON OTRA APP");panel.addView(share);
+  LinearLayout audioOptions=AuroraDesign.disclosure(panel,"Escuchar y compartir");
+  preview=button("ESCUCHAR AUDIO");audioOptions.addView(preview);
+  whatsapp=button("ABRIR WHATSAPP CON AUDIO");audioOptions.addView(whatsapp);
+  share=button("COMPARTIR CON OTRA APP");audioOptions.addView(share);
   create.setOnClickListener(v->createAudio());
   preview.setOnClickListener(v->playAudio());
   whatsapp.setOnClickListener(v->shareAudio("com.whatsapp"));
   share.setOnClickListener(v->shareAudio(null));
-  panel.addView(text("El mensaje no se envía automáticamente. Elegís el contacto y confirmás desde WhatsApp o la app de destino. Algunas aplicaciones pueden mostrar el audio como archivo adjunto.",13));
+  audioOptions.addView(text("El mensaje no se envía automáticamente. Elegís el contacto y confirmás desde WhatsApp o la app de destino. Algunas aplicaciones pueden mostrar el audio como archivo adjunto.",13));
+  LinearLayout phrases=AuroraDesign.disclosure(panel,"Frases rápidas");
+  String[] labels={"Soy una persona sorda. Respondeme por escrito.","Estoy llegando en diez minutos.","Necesito ayuda.","Gracias, ¿podés repetirlo por escrito?"};
+  for(String phrase:labels){
+   Button sample=button(phrase);phrases.addView(sample);
+   sample.setOnClickListener(v->input.setText(phrase));
+  }
   updateButtons();
   tts=new TextToSpeech(getApplicationContext(),this);
  }

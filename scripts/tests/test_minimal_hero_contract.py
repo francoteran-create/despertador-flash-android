@@ -11,14 +11,15 @@ BUTTON=(ROOT/"app/src/main/java/com/despertadorflash/AuroraHeroCloudButton.java"
 class HeroNavigationTest(unittest.TestCase):
  def test_neon_navigation_and_real_targets(self):
   area=MAIN[MAIN.index("void renderMinimalHero(){"):MAIN.index("LinearLayout neonTile(")]
-  self.assertEqual(area.count("neonPair(hero,"),5)
+  self.assertEqual(area.count("neonPair(hero,") + area.count("neonPair(more,"),5)
   for title in ('"DETECCIÓN DE SONIDOS"','"TRANSCRIPCIÓN"','"ALARMA"','"COMUNICAR"','"TEMPORIZADOR"','"SOS"','"REGISTROS"','"SENTIR LA MÚSICA"','"AURORA VOZ"','"MOSTRADOR"'):
    self.assertIn(title,area)
   for target in ("openSense(SenseActivity.MODE_SOUND)","openSense(SenseActivity.MODE_SPEECH)","alarmsPage=true;render()","communicationPage=true;render()","timerPage=true;render()","AuroraSosActivity.class","RecordsActivity.class","AuroraMusicActivity.class","AuroraVoiceActivity.class","AuroraCounterActivity.class"):
    self.assertIn(target,area)
- def test_dark_fallback_and_static_mural(self):
+ def test_dark_fallback_and_vector_mural(self):
   self.assertIn("screen.setBackgroundColor(Color.BLACK)",MAIN)
-  self.assertIn('getAssets().open("aurora_mural.jpg.b64")',MAIN)
+  self.assertIn("new NeonMuralView(this)",MAIN)
+  self.assertIn('AuroraDesign.disclosure(hero,"Más funciones")',MAIN)
   self.assertIn("AuroraDesign.menuFrame(this,scroll)",MAIN)
   self.assertIn("screenFrame=AuroraDesign.menuFrame(this,scroll)",SENSE)
   self.assertIn("new AuroraHeroCloudView(this)",MAIN)

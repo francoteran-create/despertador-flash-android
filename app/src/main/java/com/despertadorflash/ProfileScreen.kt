@@ -31,8 +31,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -93,25 +93,34 @@ internal fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(Modifier.widthIn(max = 520.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    TextButton(onClick = onBack) { Text("‹  Volver") }
-                    ProfileHeader(draft, avatar, importing, onPhoto) { avatarDialog = true }
+                    NeonHeader("Mi perfil", onBack)
+                    ProfileHeader(draft, avatar)
+                    ProfileFold("Foto y avatar") {
+                        OutlinedButton(onClick = onPhoto, enabled = !importing,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                            Text(if (importing) "Importando foto…" else "Foto del celular")
+                        }
+                        TextButton(onClick = { avatarDialog = true }, enabled = !importing,
+                            modifier = Modifier.heightIn(min = 48.dp)) { Text("Personalizar avatar") }
                     if (onEditIdentity != null) {
                         OutlinedButton(onClick = onEditIdentity, enabled = !importing,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Editar identidad y avatar HD") }
+                    }
                     }
                     ProfileSection {
                         SectionTitle("Datos personales")
                         Text("Todos los campos son opcionales.", color = secondaryInk)
                         ProfileField(draft.name, "Nombre", "profileName") { onDraft(draft.copy(name = it)) }
                         ProfileField(draft.nickname, "Apodo", "profileNickname") { onDraft(draft.copy(nickname = it)) }
+                    }
+                    ProfileFold("Más datos personales") {
                         Text("Fecha de nacimiento", style = MaterialTheme.typography.labelLarge)
                         OutlinedButton(onClick = onBirthday, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                             Text(draft.birth.ifBlank { "Elegir fecha" })
                         }
                         ProfileField(draft.contact, "Contacto de confianza", "profileContact") { onDraft(draft.copy(contact = it)) }
                     }
-                    ProfileSection {
-                        SectionTitle("Accesibilidad")
+                    ProfileFold("Accesibilidad y preferencias") {
                         Text("Certificado Único de Discapacidad (CUD)", style = MaterialTheme.typography.titleSmall)
                         Text("Declaración opcional. No hace falta adjuntar el certificado.", color = secondaryInk)
                         Box {
@@ -136,10 +145,12 @@ internal fun ProfileScreen(
                         Text("Guardar mi perfil")
                     }
                     Text(message, color = mint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    ProfileFold("Privacidad") {
                     Text("Tus datos y tu foto se guardan en este dispositivo. Si desinstalás AURORA, se pueden perder.",
                         color = secondaryInk, style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = { deleteDialog = true }, enabled = !importing) {
                         Text("Borrar datos del perfil", color = MaterialTheme.colorScheme.error)
+                    }
                     }
                 }
             }
@@ -177,7 +188,7 @@ internal fun ProfileScreen(
 
 @Composable
 private fun ProfileHeader(
-    draft: ProfileDraft, avatar: ProfileAvatar, importing: Boolean, onPhoto: () -> Unit, onAvatar: () -> Unit
+    draft: ProfileDraft, avatar: ProfileAvatar
 ) {
     val shape = RoundedCornerShape(28.dp)
     Column(
@@ -187,9 +198,6 @@ private fun ProfileHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("AURORA", color = mint, fontSize = 11.sp, letterSpacing = 4.sp, fontWeight = FontWeight.SemiBold)
-        Text("Mi perfil", fontFamily = FontFamily.SansSerif, style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Light, modifier = Modifier.semantics { heading() })
         AnimatedContent(
             targetState = avatar,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -229,13 +237,19 @@ private fun ProfileHeader(
         }
         Text(if (avatar.photo == null) "Avatar personalizado" else "Foto personal",
             color = secondaryInk, style = MaterialTheme.typography.labelMedium)
-        OutlinedButton(onClick = onPhoto, enabled = !importing,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text(if (importing) "Importando foto…" else "Foto del celular")
-        }
-        TextButton(onClick = onAvatar, enabled = !importing, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Personalizar avatar")
-        }
+
+    }
+}
+
+@Composable
+private fun ProfileFold(title: String, content: @Composable ColumnScope.() -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedButton(onClick = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics {
+                stateDescription = if (expanded) "Expandido" else "Contraído"
+            }) { Text(title) }
+        if (expanded) ProfileSection(content)
     }
 }
 

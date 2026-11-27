@@ -282,7 +282,7 @@ private fun logoMask(bitmap: Bitmap): Bitmap {
 }
 
 @Composable
-internal fun NeonLogo(asset: String, modifier: Modifier) {
+internal fun NeonLogo(asset: String, modifier: Modifier, opening: Boolean = false) {
     val context = LocalContext.current
     val phase = neonPhase()
     BoxWithConstraints(modifier.aspectRatio(1312f / 468f), contentAlignment = Alignment.Center) {
@@ -304,7 +304,7 @@ internal fun NeonLogo(asset: String, modifier: Modifier) {
                     Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
-                            val progress = phase.floatValue
+                            val progress = if (opening) .16f + phase.floatValue * 2.85f else phase.floatValue
                             val center = size.width * (-.20f + 1.40f * progress)
                             drawRect(
                                 Brush.linearGradient(

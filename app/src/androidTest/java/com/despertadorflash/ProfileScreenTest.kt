@@ -38,7 +38,9 @@ class ProfileScreenTest {
     fun savesProfileAndRestoresItAfterRecreation() {
         compose.onNodeWithTag("profileName").performScrollTo().performTextInput("María")
         compose.onNodeWithTag("profileNickname").performScrollTo().performTextInput("Luz")
+        compose.onNodeWithText("Más datos personales").performScrollTo().performClick()
         compose.onNodeWithTag("profileContact").performScrollTo().performTextInput("Contacto")
+        compose.onNodeWithText("Accesibilidad y preferencias").performScrollTo().performClick()
         compose.onNodeWithTag("profileCud").performScrollTo().performClick()
         compose.onNodeWithText("En trámite").performClick()
         compose.onNodeWithTag("profileNotes").performScrollTo().performTextInput("Prefiero texto")
@@ -69,10 +71,12 @@ class ProfileScreenTest {
 
     @Test
     fun avatarSelectionAndDeleteConfirmation() {
+        compose.onNodeWithText("Foto y avatar").performScrollTo().performClick()
         compose.onNodeWithText("Personalizar avatar").performScrollTo().performClick()
         compose.onNodeWithText("Avatar con figura").performScrollTo().performClick()
         compose.onNodeWithText("Avatar actualizado").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("profileName").performScrollTo().performTextInput("Luz")
+        compose.onNodeWithText("Privacidad").performScrollTo().performClick()
         compose.onNodeWithText("Borrar datos del perfil").performScrollTo().performClick()
         compose.onNodeWithText("Cancelar").performClick()
         compose.onNodeWithTag("profileName").performScrollTo().assertTextContains("Luz")

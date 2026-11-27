@@ -73,12 +73,9 @@ public final class AuroraAssistActivity extends Activity {
   deleteAbandonedPhotos();
   ScrollView scroll=new ScrollView(this);
   LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);
-  layout.setBackground(new AuroraSkyDrawable());layout.setPadding(dp(16),dp(14),dp(16),dp(24));
-  scroll.addView(layout);setContentView(scroll);
-  Button back=button("← VOLVER A AURORA");layout.addView(back);back.setOnClickListener(v->finish());
-  TextView title=text("AURORA · MIRAR CUANDO YO QUIERA",23);title.setTypeface(null,Typeface.BOLD);
-  title.setGravity(Gravity.CENTER);layout.addView(title);
-  layout.addView(text("Podés elegir una foto o abrir la cámara voluntariamente. AURORA busca palabras y objetos aproximados usando modelos locales. No graba video ni observa de manera continua.",15));
+  layout.setBackgroundColor(Color.BLACK);layout.setPadding(dp(16),dp(14),dp(16),dp(24));
+  scroll.addView(layout);setContentView(AuroraDesign.menuFrame(this,scroll));
+  AuroraDesign.heading(layout,"Asistente de imágenes",()->finish());
   Button choose=button("ELEGIR UNA FOTO");layout.addView(choose);
   choose.setOnClickListener(v->{
    if(processing)return;
@@ -100,16 +97,17 @@ public final class AuroraAssistActivity extends Activity {
   output.setTextIsSelectable(true);output.setMinHeight(dp(180));
   output.setBackground(AuroraDesign.surface(this,0xff0e2f42,0xff242641,0xff4c8399,20));
   layout.addView(output);
-  Button soundSummary=button("CONSULTAR MIS ÚLTIMAS DETECCIONES");layout.addView(soundSummary);
+  LinearLayout tools=AuroraDesign.disclosure(layout,"Resultados y privacidad");
+  Button soundSummary=button("CONSULTAR MIS ÚLTIMAS DETECCIONES");tools.addView(soundSummary);
   soundSummary.setOnClickListener(v->reviewHistory(true));
-  Button speechRecall=button("¿QUÉ DIJERON? · ÚLTIMA CONVERSACIÓN");layout.addView(speechRecall);
+  Button speechRecall=button("¿QUÉ DIJERON? · ÚLTIMA CONVERSACIÓN");tools.addView(speechRecall);
   speechRecall.setOnClickListener(v->reviewHistory(false));
-  Button copy=button("COPIAR RESULTADO");layout.addView(copy);
+  Button copy=button("COPIAR RESULTADO");tools.addView(copy);
   copy.setOnClickListener(v->{
    android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
    if(cm!=null)cm.setPrimaryClip(android.content.ClipData.newPlainText("AURORA · Imagen",output.getText()));
   });
-  layout.addView(text("PRIVACIDAD: la foto se procesa en el dispositivo y no se guarda en el historial de AURORA. Si usás la cámara, solo analizamos la foto que tomaste. Esto no identifica personas ni garantiza la detección de peligros.",13));
+  tools.addView(text("PRIVACIDAD: la foto se procesa en el dispositivo y no se guarda en el historial de AURORA. Si usás la cámara, solo analizamos la foto que tomaste. Esto no identifica personas ni garantiza la detección de peligros.",13));
  }
  private void reviewHistory(boolean sounds){
   if(processing){status.setText("Finalizá la operación actual antes de consultar la lista.");return;}
