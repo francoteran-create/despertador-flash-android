@@ -12,3 +12,6 @@ internal fun birthdayToday(savedDate: String, day: Int, month: Int): Boolean {
         parts[0].toInt() == day && parts[1].toInt() == month &&
         parts[2].toInt() in 1..9999
 }
+
+internal fun eligibleBirthday(savedDate: String, day: Int, month: Int, year: Int, celebrated: Set<String>): Boolean =
+    year.toString() !in celebrated && birthdayToday(savedDate, day, month)

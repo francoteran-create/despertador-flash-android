@@ -34,6 +34,8 @@ internal class NeonBlocks(private val random: Random = Random.Default) {
         const val HEIGHT = 18
         const val GRAVITY_MS = 620L
         const val CLEAR_MS = 340L
+        const val LOCK_MS = 450L
+        const val MAX_RESETS = 8
     }
 
     private val bag = ArrayDeque<BlockShape>()
@@ -50,6 +52,55 @@ internal class NeonBlocks(private val random: Random = Random.Default) {
     var ended = false
         private set
 
+    var gravityAt = GRAVITY_MS
+        private set
+    var lockAt: Long? = null
+        private set
+    private var lockLimit: Long? = null
+    private var resets = 0
+
+    fun nextEvent() = minOf(gravityAt, lockAt ?: Long.MAX_VALUE)
+
+    fun tick(now: Long) {
+        val piece = active ?: return
+        if (lockAt?.let { now >= it } == true && supported(piece)) {
+            settle(now)
+            return
+        }
+        if (now >= gravityAt) {
+            gravityAt += GRAVITY_MS
+            val down = piece.copy(y = piece.y + 1)
+            if (fits(down)) active = down
+            updateSupport(now, false)
+        }
+    }
+
+    fun landing(): FallingBlock? {
+        var piece = active ?: return null
+        while (fits(piece.copy(y = piece.y + 1))) piece = piece.copy(y = piece.y + 1)
+        return piece
+    }
+
+    fun hardDrop(now: Long) {
+        active = landing() ?: return
+        settle(now)
+    }
+
+    private fun supported(piece: FallingBlock) = !fits(piece.copy(y = piece.y + 1))
+
+    private fun updateSupport(now: Long, movedOnGround: Boolean) {
+        val piece = active ?: return
+        if (!supported(piece)) {
+            lockAt = null
+            return
+        }
+        if (lockLimit == null) lockLimit = now + LOCK_MS * (MAX_RESETS + 1)
+        if (lockAt == null || movedOnGround && resets < MAX_RESETS) {
+            if (movedOnGround && lockAt != null) resets++
+            lockAt = minOf(now + LOCK_MS, requireNotNull(lockLimit))
+        }
+    }
+
     private fun take(): BlockShape {
         if (bag.isEmpty()) bag.addAll(BlockShape.entries.shuffled(random))
         return bag.removeFirst()
@@ -61,7 +112,7 @@ internal class NeonBlocks(private val random: Random = Random.Default) {
         return piece
     }
 
-    fun reset() {
+    fun reset(now: Long = 0) {
         board = emptyBoard()
         pending = emptySet()
         score = 0
@@ -69,53 +120,62 @@ internal class NeonBlocks(private val random: Random = Random.Default) {
         bag.clear()
         next = take()
         active = spawn()
+        restartClocks(now)
     }
 
     private fun fits(piece: FallingBlock): Boolean = piece.positions().all {
         it.x in 0 until WIDTH && it.y in 0 until HEIGHT && board[it.y][it.x] == 0
     }
 
-    fun shift(delta: Int) {
+    fun shift(delta: Int, now: Long = 0) {
         val piece = active ?: return
         val moved = piece.copy(x = piece.x + delta)
-        if (fits(moved)) active = moved
+        if (fits(moved)) {
+            active = moved
+            updateSupport(now, supported(piece))
+        }
     }
 
-    fun turn() {
+    fun turn(now: Long = 0) {
         val piece = active ?: return
         for (offset in listOf(0, -1, 1, -2, 2)) {
             val turned = piece.copy(x = piece.x + offset, angle = (piece.angle + 1) % 4)
             if (fits(turned)) {
+                if (turned.positions() == piece.positions()) return
                 active = turned
+                updateSupport(now, supported(piece))
                 return
             }
         }
     }
 
-    fun lower() {
+    private fun settle(now: Long) {
         val piece = active ?: return
-        val moved = piece.copy(y = piece.y + 1)
-        if (fits(moved)) {
-            active = moved
-            return
-        }
         val settled = board.map { it.toMutableList() }
         piece.positions().forEach { settled[it.y][it.x] = piece.shape.ink }
         board = settled
         pending = completeRows(board)
-        if (pending.isEmpty()) nextPiece() else active = null
+        if (pending.isEmpty()) nextPiece(now) else active = null
     }
 
-    fun removeLines() {
+    fun removeLines(now: Long = 0) {
         if (pending.isEmpty()) return
         val count = pending.size
         board = collapseRows(board, pending)
         score += pointsForRows(count)
         pending = emptySet()
-        nextPiece()
+        nextPiece(now)
     }
 
-    private fun nextPiece() {
+    private fun restartClocks(now: Long) {
+        gravityAt = now + GRAVITY_MS
+        lockAt = null
+        lockLimit = null
+        resets = 0
+    }
+
+    private fun nextPiece(now: Long) {
+        restartClocks(now)
         val piece = spawn()
         ended = !fits(piece)
         active = piece.takeUnless { ended }

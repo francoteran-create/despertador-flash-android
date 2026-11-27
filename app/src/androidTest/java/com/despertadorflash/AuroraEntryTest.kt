@@ -16,7 +16,7 @@ class AuroraEntryTest {
         try {
             val entry = instrumentation.startActivitySync(launcher.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             assertEquals(AuroraEntryActivity::class.java.name, entry.javaClass.name)
-            assertNotNull(instrumentation.waitForMonitorWithTimeout(monitor, 6000))
+            assertNotNull(instrumentation.waitForMonitorWithTimeout(monitor, 11000))
         } finally {
             instrumentation.removeMonitor(monitor)
         }

@@ -19,7 +19,7 @@ class ProfileScreenTest {
         var empty = false
         compose.activityRule.scenario.onActivity { activity ->
             empty = activity.getSharedPreferences("aurora_profile", 0).all.isEmpty() &&
-                activity.filesDir.listFiles().orEmpty().none { it.name.startsWith("aurora_profile_photo.jpg") }
+                activity.filesDir.listFiles().orEmpty().none { it.name.startsWith("aurora_profile_photo.jpg") || it.name.startsWith("aurora_cud_attachment") }
         }
         assumeTrue("Usá una instalación de prueba con el perfil vacío.", empty)
         usingEmptyProfile = true
@@ -32,6 +32,15 @@ class ProfileScreenTest {
                 activity.getSharedPreferences("aurora_profile", 0).edit().clear().commit()
             }
         }
+    }
+
+    @Test
+    fun portraitAndPrivateAttachmentActionsAreAccessible() {
+        compose.onNodeWithContentDescription("Foto o avatar del perfil").performScrollTo().performClick()
+        compose.onNodeWithText("Foto o avatar").assertIsDisplayed()
+        compose.onNodeWithText("Cerrar").performClick()
+        compose.onNodeWithText("Accesibilidad y preferencias").performScrollTo().performClick()
+        compose.onNodeWithText("Adjuntar imagen o PDF").performScrollTo().assertHasClickAction()
     }
 
     @Test

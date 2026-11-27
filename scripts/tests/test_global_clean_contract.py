@@ -24,7 +24,8 @@ class GlobalCleanContract(unittest.TestCase):
         self.assertIn("delay(ENTRY_MS)", entry)
         self.assertIn("MainActivity.ACTION_OPEN_HOME", entry)
         self.assertIn("FLAG_ACTIVITY_CLEAR_TOP", entry)
-        self.assertNotIn("getSharedPreferences", entry)
+        self.assertNotIn("NeonWelcomeActivity", entry)
+        self.assertNotIn("neon_welcome_complete", entry)
 
     def test_alarms_and_timers_keep_direct_intents(self):
         for receiver in ("AlarmReceiver.java", "TimerReceiver.java"):

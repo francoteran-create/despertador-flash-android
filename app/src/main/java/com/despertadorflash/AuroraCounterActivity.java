@@ -71,18 +71,28 @@ public final class AuroraCounterActivity extends Activity implements TextToSpeec
   facingMessage.setTextIsSelectable(true);
   staff.addView(facingMessage,new LinearLayout.LayoutParams(-1,0,1f));
 
+  View divider=new View(this);
+  divider.setBackgroundColor(0xff39edff);
+  divider.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  screen.addView(divider,new LinearLayout.LayoutParams(-1,dp(2)));
+
   // Lower half faces the AURORA user; typed answers remain editable.
   LinearLayout user=vertical();
   screen.addView(user,new LinearLayout.LayoutParams(-1,0,1f));
   status=label("MODO MOSTRADOR · LISTO",13);status.setTextColor(0xffd9b4ef);
   user.addView(status,new LinearLayout.LayoutParams(-1,dp(42)));
-  user.addView(label("RESPUESTA DE LA OTRA PERSONA",14));
+  user.addView(label("ESCUCHAR · RESPUESTA DE LA OTRA PERSONA",14));
   replyTranscript=label("Cuando te respondan, tocá ESCUCHAR y leé la respuesta acá.",20);
   replyTranscript.setTextIsSelectable(true);
   user.addView(replyTranscript,new LinearLayout.LayoutParams(-1,0,1f));
   listen=button("ESCUCHAR RESPUESTA · MICRÓFONO APAGADO");
   user.addView(listen,new LinearLayout.LayoutParams(-1,dp(48)));
   listen.setOnClickListener(v->{if(listening)stopListening();else beginListening();});
+  View turnDivider=new View(this);
+  turnDivider.setBackgroundColor(0xffff59da);
+  turnDivider.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  user.addView(turnDivider,new LinearLayout.LayoutParams(-1,dp(2)));
+  user.addView(label("DECIR · TU MENSAJE",14));
   typed=new EditText(this);typed.setTextColor(Color.WHITE);typed.setHintTextColor(0xffaaaaaa);
   typed.setTextSize(21);typed.setHint("Escribí lo que querés decirle");
   typed.setGravity(Gravity.TOP);typed.setMinLines(2);
