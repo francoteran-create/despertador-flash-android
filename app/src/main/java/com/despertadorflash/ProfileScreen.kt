@@ -72,6 +72,7 @@ internal fun ProfileScreen(
     onBack: () -> Unit,
     onPhoto: () -> Unit,
     onAvatar: (Int) -> Unit,
+    onEditIdentity: (() -> Unit)? = null,
     onBirthday: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit
@@ -94,6 +95,10 @@ internal fun ProfileScreen(
                 Column(Modifier.widthIn(max = 520.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     TextButton(onClick = onBack) { Text("‹  Volver") }
                     ProfileHeader(draft, avatar, importing, onPhoto) { avatarDialog = true }
+                    if (onEditIdentity != null) {
+                        OutlinedButton(onClick = onEditIdentity, enabled = !importing,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Editar identidad y avatar HD") }
+                    }
                     ProfileSection {
                         SectionTitle("Datos personales")
                         Text("Todos los campos son opcionales.", color = secondaryInk)

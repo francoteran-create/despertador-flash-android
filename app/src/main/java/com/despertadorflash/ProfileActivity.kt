@@ -1,6 +1,7 @@
 package com.despertadorflash
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -30,6 +31,13 @@ class ProfileActivity : ComponentActivity() {
     private var avatar by mutableStateOf(ProfileAvatar())
     private var message by mutableStateOf("")
     private var importing by mutableStateOf(false)
+    private val editIdentity = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            draft = draft.copy(name = preferences.getString("name", "").orEmpty())
+            avatar = avatar.copy(hdPortrait = NeonIdentity.menuPortrait(this, 320))
+            message = "Identidad actualizada"
+        }
+    }
     private val pickPhoto = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             importing = true
@@ -85,6 +93,9 @@ class ProfileActivity : ComponentActivity() {
                     }
                 },
                 onAvatar = ::selectAvatar,
+                onEditIdentity = if (NeonIdentity.catalog(this) == null) null else ({
+                    editIdentity.launch(Intent(this, NeonWelcomeActivity::class.java).putExtra("edit_identity", true))
+                }),
                 onBirthday = ::showBirthdayPicker,
                 onSave = ::save,
                 onDelete = ::delete

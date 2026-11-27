@@ -92,7 +92,7 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
     add(evidence)
     add("Pendiente ejecutar las pruebas instrumentadas y validar el perfil, TalkBack y el hardware en Samsung Galaxy S9+ con Android 10.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
-    item("NUEVO 4.35", "Bienvenida en Compose, personalización local y selector horizontal de 32 avatares originales. El avatar da acceso al perfil desde el menú. Pendiente validar las animaciones y la navegación en un Galaxy S9+.")
+    item("NUEVO 4.35", "Bienvenida en Compose, personalización local y selector horizontal de 32 avatares originales. El avatar abre el perfil desde el menú. La edición de identidad conserva el perfil y permite cancelar. El catálogo incluye 20 opciones femeninas y 12 masculinas. Pendiente validar las animaciones y la navegación en un Galaxy S9+.")
     item("NUEVO 4.34", "Perfil en Kotlin, Compose y Material 3. Conserva los datos, CUD, foto local, avatares y los motores Java. Incluye animación de retrato vinculada a la escala del sistema, borrador restaurable e importación de foto en segundo plano.")
     item("NUEVO 4.33", "Tarjetas de alarma compactas con ajustes desplegables; configuración general agrupada por categorías; temporizador personalizado de 1 a 1440 minutos. Se conservan funciones y programación anteriores. Pendiente validar disposición visual y funcionamiento físico. Avatares al final.")
     item("NUEVO 4.32", "FFT local 44,1 kHz, graves/medios/agudos, línea de espectro gruesa multicolor y vibración por ataques sobre umbral dBFS configurable. Sin pulsos periódicos artificiales. Ajustes musicales persistentes; sensibilidad, pruebas de notificación e idiomas agrupados en SONIDOS/CONVERSACIÓN. Mural y paleta neón compartidos en menús, lectura horizontal negra conservada. Usuario informa alarma funcional por ahora; no se modifica su lógica. Falta probar música real y respuesta del motor.")
@@ -455,15 +455,21 @@ def main():
         raise RuntimeError("Se necesita una APK ARM64 completa")
     with ZipFile(built[0]) as apk:
         prefix = "assets/neon/"
-        catalog = json.loads(apk.read(prefix + "catalog.json"))
-        portraits = catalog["portraits"]
-        assets = {portrait["asset"] for portrait in portraits}
+        logo = "interfaz/logo_aurora.png"
+        catalog_name = "catalogo.json"
+        portraits = json.loads(apk.read(prefix + catalog_name))
+        assets = {portrait["archivo"] for portrait in portraits}
         ids = {portrait["id"] for portrait in portraits}
-        genders = {portrait["gender"] for portrait in portraits}
-        if len(portraits) != 32 or len(assets) != 32 or len(ids) != 32 or genders != {"MAN", "WOMAN"}:
+        genders = {portrait["genero"] for portrait in portraits}
+        if len(portraits) != 32 or len(assets) != 32 or len(ids) != 32 or genders != {"hombre", "mujer"}:
             raise RuntimeError("El catálogo de avatares HD está incompleto")
-        if catalog["logo"] in assets or any(prefix + name not in apk.namelist() for name in assets | {catalog["logo"]}):
-            raise RuntimeError("La APK carece de recursos originales de la bienvenida")
+        expected = assets | {logo, catalog_name}
+        packaged = {name.removeprefix(prefix) for name in apk.namelist() if name.startswith(prefix) and not name.endswith("/")}
+        if packaged != expected or any("/referencias/" in name or name.endswith("ABRIR_DEMO.html") for name in apk.namelist()):
+            raise RuntimeError("La APK debe llevar exactamente los originales y el catálogo, sin maquetas")
+        for name in expected:
+            if apk.read(prefix + name) != (ROOT / "app/src/main/assets/neon" / name).read_bytes():
+                raise RuntimeError("Los bytes empaquetados no coinciden con el original: " + name)
     evidence = test_evidence()
 
     OUT.mkdir(exist_ok=True)

@@ -3,7 +3,7 @@ package com.despertadorflash
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import org.json.JSONObject
+import org.json.JSONArray
 
 internal enum class NeonGender(val label: String) {
     MAN("SOY HOMBRE"), WOMAN("SOY MUJER"), PRIVATE("PREFIERO NO DECIRLO")
@@ -42,17 +42,23 @@ internal object NeonIdentity {
         if (loaded) return cached
         loaded = true
         cached = runCatching {
-            val files = context.assets.list("neon").orEmpty().toSet()
-            val root = context.assets.open("neon/catalog.json").bufferedReader().use { JSONObject(it.readText()) }
-            val logo = root.getString("logo").also { require(it in files) }
-            val entries = root.getJSONArray("portraits")
+            val files = context.assets.list("neon/avatares").orEmpty().toSet()
+            val logo = "interfaz/logo_aurora.png"
+            context.assets.open("neon/$logo").close()
+            val entries = context.assets.open("neon/catalogo.json").bufferedReader().use { JSONArray(it.readText()) }
             NeonCatalog(logo, (0 until entries.length()).map { index ->
                 val entry = entries.getJSONObject(index)
+                val asset = entry.getString("archivo")
+                require(asset.startsWith("avatares/") && asset.substringAfter('/') in files)
                 NeonPortrait(
                     entry.getString("id"),
-                    entry.getString("label").also { require(it.isNotBlank()) },
-                    NeonGender.valueOf(entry.getString("gender")),
-                    entry.getString("asset").also { require(it in files && it != logo) }
+                    entry.getString("nombre").also { require(it.isNotBlank()) },
+                    when (entry.getString("genero")) {
+                        "hombre" -> NeonGender.MAN
+                        "mujer" -> NeonGender.WOMAN
+                        else -> error("Género de catálogo desconocido")
+                    },
+                    asset
                 )
             })
         }.getOrNull()
@@ -68,6 +74,27 @@ internal object NeonIdentity {
         val avatar = preferences(context).getString("neon_avatar", null)
         return catalog(context)?.portraits?.firstOrNull { it.id == avatar }
             ?.let { bitmap(context, it.asset, pixels) }
+    }
+
+    fun savedDraft(context: Context): NeonDraft {
+        val prefs = preferences(context)
+        val avatar = prefs.getString("neon_avatar", null)
+        return NeonDraft(
+            NeonGender.entries.firstOrNull { it.name == prefs.getString("neon_gender", null) }
+                ?: if (avatar != null) NeonGender.PRIVATE else null,
+            prefs.getString("name", "").orEmpty(),
+            avatar
+        )
+    }
+
+    fun save(context: Context, draft: NeonDraft) {
+        preferences(context).edit()
+            .putString("name", draft.name.trim())
+            .putString("neon_gender", draft.gender?.takeUnless { it == NeonGender.PRIVATE }?.name)
+            .putString("neon_avatar", draft.avatar)
+            .remove("neon_legacy_portrait")
+            .putBoolean("neon_welcome_complete", true)
+            .apply()
     }
 
     fun preferences(context: Context) = context.getSharedPreferences("aurora_profile", Context.MODE_PRIVATE)

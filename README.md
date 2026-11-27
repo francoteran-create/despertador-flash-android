@@ -7,13 +7,10 @@ certificados de seguridad ni servicios de emergencia.
 
 ## AURORA 4.35 · Neon Experience
 
-La bienvenida, el carrusel y el acceso al perfil se activan con un catálogo
-completo de los originales HD. El catálogo interno `assets/neon/catalog.json`
-identifica el archivo `logo` y 32 elementos de `portraits`. Cada elemento
-declara `id`, `label`, `asset` y `gender` (`MAN` o `WOMAN`) según los
-originales. Los nombres de archivo son relativos al directorio `neon`.
-GitHub Actions publica el ZIP de entrega únicamente cuando la APK incluye los
-33 archivos originales y el catálogo.
+El selector usa `assets/neon/catalogo.json` y los 32 WebP en `avatares/`
+como fuente de verdad. La APK incluye el logo fijo en `interfaz/logo_aurora.png`.
+GitHub Actions verifica los bytes de los originales y publica la APK ARM64 y
+el MASTER PDF en un único ZIP. Las maquetas y la demo no se empaquetan.
 
 ## AURORA 4.34 · Compose Pilot
 

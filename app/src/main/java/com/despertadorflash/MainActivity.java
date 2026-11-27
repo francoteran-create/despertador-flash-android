@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
  private boolean firstSetupScheduled=false;
  private boolean neonWelcomeStarted=false;
  private android.widget.ImageView profileShortcut;
+ private TextView profileShortcutLabel;
  boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
  SpeechRecognizer homeRecognizer; boolean homeListening=false; TextView homeTranscript,homeSpeechStatus; Button homeSpeechToggle;
  SenseHistory homeSpeechHistory;
@@ -405,14 +406,21 @@ public class MainActivity extends Activity {
   profileShortcut=new android.widget.ImageView(this);
   profileShortcut.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
   profileShortcut.setPadding(dp(4),dp(4),dp(4),dp(4));
-  profileShortcut.setContentDescription("Abrir mi perfil");
-  profileShortcut.setFocusable(true);
-  profileShortcut.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class)));
-  profileShortcut.setBackground(new android.graphics.drawable.RippleDrawable(
+  profileShortcut.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  android.widget.FrameLayout profileAction=new android.widget.FrameLayout(this);
+  profileAction.setContentDescription("Abrir mi perfil");
+  profileAction.setFocusable(true);
+  profileAction.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class)));
+  profileAction.setAccessibilityDelegate(new View.AccessibilityDelegate(){@Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){super.onInitializeAccessibilityNodeInfo(host,info);info.setClassName(Button.class.getName());}});
+  profileAction.setBackground(new android.graphics.drawable.RippleDrawable(
    android.content.res.ColorStateList.valueOf(0x66ff59da),
    AuroraDesign.surface(this,0xff171326,0xff07181d,0xffff59da,17),null));
+  profileAction.addView(profileShortcut,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  profileShortcutLabel=txt("Perfil",11);profileShortcutLabel.setGravity(Gravity.CENTER);
+  profileShortcutLabel.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  profileAction.addView(profileShortcutLabel,new android.widget.FrameLayout.LayoutParams(-1,-1));
   LinearLayout.LayoutParams portraitSize=new LinearLayout.LayoutParams(dp(52),dp(52));
-  portraitSize.leftMargin=dp(8);top.addView(profileShortcut,portraitSize);
+  portraitSize.leftMargin=dp(8);top.addView(profileAction,portraitSize);
   refreshProfileShortcut();
   hero.addView(top);
   TextView slogan=txt("TU MUNDO, ACCESIBLE",15);slogan.setGravity(Gravity.CENTER);slogan.setTypeface(null,Typeface.BOLD);slogan.setTextColor(0xffffff49);slogan.setPadding(0,0,0,dp(13));hero.addView(slogan);
@@ -427,6 +435,7 @@ public class MainActivity extends Activity {
   android.graphics.Bitmap avatar=NeonIdentity.menuPortrait(this,dp(52));
   profileShortcut.setImageBitmap(avatar);
   profileShortcut.setVisibility(avatar==null?View.GONE:View.VISIBLE);
+  profileShortcutLabel.setVisibility(avatar==null?View.VISIBLE:View.GONE);
  }
  LinearLayout neonTile(String label,int icon,Runnable navigate){
   LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);tile.setGravity(Gravity.CENTER);tile.setPadding(dp(4),dp(6),dp(4),dp(6));
