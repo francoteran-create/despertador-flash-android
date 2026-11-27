@@ -1,13 +1,15 @@
 name: Compilar AURORA Android 64 bits
 on:
   workflow_dispatch:
+  workflow_call:
   push:
     branches: [main, aurora-sense-precision-2026-11-10]
   pull_request:
-    branches: [main]
+    branches: [main, aurora-sense-precision-2026-11-10]
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -37,42 +39,24 @@ jobs:
             https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite \
             --output app/src/main/assets/yamnet.tflite
           test "$(wc -c < app/src/main/assets/yamnet.tflite)" -gt 1000000
-      - name: Probar contratos de traducción, sonidos y privacidad
-        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
-      - name: Probar Java y cola de traducciones
-        run: gradle --no-daemon :app:testDebugUnitTest --stacktrace
-      - name: Compilar APK Android ARM64
-        run: gradle --no-daemon :app:assembleDebug --stacktrace
-      - name: Verificar UN solo instalador ARM64 y paquete independiente
+      - name: Ejecutar pruebas Python
         run: |
-          shopt -s nullglob
-          apks=(app/build/outputs/apk/debug/*.apk)
-          test "${#apks[@]}" -eq 1
-          apk="${apks[0]}"
-          [[ "$apk" == *arm64-v8a* ]]
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.despertadorflash.beta427'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "application-label:'AURORA 4.33 BETA'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -F "com.despertadorflash.beta427.photos"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.INTERNET"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.RECORD_AUDIO"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.VIBRATE"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$apk" | grep -Fq "android.permission.CAMERA"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
-          sha256sum "$apk"
-      # The normal workflow validates source and APK; the final delivery is
-      # published only for explicit or marked commits to avoid repeated ZIPs.
-      - name: Generar MASTER PDF y copia única APK ARM64
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
+          set -o pipefail
+          mkdir -p build
+          python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v 2>&1 | tee build/python-tests.log
+      - name: Probar Java y compilar APK ARM64 y pruebas de interfaz
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+      - name: Verificar APK y generar el ZIP de entrega
+        env:
+          AURORA_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
+          bash scripts/verify_delivery.sh
           python3 -m pip install --disable-pip-version-check 'reportlab>=4,<5'
-          python3 scripts/build_delivery.py
-          test "$(find dist -maxdepth 1 -type f | wc -l)" -eq 2
+          python3 scripts/build_delivery.py --branch "$AURORA_BRANCH"
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[DELIVERY]'))
         with:
-          name: AURORA-4-33-DOS-ARCHIVOS
-          path: |
-            dist/AURORA_4_33_ARM64.apk
-            dist/AURORA_4_33_MASTER_ESTADO_Y_PLAN.pdf
+          name: AURORA-4.34-COMPOSE-PILOT-ARM64
+          path: dist/AURORA_4_34_COMPOSE_PILOT_ARM64.zip
           if-no-files-found: error
+          compression-level: 0
           retention-days: 30

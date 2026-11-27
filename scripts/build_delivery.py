@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""Produce EXACTLY two AURORA delivery files: one ARM64 APK and one PDF master.
-
-This runs only after Python regression tests, Gradle unit tests,
-APK build, permission checks and debug signature verification succeeded.
-It never packages source code or an extra 32-bit installer for the user.
-"""
+"""Package the verified ARM64 APK and current MASTER PDF in one ZIP."""
 from __future__ import annotations
 
+import argparse
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
 import re
-import shutil
 import subprocess
+from tempfile import TemporaryDirectory
+from xml.etree import ElementTree
+from zipfile import ZIP_DEFLATED, ZipFile
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
@@ -28,7 +26,7 @@ from reportlab.platypus import (
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/"dist"
 REPO="francoteran-create/despertador-flash-android"
-BRANCH="aurora-sense-precision-2026-11-10"
+BASE_BRANCH="aurora-sense-precision-2026-11-10"
 
 def git(*args):
     return subprocess.check_output(["git",*args],cwd=ROOT,text=True).strip()
@@ -36,7 +34,7 @@ def git(*args):
 def paragraph(txt,style):
     return Paragraph(escape(txt),style)
 
-def create_master(path:Path,commit:str,version:str,apk:Path)->None:
+def create_master(path: Path, commit: str, branch: str, version: str, apk: Path, evidence: str) -> None:
     styles=getSampleStyleSheet()
     dark=colors.HexColor("#142237")
     accent=colors.HexColor("#18758A")
@@ -57,7 +55,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.33",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.34 · Compose Pilot",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -68,7 +66,8 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         ("Versión compilada",version),
         ("Paquete independiente","com.despertadorflash.beta427"),
         ("Repositorio",REPO),
-        ("Rama de trabajo",BRANCH),
+        ("Rama de trabajo",branch),
+        ("Rama de base",BASE_BRANCH),
         ("Commit exacto",commit),
         ("Instalador","Solo ARM64 / 64 bits - Galaxy S9+"),
         ("Firma","APK de desarrollo (debug), no publicacion comercial"),
@@ -87,14 +86,10 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
     ]))
     story.append(table)
     head("1 | ESTADO REAL DE ESTA ENTREGA")
-    add("Compilación automática en GitHub: aprobada ANTES de producir estos archivos. "
-        "Las pruebas unitarias Java, regresiones Python, compilación ARM64, firma "
-        "de desarrollo y permisos de micrófono/Internet se verifican en CI. "
-        "Esto NO equivale a pruebas en un teléfono.")
-    add("Pruebas físicas de reconocimiento, calidad de traducción, batería, "
-        "flash, vibración y escucha con la pantalla bloqueada: PENDIENTES "
-        "en Samsung Galaxy S9+. La rama main estable permanece intacta.")
+    add(evidence)
+    add("Pendiente ejecutar las pruebas instrumentadas y validar el perfil, TalkBack y el hardware en Samsung Galaxy S9+ con Android 10.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
+    item("NUEVO 4.34", "Perfil en Kotlin, Compose y Material 3. Conserva los datos, CUD, foto local, avatares y los motores Java. Incluye animación de retrato vinculada a la escala del sistema, borrador restaurable e importación de foto en segundo plano.")
     item("NUEVO 4.33", "Tarjetas de alarma compactas con ajustes desplegables; configuración general agrupada por categorías; temporizador personalizado de 1 a 1440 minutos. Se conservan funciones y programación anteriores. Pendiente validar disposición visual y funcionamiento físico. Avatares al final.")
     item("NUEVO 4.32", "FFT local 44,1 kHz, graves/medios/agudos, línea de espectro gruesa multicolor y vibración por ataques sobre umbral dBFS configurable. Sin pulsos periódicos artificiales. Ajustes musicales persistentes; sensibilidad, pruebas de notificación e idiomas agrupados en SONIDOS/CONVERSACIÓN. Mural y paleta neón compartidos en menús, lectura horizontal negra conservada. Usuario informa alarma funcional por ahora; no se modifica su lógica. Falta probar música real y respuesta del motor.")
     item("NUEVO 4.31", "Respaldo V3 con los seis ajustes individuales de cada alarma: LED, vibración, sonido, tono, volumen y duración. Importa V1 y V2 conservando el ajuste general de LED; audio desactivado de forma predeterminada. Valida rangos e integridad. Sin cambios de avatar; sin radar.")
@@ -266,7 +261,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.33 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
+        "Instalar AURORA 4.34 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
         "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
         "probar música con graves cercanos y vibración.",
         "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
@@ -345,9 +340,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "No activar dos versiones AURORA escuchando a la vez.",
     ]:add("- "+line)
     head("6 | REGLA DE ENTREGA")
-    add("Solamente dos archivos para el usuario: "
-        "AURORA 4.33 APK ARM64 y este MASTER PDF. No se adjuntan "
-        "ZIP con fuentes ni APK de 32 bits; código y historial quedan en GitHub.")
+    add("Un único ZIP de entrega contiene la APK completa ARM64 y este MASTER PDF actualizado. El código fuente se conserva en GitHub.")
     add("Para retomar: usar el repositorio, rama y commit exactos de la "
         "primera página. No declarar estable ninguna función sólo por "
         "haber superado CI.")
@@ -360,7 +353,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "El ZIP de entrega contiene la APK Android ARM64 y este PDF; "
         "el codigo fuente NO esta dentro del ZIP: se conserva en GitHub.",
         "Repositorio GitHub: francoteran-create/despertador-flash-android",
-        "Rama de desarrollo: aurora-sense-precision-2026-11-10",
+        "Rama de desarrollo: "+branch,
         "Commit de referencia de esta entrega: "+commit,
         "Version de la APK: "+version,
         "Rama estable main: NO MODIFICAR sin autorizacion expresa.",
@@ -370,7 +363,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "Conserva el trabajo ya programado y las decisiones del MASTER. "
         "No me pidas que repita acuerdos ya documentados.",
         "Prioriza el funcionamiento, la accesibilidad, las pruebas "
-        "y la estabilidad. Conservar la estética urbana neón aprobada.",
+        "y la estabilidad. Conservar la estética urbana neón aprobada fuera del piloto de perfil.",
         "AURORA VOZ: texto a WAV local y compartir con WhatsApp u otra "
         "app esta implementado en codigo; falta probarlo en Galaxy S9+.",
         "Modo Mostrador 4.25: el USUARIO escribe abajo y lee abajo "
@@ -399,7 +392,7 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         "en telefono; no inventes porcentajes de precision.",
         "Entrega un unico ZIP con exactamente una APK ARM64 y un "
         "PDF MASTER actualizado. Incluye estado, pendientes, "
-        "pruebas, riesgos, porcentajes estimados y nueva referencia "
+        "pruebas, riesgos y nueva referencia "
         "exacta de commit de GitHub.",
         "Empeza verificando GitHub y el MASTER. Continua con la "
         "primera prioridad pendiente y entrega resultados verificables.",
@@ -415,41 +408,69 @@ def create_master(path:Path,commit:str,version:str,apk:Path)->None:
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.33 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.34 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.33 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.34 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
-def main():
-    commit=git("rev-parse","HEAD")
-    version_text=(ROOT/"app/build.gradle").read_text(encoding="utf-8")
-    m=re.search(r"versionName\s+['\"]([^'\"]+)['\"]",version_text)
-    if m is None:raise RuntimeError("Falta versionName")
-    version=m.group(1)
-    if version!="4.33-clean-menus-beta":raise RuntimeError("Versión inesperada")
-    built=list((ROOT/"app/build/outputs/apk/debug").glob("*.apk"))
-    if len(built)!=1 or "arm64-v8a" not in built[0].name:
-        raise RuntimeError("Entrega debe contener exactamente una APK arm64-v8a")
-    OUT.mkdir(exist_ok=True)
-    apk=OUT/"AURORA_4_33_ARM64.apk"
-    pdf=OUT/"AURORA_4_33_MASTER_ESTADO_Y_PLAN.pdf"
-    shutil.copy2(built[0],apk)
-    create_master(pdf,commit,version,apk)
-    if not apk.stat().st_size>10_000_000 or not pdf.stat().st_size>2500:
-        raise RuntimeError("Faltan bytes de entrega")
-    if not pdf.read_bytes().startswith(b"%PDF-"):
-        raise RuntimeError("MASTER PDF no valido")
-    print("Tamaños APK/PDF:",apk.stat().st_size,pdf.stat().st_size)
-    files=sorted(p.name for p in OUT.iterdir() if p.is_file())
-    if files!=sorted([apk.name,pdf.name]):
-        raise RuntimeError("Entrega debe tener exactamente 2 archivos: "+str(files))
-    print("VERIFICADO: dos entregables",files)
-    print("SHA256 APK",hashlib.sha256(apk.read_bytes()).hexdigest())
-    print("Git commit",commit)
+def test_evidence() -> str:
+    python_log = (ROOT / "build/python-tests.log").read_text(encoding="utf-8")
+    python_total = re.search(r"^Ran (\d+) tests? in ", python_log, re.MULTILINE)
+    if not python_total or not python_log.rstrip().endswith("OK"):
+        raise RuntimeError("Falta el resultado exitoso de las pruebas Python")
+    reports = list((ROOT / "app/build/test-results/testDebugUnitTest").glob("TEST-*.xml"))
+    suites = [ElementTree.parse(report).getroot() for report in reports]
+    java_total = sum(int(suite.attrib["tests"]) for suite in suites)
+    if not java_total or any(int(suite.get(key, 0)) for suite in suites for key in ("failures", "errors", "skipped")):
+        raise RuntimeError("Falta el resultado exitoso de las pruebas Java")
+    test_apks = list((ROOT / "app/build/outputs/apk/androidTest/debug").glob("*.apk"))
+    if not test_apks:
+        raise RuntimeError("Falta compilar el APK de pruebas instrumentadas")
+    return (
+        f"{python_total[1]} pruebas Python y {java_total} pruebas Java superadas. "
+        "APK ARM64 con firma de desarrollo verificada. APK de pruebas de interfaz compilada."
+    )
 
-if __name__=="__main__":
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--branch", default=None)
+    args = parser.parse_args()
+    commit = git("rev-parse", "HEAD")
+    branch = args.branch or git("rev-parse", "--abbrev-ref", "HEAD")
+    version_text = (ROOT / "app/build.gradle").read_text(encoding="utf-8")
+    version = re.search(r"versionName\s+'([^']+)'", version_text)
+    if not version or version[1] != "4.34-compose-pilot-beta":
+        raise RuntimeError("Versión de entrega inesperada")
+    built = list((ROOT / "app/build/outputs/apk/debug").glob("*.apk"))
+    if len(built) != 1 or "arm64-v8a" not in built[0].name or built[0].stat().st_size < 10_000_000:
+        raise RuntimeError("Se necesita una APK ARM64 completa")
+    evidence = test_evidence()
+
+    OUT.mkdir(exist_ok=True)
+    target = OUT / "AURORA_4_34_COMPOSE_PILOT_ARM64.zip"
+    apk_name = "AURORA_4_34_ARM64.apk"
+    with TemporaryDirectory(dir=OUT) as directory:
+        staging = Path(directory)
+        pdf = staging / "AURORA_4_34_MASTER.pdf"
+        create_master(pdf, commit, branch, version[1], built[0], evidence)
+        if not pdf.read_bytes().startswith(b"%PDF-"):
+            raise RuntimeError("El MASTER no es un PDF válido")
+        staged_zip = staging / target.name
+        with ZipFile(staged_zip, "w", ZIP_DEFLATED, compresslevel=3) as bundle:
+            bundle.write(built[0], apk_name)
+            bundle.write(pdf, pdf.name)
+        with ZipFile(staged_zip) as bundle:
+            if bundle.namelist() != [apk_name, pdf.name] or bundle.testzip() is not None:
+                raise RuntimeError("El ZIP de entrega no superó la verificación")
+        staged_zip.replace(target)
+    print("Entrega verificada:", target)
+    print("Commit:", commit)
+
+
+if __name__ == "__main__":
     main()

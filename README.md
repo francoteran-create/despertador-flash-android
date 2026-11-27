@@ -5,6 +5,18 @@ sonidos del entorno, recibir avisos, usar alarmas y convertir voz en texto.
 El reconocimiento de sonidos es probabilístico y NO sustituye dispositivos
 certificados de seguridad ni servicios de emergencia.
 
+## AURORA 4.34 · Compose Pilot
+
+La rama `aurora-4.34-compose-pilot` parte del commit auditado `7f8953c`.
+El perfil usa Kotlin 2.1.10, Compose BOM 2025.02.00 y Material 3. La beta
+`4.34-compose-pilot-beta` (versionCode 74) usa `com.despertadorflash.beta427`
+y se distribuye para ARM64. El mínimo sigue siendo API 24.
+
+El flujo de entrega está en [AGENTS.md](AGENTS.md). GitHub Actions publica un
+solo ZIP con la APK completa y el MASTER PDF. Para ejecutar las pruebas
+instrumentadas del perfil, conectá un dispositivo ARM64 de prueba y ejecutá
+`gradle :app:connectedDebugAndroidTest` con Gradle 8.7 y JDK 17.
+
 ## Fuentes oficiales y estado
 
 - Repositorio: francoteran-create/despertador-flash-android
