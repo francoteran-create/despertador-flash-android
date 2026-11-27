@@ -84,10 +84,10 @@ class NeonWelcomeActivity : ComponentActivity() {
     }
 }
 
-private val yellow = Color(0xFFFFFF48)
-private val cyan = Color(0xFF39EDFF)
-private val magenta = Color(0xFFFF59DA)
-private val nearBlack = Color(0xFF07090D)
+internal val yellow = Color(0xFFFFFF48)
+internal val cyan = Color(0xFF39EDFF)
+internal val magenta = Color(0xFFFF59DA)
+internal val nearBlack = Color(0xFF07090D)
 
 @Composable
 internal fun NeonWelcome(
@@ -226,11 +226,11 @@ private fun AvatarCarousel(
 }
 
 @Composable
-private fun neonPhase(): FloatState {
+internal fun neonPhase(active: Boolean = true): FloatState {
     val owner = LocalLifecycleOwner.current
     val resolver = LocalContext.current.contentResolver
     val phase = remember { mutableFloatStateOf(0f) }
-    DisposableEffect(owner, resolver) {
+    DisposableEffect(owner, resolver, active) {
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 4400
             interpolator = LinearInterpolator()
@@ -239,7 +239,7 @@ private fun neonPhase(): FloatState {
         }
         fun update() {
             val enabled = Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
-            if (owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && enabled) {
+            if (active && owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && enabled) {
                 if (!animator.isStarted) animator.start()
             } else {
                 animator.cancel()
@@ -282,7 +282,7 @@ private fun logoMask(bitmap: Bitmap): Bitmap {
 }
 
 @Composable
-private fun NeonLogo(asset: String, modifier: Modifier) {
+internal fun NeonLogo(asset: String, modifier: Modifier) {
     val context = LocalContext.current
     val phase = neonPhase()
     BoxWithConstraints(modifier.aspectRatio(1312f / 468f), contentAlignment = Alignment.Center) {

@@ -1,0 +1,169 @@
+{
+  "source_commit": "db8ed5d2f4c1920b444111fd7db05007f6fb7b7e",
+  "width": 720,
+  "height": 900,
+  "quality": 94,
+  "encoder": "libwebp 1.5.0 (sharp YUV)",
+  "avatars": {
+    "animales_chimpance.webp": {
+      "sha256": "219f5059c25b7cf964e664473a39b9991c24a30aee9bfc0635b10c0f5782caa2",
+      "bytes": 260174,
+      "psnr_432x540_db": 36.46
+    },
+    "animales_chimpance_femenina.webp": {
+      "sha256": "469dab7d71fbe07beecc17ccdc070be5bb9c45273a446d9db421c41c1fb72fc7",
+      "bytes": 266402,
+      "psnr_432x540_db": 34.28
+    },
+    "animales_coneja_recorte.webp": {
+      "sha256": "d7293ccb54e57cc07c7afd2d3c1b1bbd4410071ff3ff1724d49a0275d511da23",
+      "bytes": 176260,
+      "psnr_432x540_db": 39.29
+    },
+    "animales_cuervo_femenino.webp": {
+      "sha256": "6a6f67162ae1df0ef4fc162ccbab54107f3ab33488ca61512931db516b447fb9",
+      "bytes": 267888,
+      "psnr_432x540_db": 34.27
+    },
+    "animales_doberman.webp": {
+      "sha256": "9bbce0c97aa1d978f239690f892ced1c531ebb0192da3162e6ca91d409615c86",
+      "bytes": 248804,
+      "psnr_432x540_db": 34.33
+    },
+    "animales_doberman_femenina.webp": {
+      "sha256": "8f2a4d8e653e73e4a8b0e6d8ef9986d980bd10eeb7c76aab201578ec8d1df7f7",
+      "bytes": 243960,
+      "psnr_432x540_db": 34.29
+    },
+    "animales_doberman_variante.webp": {
+      "sha256": "8f1eb5c1ea04b6b63b2fff5e1bddaac05ba92c4101b9f0e5b7ee0e50de0160a8",
+      "bytes": 242060,
+      "psnr_432x540_db": 36.26
+    },
+    "animales_gata.webp": {
+      "sha256": "886bc275c73207923151c71fa251603a2ce707999ec46985caecc47cd5da8a41",
+      "bytes": 264460,
+      "psnr_432x540_db": 34.3
+    },
+    "animales_gato_gris.webp": {
+      "sha256": "42ca7c85bb0367b0d7669b9a56e05460dde578da1b7b02e0bcefaa9934f3de3a",
+      "bytes": 246442,
+      "psnr_432x540_db": 36.7
+    },
+    "animales_leona_recorte.webp": {
+      "sha256": "24fe465988ea7a9776bc531b46ed5807957d2763799fcfffcfc4cc01af8127c9",
+      "bytes": 183196,
+      "psnr_432x540_db": 39.0
+    },
+    "animales_panda_recorte.webp": {
+      "sha256": "cbe453a06ccc77dc766657b15d63b9468c0c5ecbc2c0be4b375062b03a8eb77c",
+      "bytes": 181244,
+      "psnr_432x540_db": 39.24
+    },
+    "animales_zorra_recorte.webp": {
+      "sha256": "26ecaac704a9e733c0064e4e1d8981b0a2e6e3cdf7754e7870e21fd60a4b62c9",
+      "bytes": 185318,
+      "psnr_432x540_db": 39.0
+    },
+    "hombres_hombre_audifono_pequeno.webp": {
+      "sha256": "b3b385cc56cedb838050de50f8544a801b8362e8016db447d1dd286346ce442d",
+      "bytes": 252108,
+      "psnr_432x540_db": 36.57
+    },
+    "hombres_hombre_audifono_variante.webp": {
+      "sha256": "a6b42a897ac8486189717450901f6c244347e4a59dd83017d9a94b31dab44270",
+      "bytes": 253460,
+      "psnr_432x540_db": 36.9
+    },
+    "hombres_hombre_gordito.webp": {
+      "sha256": "f1d06473253efd5eeed5c177bdc2fcbe98d8b722a9561224d59487999f23e9d2",
+      "bytes": 237864,
+      "psnr_432x540_db": 35.26
+    },
+    "hombres_hombre_negro_barba_larga.webp": {
+      "sha256": "9bfdd4341bf8f3be4abd793f1d4c9eaa8038fde8c06968ae298825ce6a6c0ec0",
+      "bytes": 259162,
+      "psnr_432x540_db": 36.92
+    },
+    "hombres_hombre_negro_delgado.webp": {
+      "sha256": "f237b11d7b539209ce8b881c6da74009ca6ba8ad8e891dbe3f57710c39cf7d40",
+      "bytes": 214654,
+      "psnr_432x540_db": 35.66
+    },
+    "mujeres_mujer_curvilinea.webp": {
+      "sha256": "09b25fefe3edcbb3d1153f583d2a8622e857893ad37ce06be2b9a74d8c9d743b",
+      "bytes": 272534,
+      "psnr_432x540_db": 35.79
+    },
+    "mujeres_mujer_curvilinea_variante.webp": {
+      "sha256": "7dfd94be18df2907162eb89f93c4b56fe616701ddeab12f119dec3a72da48957",
+      "bytes": 235778,
+      "psnr_432x540_db": 36.68
+    },
+    "mujeres_mujer_negra_afro.webp": {
+      "sha256": "01cdde16745e83a013994bbd2c5b3001877c4efd6f7e410946649ec87b8a8e40",
+      "bytes": 280722,
+      "psnr_432x540_db": 35.34
+    },
+    "mujeres_mujer_negra_afro_variante.webp": {
+      "sha256": "5687f52568f93bdb7199863456e499aa972786a30a021a5e87bbfaa6373e0b59",
+      "bytes": 278942,
+      "psnr_432x540_db": 35.45
+    },
+    "mujeres_mujer_negra_delgada_trenzas.webp": {
+      "sha256": "6f317a5aaf7233a5c74f83b44262a01920fae57c3d241d91164d233b5be05303",
+      "bytes": 264006,
+      "psnr_432x540_db": 35.88
+    },
+    "mujeres_mujer_original.webp": {
+      "sha256": "7fa91bc8e1c51f4cb2523d8adfff246eacaf0f993614f1070fa3b3cf09f8809e",
+      "bytes": 261184,
+      "psnr_432x540_db": 36.3
+    },
+    "ninas_nina_dos_monos.webp": {
+      "sha256": "8a2d0051ee812bd6f4f53a173135a26c32e5f37c24a3b28fcb570ef9c2abe1f3",
+      "bytes": 247378,
+      "psnr_432x540_db": 36.4
+    },
+    "ninas_nina_gordita.webp": {
+      "sha256": "6cbe4b3d85b0e88df15d6b647b719959a6473cd2b21ac9336c8000c71c51ca3a",
+      "bytes": 247196,
+      "psnr_432x540_db": 36.17
+    },
+    "ninas_nina_negra_delgada_variante.webp": {
+      "sha256": "6c0449fb0e58bb0b26df7b23f6b4fb004edbe766b0a83e70f59ae9a5fb0564e4",
+      "bytes": 251560,
+      "psnr_432x540_db": 36.17
+    },
+    "ninas_nina_negra_gordita_rosa.webp": {
+      "sha256": "bf7af0afca164d5731c87a05900ce3254929c75f04bbcf40b0cec53da23f3bac",
+      "bytes": 263006,
+      "psnr_432x540_db": 35.84
+    },
+    "ninas_nina_negra_gordita_variante.webp": {
+      "sha256": "f615a3c621246264cdc5ac55026c761c44f96f0d96fb121253669dd3264e1142",
+      "bytes": 252386,
+      "psnr_432x540_db": 36.4
+    },
+    "ninas_nina_negra_violeta.webp": {
+      "sha256": "5e2eab752302491bf1d07b12a0e2dddbd253b45f4e10c1cec1ebff046523d39c",
+      "bytes": 265480,
+      "psnr_432x540_db": 36.01
+    },
+    "ninos_nino_gordito.webp": {
+      "sha256": "bced4e19ac51e4a2072043cbde35313a546fae26c74bfe5bd4b941030b5a890b",
+      "bytes": 245552,
+      "psnr_432x540_db": 35.28
+    },
+    "ninos_nino_gorra.webp": {
+      "sha256": "e03bb0cc87624d712fa0044dac743a8fb9aa0a5da0f1e3462a2b87f7e8077e41",
+      "bytes": 249104,
+      "psnr_432x540_db": 36.82
+    },
+    "ninos_nino_negro_gordito.webp": {
+      "sha256": "a68f53db8b5213554c476bf18c1e706f7b5783f5a2e5646811acf62d5ac6cb12",
+      "bytes": 230098,
+      "psnr_432x540_db": 35.14
+    }
+  }
+}
