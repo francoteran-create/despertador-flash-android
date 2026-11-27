@@ -2,7 +2,9 @@ package com.despertadorflash
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -10,11 +12,26 @@ import org.junit.Test
 class ProfileScreenTest {
     @get:Rule val compose = createAndroidComposeRule<ProfileActivity>()
 
+    private var usingEmptyProfile = false
+
     @Before
-    fun startWithEmptyProfile() {
-        compose.onNodeWithText("Borrar datos del perfil").performScrollTo().performClick()
-        compose.onNodeWithText("Borrar", substring = false).performClick()
-        compose.activityRule.scenario.recreate()
+    fun requireDisposableProfile() {
+        var empty = false
+        compose.activityRule.scenario.onActivity { activity ->
+            empty = activity.getSharedPreferences("aurora_profile", 0).all.isEmpty() &&
+                activity.filesDir.listFiles().orEmpty().none { it.name.startsWith("aurora_profile_photo.jpg") }
+        }
+        assumeTrue("Usá una instalación de prueba con el perfil vacío.", empty)
+        usingEmptyProfile = true
+    }
+
+    @After
+    fun clearTestData() {
+        if (usingEmptyProfile) {
+            compose.activityRule.scenario.onActivity { activity ->
+                activity.getSharedPreferences("aurora_profile", 0).edit().clear().commit()
+            }
+        }
     }
 
     @Test
