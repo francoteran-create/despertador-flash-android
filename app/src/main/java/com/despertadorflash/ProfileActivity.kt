@@ -64,6 +64,7 @@ class ProfileActivity : ComponentActivity() {
         avatar = ProfileAvatar(
             color = preferences.getInt("avatar_color", 0).coerceIn(0, 5),
             figure = preferences.getInt("avatar_style", 0) != 0,
+            hdPortrait = if (preferences.getBoolean("neon_legacy_portrait", false)) null else NeonIdentity.menuPortrait(this, 320),
             photo = if (preferences.getBoolean("photo", false)) {
                 runCatching { photoFile.openRead().use { BitmapFactory.decodeStream(it) } }.getOrNull()
             } else null
@@ -123,11 +124,11 @@ class ProfileActivity : ComponentActivity() {
     }
 
     private fun selectAvatar(option: Int) {
-        avatar = if (option < 6) avatar.copy(color = option, photo = null)
-                 else avatar.copy(figure = option == 7, photo = null)
+        avatar = if (option < 6) avatar.copy(color = option, photo = null, hdPortrait = null)
+                 else avatar.copy(figure = option == 7, photo = null, hdPortrait = null)
         preferences.edit().putInt("avatar_color", avatar.color)
             .putInt("avatar_style", if (avatar.figure) 1 else 0)
-            .putBoolean("photo", false).apply()
+            .putBoolean("photo", false).putBoolean("neon_legacy_portrait", true).apply()
         message = "Avatar actualizado"
     }
 
@@ -160,7 +161,10 @@ class ProfileActivity : ComponentActivity() {
 
     private fun delete() {
         photoFile.delete()
-        preferences.edit().clear().apply()
+        val completed = preferences.getBoolean("neon_welcome_complete", false)
+        preferences.edit().clear().apply {
+            if (completed) putBoolean("neon_welcome_complete", true)
+        }.apply()
         draft = ProfileDraft()
         avatar = ProfileAvatar()
         message = "Perfil borrado"

@@ -5,6 +5,16 @@ sonidos del entorno, recibir avisos, usar alarmas y convertir voz en texto.
 El reconocimiento de sonidos es probabilístico y NO sustituye dispositivos
 certificados de seguridad ni servicios de emergencia.
 
+## AURORA 4.35 · Neon Experience
+
+La bienvenida, el carrusel y el acceso al perfil se activan con un catálogo
+completo de los originales HD. El catálogo interno `assets/neon/catalog.json`
+identifica el archivo `logo` y 32 elementos de `portraits`. Cada elemento
+declara `id`, `label`, `asset` y `gender` (`MAN` o `WOMAN`) según los
+originales. Los nombres de archivo son relativos al directorio `neon`.
+GitHub Actions publica el ZIP de entrega únicamente cuando la APK incluye los
+33 archivos originales y el catálogo.
+
 ## AURORA 4.34 · Compose Pilot
 
 La rama `aurora-4.34-compose-pilot` parte del commit auditado `7f8953c`.

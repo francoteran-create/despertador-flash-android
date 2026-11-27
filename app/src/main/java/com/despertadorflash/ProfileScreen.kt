@@ -47,7 +47,7 @@ internal data class ProfileDraft(
     val cud: Int = 0
 )
 
-internal data class ProfileAvatar(val color: Int = 0, val figure: Boolean = false, val photo: Bitmap? = null)
+internal data class ProfileAvatar(val color: Int = 0, val figure: Boolean = false, val photo: Bitmap? = null, val hdPortrait: Bitmap? = null)
 
 private val mint = Color(0xFFA3F6DF)
 private val lilac = Color(0xFFCDC1FF)
@@ -199,6 +199,10 @@ private fun ProfileHeader(
                 if (photo != null) {
                     Image(remember(photo) { photo.asImageBitmap() }, null, Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop)
+                } else if (portrait.hdPortrait != null) {
+                    val hd = portrait.hdPortrait
+                    Image(remember(hd) { hd.asImageBitmap() }, null, Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit)
                 } else if (portrait.figure) {
                     Canvas(Modifier.fillMaxSize()) {
                         drawCircle(ink, radius = size.width * .15f, center = Offset(center.x, size.height * .37f))

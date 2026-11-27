@@ -5,7 +5,7 @@ on:
   push:
     branches: [main, aurora-sense-precision-2026-11-10]
   pull_request:
-    branches: [main, aurora-sense-precision-2026-11-10]
+    branches: [main, aurora-sense-precision-2026-11-10, aurora-4.34-compose-pilot]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -46,17 +46,28 @@ jobs:
           python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v 2>&1 | tee build/python-tests.log
       - name: Probar Java y compilar APK ARM64 y pruebas de interfaz
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
-      - name: Verificar APK y generar el ZIP de entrega
+      - name: Verificar firma, contenido y ABI de la APK
+        run: bash scripts/verify_delivery.sh
+      - name: Comprobar disponibilidad de originales HD
+        id: neon
+        run: |
+          if test -f app/src/main/assets/neon/catalog.json; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Compilación de revisión sin catálogo gráfico. ZIP de entrega pendiente."
+          fi
+      - name: Generar el ZIP de entrega
+        if: steps.neon.outputs.ready == 'true'
         env:
           AURORA_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
-          bash scripts/verify_delivery.sh
           python3 -m pip install --disable-pip-version-check 'reportlab>=4,<5'
           python3 scripts/build_delivery.py --branch "$AURORA_BRANCH"
       - uses: actions/upload-artifact@v4
+        if: steps.neon.outputs.ready == 'true'
         with:
-          name: AURORA-4.34-COMPOSE-PILOT-ARM64
-          path: dist/AURORA_4_34_COMPOSE_PILOT_ARM64.zip
+          name: AURORA-4.35-NEON-EXPERIENCE-ARM64
+          path: dist/AURORA_4_35_NEON_EXPERIENCE_ARM64.zip
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
