@@ -15,6 +15,8 @@ import java.util.*;
 public class MainActivity extends Activity {
  static final String PREF="aurora";
  private static final int EXPORT_SETTINGS=9201,IMPORT_SETTINGS=9202;
+ static final String EXTRA_SETTINGS_SECTION="aurora_settings_section";
+ private String openedSettingsSection;
  LinearLayout root; SharedPreferences prefs; CountDownTimer timer; android.os.Handler flashHandler=new android.os.Handler(android.os.Looper.getMainLooper()); Runnable flashTask; boolean alarmActive=false; boolean timerAlertActive=false; int activeAlarmId=-1; TorchFlasher torch; boolean alarmsPage=false; boolean timerPage=false; boolean communicationPage=false; boolean settingsPage=false;
  int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
  TextView txt(String t,int size){TextView v=new TextView(this);v.setText(t);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(dp(5),dp(12),dp(5),dp(12));return v;}
@@ -31,7 +33,8 @@ public class MainActivity extends Activity {
    if(item instanceof TextView&&"aurora_settings_heading".equals(item.getTag())){
     String name=((TextView)item).getText().toString();
     Button header=btn("＋  "+name);root.addView(header);
-    LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setPadding(dp(5),dp(3),dp(5),dp(10));group.setVisibility(View.GONE);root.addView(group);
+    LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setPadding(dp(5),dp(3),dp(5),dp(10));group.setVisibility(name.equals(openedSettingsSection)?View.VISIBLE:View.GONE);root.addView(group);
+    if(group.getVisibility()==View.VISIBLE){header.setText("−  "+name);header.post(()->header.requestRectangleOnScreen(new android.graphics.Rect(0,0,header.getWidth(),header.getHeight()),false));}
     header.setOnClickListener(v->{boolean open=group.getVisibility()!=View.VISIBLE;group.setVisibility(open?View.VISIBLE:View.GONE);header.setText((open?"−  ":"＋  ")+name);});
     body=group;
    }else if(body!=null)body.addView(item);else root.addView(item);
@@ -55,6 +58,10 @@ public class MainActivity extends Activity {
   pendingTimerLaunch=getIntent().getBooleanExtra("timer_finished",false);
   if(Build.VERSION.SDK_INT>=27&&(pendingAlarmLaunch||pendingTimerLaunch)){
    setShowWhenLocked(true);setTurnScreenOn(true);
+  }
+  if(!pendingAlarmLaunch&&!pendingTimerLaunch&&getIntent().hasExtra(EXTRA_SETTINGS_SECTION)){
+   settingsPage=true;
+   openedSettingsSection=getIntent().getStringExtra(EXTRA_SETTINGS_SECTION);
   }
   render();
  }

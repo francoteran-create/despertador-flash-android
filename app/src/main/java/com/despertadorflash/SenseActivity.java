@@ -1,7 +1,7 @@
 package com.despertadorflash;
 
 import android.Manifest;
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.text.Editable;
@@ -38,7 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Real microphone analysis. No fake observations and no background capture. */
-public final class SenseActivity extends Activity {
+public final class SenseActivity extends ComponentActivity {
  private static final int MIC_REQUEST=33;
  public static final String EXTRA_MODE="aurora_sense_mode";
  public static final int MODE_NONE=0, MODE_SPEECH=1, MODE_SOUND=2;
@@ -111,6 +111,17 @@ public final class SenseActivity extends Activity {
  private int mode=MODE_NONE, requestedMode=MODE_NONE, screenMode=MODE_SPEECH;
  private LinearLayout root;
  private ScrollView pageScroll;
+ private SoundStage soundStage;
+ private final java.util.Map<String,java.util.List<View>> stagePanels=new java.util.LinkedHashMap<>();
+ private final java.util.Map<String,Long> stageAccepted=new java.util.HashMap<>();
+ private volatile boolean soundScreenVisible;
+ private volatile boolean stageMotionEnabled=true;
+ private long lastStageFrame;
+ private volatile boolean legacySpectrum;
+ private boolean stageHistoryOpen;
+ private final android.database.ContentObserver stageMotionSettings=new android.database.ContentObserver(new Handler(Looper.getMainLooper())){
+  @Override public void onChange(boolean selfChange){readStageMotionSetting();}
+ };
  private FrameLayout screenFrame,wideOverlay;
  private TextView wideOriginal,wideTranslation,wideLabel,wideIntensity;
  private ScrollView wideTranslationPanel;
@@ -168,10 +179,14 @@ public final class SenseActivity extends Activity {
    Toast.makeText(this,"Escucha continua detenida para usar el micrófono aquí",Toast.LENGTH_LONG).show();
   }
   screenMode=getIntent().getIntExtra(EXTRA_MODE,MODE_SPEECH)==MODE_SOUND?MODE_SOUND:MODE_SPEECH;
-  setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+  if(screenMode==MODE_SPEECH)setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
   draw();
-  // Let Android release the previous microphone owner before acquiring it here.
-  main.postDelayed(()->toggle(screenMode),backgroundWasActive?550L:0L);
+  if(screenMode==MODE_SOUND){
+   attachSoundStage();
+  }else{
+   // Let Android release the previous microphone owner before acquiring it here.
+   main.postDelayed(()->{if(!isFinishing()&&getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))toggle(screenMode);},backgroundWasActive?550L:0L);
+  }
  }
  private void draw(){
   ScrollView scroll=new ScrollView(this);
@@ -373,6 +388,7 @@ public final class SenseActivity extends Activity {
   audioHealth=text("DIAGNÓSTICO: todavía sin respuestas del detector.",12,0xffb8ddec);
   Button diagnostic=button("COPIAR DIAGNÓSTICO (SIN AUDIO)");
   diagnostic.setOnClickListener(v->copySoundDiagnostic());
+  int historyStart=root.getChildCount();
   if(screenMode==MODE_SOUND&&getSharedPreferences("aurora",0).getBoolean("sense_feedback_mode",false)){
    TextView note=text("MODO PRUEBA: marcá ACERTÓ o NO COINCIDE para las últimas detecciones. "
     +"Si escuchaste algo que AURORA no detectó, usá el botón. No se guarda audio.",13,0xffb0dfee);
@@ -435,6 +451,13 @@ public final class SenseActivity extends Activity {
   eventsView.addView(empty);
   File[] files=ConversationRecordFilter.conversations(history.list());lastSaved=files.length>0?files[0]:null;
   if(screenMode==MODE_SOUND)showRecentSounds();
+  if(screenMode==MODE_SOUND){
+   java.util.List<View> historyItems=new java.util.ArrayList<>();
+   for(int index=historyStart;index<root.getChildCount();index++)historyItems.add(root.getChildAt(index));
+   stagePanels.put("history",historyItems);
+   stagePanels.put("sensitivity",java.util.Collections.singletonList(options));
+   stagePanels.put("diagnostic",java.util.Arrays.asList(audioHealth,diagnostic,detail));
+  }
   openSaved=button("ABRIR ÚLTIMO ARCHIVO");
   root.addView(openSaved);openSaved.setOnClickListener(v->showFile(lastSaved));
   openSaved.setVisibility(screenMode==MODE_SPEECH&&lastSaved!=null?View.VISIBLE:View.GONE);
@@ -465,6 +488,99 @@ public final class SenseActivity extends Activity {
   state.addTextChangedListener(mirror);
   if(translationResult!=null)translationResult.addTextChangedListener(mirror);
   syncWideText();
+ }
+ private void attachSoundStage(){
+  soundStage=new SoundStage(this);
+  pageScroll.setVisibility(View.GONE);
+  screenFrame.addView(soundStage.getView(),new FrameLayout.LayoutParams(-1,-1));
+  TextWatcher statusWatcher=new TextWatcher(){
+   public void beforeTextChanged(CharSequence text,int start,int count,int after){}
+   public void onTextChanged(CharSequence text,int start,int before,int count){updateStageStatus();}
+   public void afterTextChanged(Editable value){}
+  };
+  state.addTextChangedListener(statusWatcher);
+  detail.addTextChangedListener(statusWatcher);
+  updateStageStatus();
+ }
+ private void updateStageStatus(){
+  if(soundStage!=null)soundStage.status(mode==MODE_SOUND,state.getText().toString(),detail.getText().toString());
+ }
+ private void readStageMotionSetting(){
+  stageMotionEnabled=android.provider.Settings.Global.getFloat(getContentResolver(),
+   android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,1f)>0f;
+  if(!stageMotionEnabled&&soundStage!=null)soundStage.levels(new float[48]);
+  if(legacySpectrum&&wideSpectrum!=null)wideSpectrum.setListening(stageMotionEnabled&&soundRunning);
+ }
+ @Override protected void onStart(){
+  super.onStart();
+  if(soundStage!=null){
+   readStageMotionSetting();
+   getContentResolver().registerContentObserver(android.provider.Settings.Global.getUriFor(
+    android.provider.Settings.Global.ANIMATOR_DURATION_SCALE),false,stageMotionSettings);
+  }
+ }
+ @Override protected void onResume(){
+  super.onResume();
+  soundScreenVisible=true;
+  if(legacySpectrum&&wideSpectrum!=null)wideSpectrum.setListening(stageMotionEnabled&&soundRunning);
+ }
+ @Override protected void onPause(){
+  soundScreenVisible=false;
+  if(soundStage!=null)soundStage.levels(new float[48]);
+  if(legacySpectrum&&wideSpectrum!=null)wideSpectrum.setListening(false);
+  super.onPause();
+ }
+ void performSoundAction(String action){
+  switch(action){
+   case "start":
+    if(mode!=MODE_SOUND&&requestedMode==MODE_NONE)toggle(MODE_SOUND);
+    break;
+   case "stop": stopAll(true);break;
+   case "back": if(wideMode)leaveWideMode();else finish();break;
+   case "rotate": if(wideMode)leaveWideMode();else enterWideMode();break;
+   case "spectrum":
+    if(wideMode)leaveWideMode();
+    legacySpectrum=true;
+    enterWideMode();
+    break;
+   case "alerts":openStagePreferences("AVISOS POR TIPO DE SONIDO");break;
+   case "vibration":case "flash":openStagePreferences("AVISOS AL DETECTAR SONIDOS");break;
+   case "preferences":openStagePreferences("");break;
+   case "records":startActivity(new Intent(this,RecordsActivity.class));break;
+   case "assist":startActivity(new Intent(this,AuroraAssistActivity.class));break;
+   case "voice":
+    stopAll(true);
+    startActivity(new Intent(this,SenseActivity.class).putExtra(EXTRA_MODE,MODE_SPEECH));
+    finish();
+    break;
+   case "history":showStagePanel(action,"Historial de sonidos");break;
+   case "sensitivity":showStagePanel(action,"Sensibilidad");break;
+   case "diagnostic":showStagePanel(action,"Diagnóstico");break;
+  }
+ }
+ private void openStagePreferences(String section){
+  startActivity(new Intent(this,MainActivity.class).putExtra(MainActivity.EXTRA_SETTINGS_SECTION,section));
+ }
+ private void showStagePanel(String name,String title){
+  java.util.List<View> children=stagePanels.get(name);
+  if(children==null)return;
+  ScrollView scroll=new ScrollView(this);
+  LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);
+  list.setPadding(dp(12),dp(5),dp(12),dp(10));
+  for(View child:children){
+   if(child.getParent() instanceof android.view.ViewGroup)((android.view.ViewGroup)child.getParent()).removeView(child);
+   list.addView(child);
+   child.setVisibility(View.VISIBLE);
+  }
+  scroll.addView(list);
+  android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this).setTitle(title)
+   .setView(scroll).setPositiveButton("Cerrar",null).create();
+  if("history".equals(name)){
+   stageHistoryOpen=true;
+   showRecentSounds();
+   dialog.setOnDismissListener(d->stageHistoryOpen=false);
+  }
+  dialog.show();
  }
  /** Visualización en la misma Activity y sin abrir otro micrófono.
   * Android no recrea esta pantalla al cambiar orientación (ver Manifest).
@@ -530,9 +646,13 @@ public final class SenseActivity extends Activity {
  private void enterWideMode(){
   if(wideOverlay==null||wideMode)return;
   wideMode=true;
+  if(soundStage!=null&&!legacySpectrum){
+   setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+   return;
+  }
   wideOverlay.setVisibility(View.VISIBLE);
   wideOverlay.bringToFront();
-  if(wideSpectrum!=null)wideSpectrum.setListening(soundRunning&&mode==MODE_SOUND);
+  if(wideSpectrum!=null)wideSpectrum.setListening(stageMotionEnabled&&soundRunning&&mode==MODE_SOUND);
   syncWideText();
   getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
   getWindow().getDecorView().setSystemUiVisibility(
@@ -543,11 +663,16 @@ public final class SenseActivity extends Activity {
  private void leaveWideMode(){
   if(!wideMode)return;
   wideMode=false;
+  if(soundStage!=null&&!legacySpectrum){
+   setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+   return;
+  }
   if(wideSpectrum!=null)wideSpectrum.setListening(false);
   if(wideOverlay!=null)wideOverlay.setVisibility(View.GONE);
   getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
   getWindow().getDecorView().setSystemUiVisibility(0);
-  setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+  setRequestedOrientation(soundStage==null?ActivityInfo.SCREEN_ORIENTATION_PORTRAIT:ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+  legacySpectrum=false;
  }
  @Override public void onConfigurationChanged(Configuration config){
   super.onConfigurationChanged(config);
@@ -558,7 +683,7 @@ public final class SenseActivity extends Activity {
   super.onBackPressed();
  }
  private void showRecentSounds(){
-  if(screenMode!=MODE_SOUND||eventsView==null)return;
+  if(screenMode!=MODE_SOUND||eventsView==null||(soundStage!=null&&!stageHistoryOpen))return;
   eventsView.removeAllViews();
   java.util.List<SoundTimeline.Entry> recent=RecentSoundEvents.snapshot(this);
   if(soundCount!=null)soundCount.setText(recent.size()+"/30 eventos detectados");
@@ -1161,10 +1286,12 @@ public final class SenseActivity extends Activity {
  private void updateLiveSoundDisplay(long now){
   if(mode!=MODE_SOUND||!soundRunning)return;
   if(soundReconnecting){
+   if(soundStage!=null)soundStage.clearSignal();
    result.setText("RECONECTANDO EL MICRÓFONO…\nNo se están detectando sonidos durante la reconexión");
    return;
   }
   java.util.List<SoundLiveWindow.Item> recent=soundLiveWindow.snapshot(now,4);
+  if(soundStage!=null)soundStage.detections(recent,stageAccepted,now);
   if(recent.isEmpty()){
    result.setText("Escuchando…\nSin sonidos identificados ahora");
    return;
@@ -1179,6 +1306,8 @@ public final class SenseActivity extends Activity {
  private void stopSoundDisplayTick(){
   if(soundDisplayTick!=null){main.removeCallbacks(soundDisplayTick);soundDisplayTick=null;}
   soundLiveWindow.clear();
+  stageAccepted.clear();
+  if(soundStage!=null)soundStage.clearSignal();
  }
  private void beginSoundDisplayTick(final int run){
   stopSoundDisplayTick();
@@ -1241,16 +1370,18 @@ public final class SenseActivity extends Activity {
         if(!activeClassifier.get()||!soundRunning||soundSession!=run||mode!=MODE_SOUND)return;
         long now=SystemClock.elapsedRealtime();
         soundLiveWindow.observe(current,now);
-        updateLiveSoundDisplay(now);
+        stageAccepted.entrySet().removeIf(e->now-e.getValue()>SoundLiveWindow.LIVE_MS);
         int sensitivity=minConfidence<=22?0:minConfidence>=45?2:1;
         int maxConfirmed=0;
         for(java.util.Map.Entry<String,Float> event:current.entrySet()){
          String label=event.getKey();
          int score=Math.round(event.getValue()*100f);
          if(!foregroundSoundGate.accept(label,score,sensitivity,now))continue;
+         stageAccepted.put(label,now);
          maxConfirmed=Math.max(maxConfirmed,score);
          recordSoundEvent(label,score);
         }
+        updateLiveSoundDisplay(now);
         if(maxConfirmed>0&&visual!=null){
          visual.setEnergy(maxConfirmed/100f);
          visual.setDetected(true);
@@ -1270,7 +1401,7 @@ public final class SenseActivity extends Activity {
      if(localRecord.getRecordingState()!=AudioRecord.RECORDSTATE_RECORDING)
       throw new IllegalStateException("Android no habilitó el micrófono");
      soundReconnecting=false;
-     main.post(()->{if(wideSpectrum!=null&&wideMode)wideSpectrum.setListening(true);});
+     main.post(()->{if(wideSpectrum!=null&&wideMode)wideSpectrum.setListening(stageMotionEnabled);});
      started=SystemClock.elapsedRealtime();
      main.post(()->{
       if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
@@ -1284,10 +1415,18 @@ public final class SenseActivity extends Activity {
       int frames=data.load(localRecord);
       if(frames>0){
        // Reuse the actual PCM buffer feeding YAMNet; no second microphone.
-       if(wideMode){
+       long frameTime=SystemClock.elapsedRealtime();
+       if(soundStage!=null&&!legacySpectrum&&soundScreenVisible&&stageMotionEnabled&&frameTime-lastStageFrame>=68L){
+        lastStageFrame=frameTime;
+        float[] wave=SoundStageKt.soundWave(data.getBuffer());
+        main.post(()->{
+         if(soundScreenVisible&&stageMotionEnabled&&soundRunning&&!soundReconnecting&&soundSession==run) soundStage.levels(wave);
+        });
+       }
+       if(wideMode&&stageMotionEnabled&&(soundStage==null||legacySpectrum&&soundScreenVisible)){
         LiveAudioSpectrum.Reading spectrum=LiveAudioSpectrum.fromPcm(data.getBuffer());
         main.post(()->{
-         if(!wideMode||!soundRunning||mode!=MODE_SOUND||soundSession!=run)return;
+         if(!wideMode||!soundRunning||mode!=MODE_SOUND||soundSession!=run||(legacySpectrum&&!soundScreenVisible))return;
          if(wideSpectrum!=null)wideSpectrum.setSpectrum(spectrum);
          if(wideIntensity!=null){
           String intensity=spectrum.level>=.70f?"FUERTE":spectrum.level>=.27f?"MEDIA":"BAJA";
@@ -1336,6 +1475,8 @@ public final class SenseActivity extends Activity {
      main.post(()->{
       if(soundRunning&&soundSession==run&&mode==MODE_SOUND){
        soundLiveWindow.clear();
+       stageAccepted.clear();
+       if(soundStage!=null)soundStage.clearSignal();
        state.setText("RECONECTANDO EL DETECTOR");
        result.setText("Reconectando micrófono…");
        detail.setText("Interrupción detectada. Reintento "+attempt+" de 5.");
@@ -1370,8 +1511,13 @@ public final class SenseActivity extends Activity {
   releaseSpeech();
   AudioRecord record=audioRecord;if(record!=null){try{record.stop();}catch(Exception ignored){}}
   if(show){state.setText("MICRÓFONO APAGADO");detail.setText("Escucha detenida. Ninguna función está capturando audio.");}updateModeVisibility();
+  updateStageStatus();
  }
- @Override protected void onStop(){stopAll(true);super.onStop();}
+ @Override protected void onStop(){
+  soundScreenVisible=false;
+  if(soundStage!=null)getContentResolver().unregisterContentObserver(stageMotionSettings);
+  stopAll(true);super.onStop();
+ }
  @Override protected void onDestroy(){
   stopAll(false);
   work.shutdownNow();historyWorker.shutdown();super.onDestroy();

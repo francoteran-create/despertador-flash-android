@@ -27,7 +27,8 @@ from reportlab.platypus import (
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/"dist"
 REPO="francoteran-create/despertador-flash-android"
-BASE_BRANCH="aurora-4.34-compose-pilot"
+BASE_BRANCH="aurora-4.35-neon-experience"
+BASE_APK_BYTES=143562983
 AUDITED_BRANCH="aurora-sense-precision-2026-11-10"
 
 def git(*args):
@@ -57,7 +58,7 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
     h=styles["AuroraHead"];body=styles["AuroraBody"];small=styles["AuroraSmall"]
     story=[
         paragraph("AURORA | MASTER DE CONTINUIDAD",styles["AuroraTitle"]),
-        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.35 · Neon Experience",small),
+        paragraph("Estado compilado, pruebas y próximos pasos | Beta 4.36 · Slim & Neon Experience",small),
         Spacer(1,4),
     ]
     def head(text):story.append(paragraph(text,h))
@@ -88,10 +89,16 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
         ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
     ]))
     story.append(table)
+    current_bytes = apk.stat().st_size
+    reduction = (1 - current_bytes / BASE_APK_BYTES) * 100
+    add(f"Peso APK ARM64. Referencia local 4.35: {BASE_APK_BYTES:,} bytes. Esta APK: {current_bytes:,} bytes. Reducción: {reduction:.2f}%.")
+    add("Derivados WebP de 720 × 900, calidad 94 con conversión Sharp YUV. Los 32 originales de 1080 × 1350 quedan en el commit base db8ed5d. Comparación digital a 432 × 540 sobre el contenido: PSNR mínimo 34,27 dB y mediana 36,17 dB.")
+    add("R8 y resource shrinking se evaluaron por composición. DEX, tabla y recursos sumaban cerca de 13,5 MB antes del piloto, mientras que las bibliotecas nativas ocupaban 69,6 MB. La entrega conserva el empaquetado probado de los motores. Se requiere validación Android de JNI, traducción, OCR y audio antes de activar shrinking.")
     head("1 | ESTADO REAL DE ESTA ENTREGA")
     add(evidence)
     add("Pendiente ejecutar las pruebas instrumentadas y validar el perfil, TalkBack y el hardware en Samsung Galaxy S9+ con Android 10.")
     head("2 | YA IMPLEMENTADO Y COMPILADO")
+    item("NUEVO 4.36", "Escuchar sonidos en Compose y Material 3, onda basada en el mismo PCM que recibe YAMNet, arte vectorial neón y etiquetas de confianza. La escucha se inicia desde el botón. Se conservan historial, avisos, sensibilidad, diagnóstico y registros. Las animaciones reducen su movimiento según Android y se suspenden fuera de la pantalla activa. Peso y pruebas locales documentados; RAM, batería, latencia, capturas y ejecución física pendientes.")
     item("NUEVO 4.35", "Bienvenida en Compose, personalización local y selector horizontal de 32 avatares originales. El avatar abre el perfil desde el menú. La edición de identidad conserva el perfil y permite cancelar. El catálogo incluye 20 opciones femeninas y 12 masculinas. Pendiente validar las animaciones y la navegación en un Galaxy S9+.")
     item("NUEVO 4.34", "Perfil en Kotlin, Compose y Material 3. Conserva los datos, CUD, foto local, avatares y los motores Java. Incluye animación de retrato vinculada a la escala del sistema, borrador restaurable e importación de foto en segundo plano.")
     item("NUEVO 4.33", "Tarjetas de alarma compactas con ajustes desplegables; configuración general agrupada por categorías; temporizador personalizado de 1 a 1440 minutos. Se conservan funciones y programación anteriores. Pendiente validar disposición visual y funcionamiento físico. Avatares al final.")
@@ -265,7 +272,7 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
         "preparacion comercial 20%. Validar en dispositivos reales.")
     head("5 | PRUEBA SIGUIENTE EN GALAXY S9+")
     for line in [
-        "Instalar AURORA 4.35 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
+        "Instalar AURORA 4.36 BETA ARM64. Si Android rechaza la actualización por firma, exportar ajustes antes de desinstalar la beta anterior; no tocar la estable.",
         "COMUNICAR > SENTIR LA MUSICA: autorizar microfono; "
         "probar música con graves cercanos y vibración.",
         "MUSICA: elegir SUAVE, MEDIO y FUERTE; verificar "
@@ -412,13 +419,13 @@ def create_master(path: Path, commit: str, branch: str, version: str, apk: Path,
         canvas.line(18*mm,14*mm,w-18*mm,14*mm)
         canvas.setFont("Helvetica",7)
         canvas.setFillColor(grey)
-        canvas.drawString(18*mm,10*mm,"AURORA - 4.35 BETA - Proyecto Cero")
+        canvas.drawString(18*mm,10*mm,"AURORA - 4.36 BETA - Proyecto Cero")
         canvas.drawRightString(w-18*mm,10*mm,"Página "+str(pdf.page))
         canvas.restoreState()
     doc=SimpleDocTemplate(
         str(path),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,
         topMargin=17*mm,bottomMargin=20*mm,
-        title="AURORA MASTER 4.35 - Estado, compilado y planificación")
+        title="AURORA MASTER 4.36 - Estado, compilado y planificación")
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
 
 def test_evidence() -> str:
@@ -448,7 +455,7 @@ def main():
     branch = args.branch or git("rev-parse", "--abbrev-ref", "HEAD")
     version_text = (ROOT / "app/build.gradle").read_text(encoding="utf-8")
     version = re.search(r"versionName\s+'([^']+)'", version_text)
-    if not version or version[1] != "4.35-neon-experience-beta":
+    if not version or version[1] != "4.36-slim-neon-beta":
         raise RuntimeError("Versión de entrega inesperada")
     built = list((ROOT / "app/build/outputs/apk/debug").glob("*.apk"))
     if len(built) != 1 or "arm64-v8a" not in built[0].name or built[0].stat().st_size < 10_000_000:
@@ -466,18 +473,28 @@ def main():
         expected = assets | {logo, catalog_name}
         packaged = {name.removeprefix(prefix) for name in apk.namelist() if name.startswith(prefix) and not name.endswith("/")}
         if packaged != expected or any("/referencias/" in name or name.endswith("ABRIR_DEMO.html") for name in apk.namelist()):
-            raise RuntimeError("La APK debe llevar exactamente los originales y el catálogo, sin maquetas")
+            raise RuntimeError("La APK debe llevar exactamente los derivados, el logo y el catálogo, sin maquetas")
         for name in expected:
             if apk.read(prefix + name) != (ROOT / "app/src/main/assets/neon" / name).read_bytes():
                 raise RuntimeError("Los bytes empaquetados no coinciden con el original: " + name)
+    derivatives = json.loads((ROOT / "scripts/avatar-derivatives.json").read_text(encoding="utf-8"))
+    derived = derivatives["avatars"]
+    if set(derived) != {Path(asset).name for asset in assets}:
+        raise RuntimeError("Los derivados no coinciden con los 32 identificadores del catálogo")
+    with ZipFile(built[0]) as apk:
+        for asset in assets:
+            content = apk.read("assets/neon/" + asset)
+            info = derived[Path(asset).name]
+            if len(content) != info["bytes"] or hashlib.sha256(content).hexdigest() != info["sha256"]:
+                raise RuntimeError("Derivado inesperado en el APK: " + asset)
     evidence = test_evidence()
 
     OUT.mkdir(exist_ok=True)
-    target = OUT / "AURORA_4_35_NEON_EXPERIENCE_ARM64.zip"
-    apk_name = "AURORA_4_35_ARM64.apk"
+    target = OUT / "AURORA_4_36_SLIM_NEON_EXPERIENCE_ARM64.zip"
+    apk_name = "AURORA_4_36_ARM64.apk"
     with TemporaryDirectory(dir=OUT) as directory:
         staging = Path(directory)
-        pdf = staging / "AURORA_4_35_MASTER.pdf"
+        pdf = staging / "AURORA_4_36_MASTER.pdf"
         create_master(pdf, commit, branch, version[1], built[0], evidence)
         if not pdf.read_bytes().startswith(b"%PDF-"):
             raise RuntimeError("El MASTER no es un PDF válido")

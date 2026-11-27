@@ -5,6 +5,18 @@ sonidos del entorno, recibir avisos, usar alarmas y convertir voz en texto.
 El reconocimiento de sonidos es probabilístico y NO sustituye dispositivos
 certificados de seguridad ni servicios de emergencia.
 
+## AURORA 4.36 · Slim & Neon Experience
+
+Escuchar sonidos presenta una onda de micrófono reutilizando el PCM de YAMNet,
+ilustraciones vectoriales y controles de escucha en Compose. El menú de sonidos
+mantiene historial, sensibilidad, avisos, registros y diagnóstico. La escucha
+empieza cuando tocás Escuchar. El indicador de confianza no representa certeza.
+
+Los 32 originales HD se conservan en `db8ed5d`. El APK incluye derivados
+WebP de 720 × 900, calidad 94 con Sharp YUV, e idénticos IDs, encuadre y logo.
+`scripts/avatar-derivatives.json` registra hashes, tamaño y comparación digital.
+La tipografía Permanent Marker distribuida en el APK usa licencia Apache 2.0.
+
 ## AURORA 4.35 · Neon Experience
 
 El selector usa `assets/neon/catalogo.json` y los 32 WebP en `avatares/`
