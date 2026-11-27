@@ -5,6 +5,18 @@ sonidos del entorno, recibir avisos, usar alarmas y convertir voz en texto.
 El reconocimiento de sonidos es probabilístico y NO sustituye dispositivos
 certificados de seguridad ni servicios de emergencia.
 
+## AURORA 4.39 · Gaming Experience
+
+Juegos incorpora Truco argentino offline contra tres niveles de estrategia local.
+La baraja se dibuja en vector. Hay partidas a 15 y 30, envido, Truco y Flor
+opcional. En la variante elegida, Falta envido adopta el tramo de malas o
+buenas. El rival recibe solo su mano y cartas públicas. Los subtítulos se
+pueden ajustar y la voz local se suspende durante la escucha ambiental.
+
+Bloques añade caída instantánea y fijación natural de 450 ms. Se completan
+la ampliación de retrato, el CUD privado con PDF o imagen, la división visible
+de Mostrador y la celebración anual de cuatro segundos.
+
 ## AURORA 4.38 · Neón y Juegos
 
 La entrada muestra el mismo logo durante dos segundos y continúa con un saludo

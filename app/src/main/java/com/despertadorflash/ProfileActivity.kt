@@ -31,10 +31,45 @@ class ProfileActivity : ComponentActivity() {
     private var avatar by mutableStateOf(ProfileAvatar())
     private var message by mutableStateOf("")
     private var importing by mutableStateOf(false)
+    private val certificate by lazy { PrivateCertificate(this) }
+    private var hasCertificate by mutableStateOf(false)
+    private var certificatePreview by mutableStateOf<Bitmap?>(null)
+    private var certificateBusy by mutableStateOf(false)
+    private val pickCertificate = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null && !certificateBusy) {
+            certificateBusy = true
+            lifecycleScope.launch {
+                try {
+                    withContext(Dispatchers.IO) { certificate.import(uri) }
+                    hasCertificate = true
+                    message = "Certificado adjuntado en este dispositivo"
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    message = "No se pudo adjuntar el certificado. Elegí una imagen o PDF válido de hasta 12 MB."
+                } finally {
+                    certificateBusy = false
+                }
+            }
+        }
+    }
+
+    private fun viewCertificate() {
+        lifecycleScope.launch {
+            try {
+                certificatePreview = withContext(Dispatchers.IO) { certificate.preview() }
+                if (certificatePreview == null) message = "No se pudo abrir el certificado"
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                message = "No se pudo abrir el certificado"
+            }
+        }
+    }
     private val editIdentity = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             draft = draft.copy(name = preferences.getString("name", "").orEmpty())
-            avatar = avatar.copy(hdPortrait = NeonIdentity.menuPortrait(this, 320))
+            avatar = avatar.copy(hdPortrait = NeonIdentity.menuPortrait(this, 640))
             message = "Identidad actualizada"
         }
     }
@@ -61,6 +96,7 @@ class ProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hasCertificate = certificate.exists()
         draft = ProfileDraft(
             name = savedInstanceState?.getString("name") ?: preferences.getString("name", "").orEmpty(),
             nickname = savedInstanceState?.getString("nickname") ?: preferences.getString("nickname", "").orEmpty(),
@@ -72,7 +108,7 @@ class ProfileActivity : ComponentActivity() {
         avatar = ProfileAvatar(
             color = preferences.getInt("avatar_color", 0).coerceIn(0, 5),
             figure = preferences.getInt("avatar_style", 0) != 0,
-            hdPortrait = if (preferences.getBoolean("neon_legacy_portrait", false)) null else NeonIdentity.menuPortrait(this, 320),
+            hdPortrait = if (preferences.getBoolean("neon_legacy_portrait", false)) null else NeonIdentity.menuPortrait(this, 640),
             photo = if (preferences.getBoolean("photo", false)) {
                 runCatching { photoFile.openRead().use { BitmapFactory.decodeStream(it) } }.getOrNull()
             } else null
@@ -97,6 +133,18 @@ class ProfileActivity : ComponentActivity() {
                     editIdentity.launch(Intent(this, NeonWelcomeActivity::class.java).putExtra("edit_identity", true))
                 }),
                 onBirthday = ::showBirthdayPicker,
+                hasCertificate = hasCertificate,
+                certificatePreview = certificatePreview,
+                certificateBusy = certificateBusy,
+                onAddCertificate = { pickCertificate.launch(arrayOf("image/*", "application/pdf")) },
+                onViewCertificate = ::viewCertificate,
+                onCloseCertificate = { certificatePreview = null },
+                onRemoveCertificate = {
+                    certificate.clear()
+                    hasCertificate = certificate.exists()
+                    certificatePreview = null
+                    message = if (hasCertificate) "No se pudo eliminar el certificado" else "Certificado eliminado"
+                },
                 onSave = ::save,
                 onDelete = ::delete
             )
@@ -172,6 +220,9 @@ class ProfileActivity : ComponentActivity() {
 
     private fun delete() {
         photoFile.delete()
+        certificate.clear()
+        hasCertificate = certificate.exists()
+        certificatePreview = null
         val completed = preferences.getBoolean("neon_welcome_complete", false)
         preferences.edit().clear().apply {
             if (completed) putBoolean("neon_welcome_complete", true)

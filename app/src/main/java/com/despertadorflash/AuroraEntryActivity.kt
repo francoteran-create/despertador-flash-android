@@ -3,6 +3,7 @@ package com.despertadorflash
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
@@ -37,7 +38,7 @@ class AuroraEntryActivity : ComponentActivity() {
     private var greeting by mutableStateOf(false)
     private lateinit var displayName: String
     private var gender: NeonGender? = null
-    private var birthday = false
+    private var celebrationUntil by mutableLongStateOf(0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,9 +46,7 @@ class AuroraEntryActivity : ComponentActivity() {
         val identity = NeonIdentity.savedDraft(this)
         displayName = prefs.getString("nickname", "").orEmpty().trim().ifBlank { identity.name.trim() }
         gender = identity.gender
-        val today = Calendar.getInstance()
-        birthday = birthdayToday(prefs.getString("birth", "").orEmpty(), today.get(Calendar.DAY_OF_MONTH),
-            today.get(Calendar.MONTH) + 1)
+        celebrationUntil = savedInstanceState?.getLong("birthday_until") ?: 0L
         greeting = savedInstanceState?.getBoolean("greeting") ?: false
         setContent {
             val avatar by produceState<Bitmap?>(null) {
@@ -56,6 +55,7 @@ class AuroraEntryActivity : ComponentActivity() {
             Surface(Modifier.fillMaxSize(), color = Color.Black) {
                 Box(Modifier.fillMaxSize().safeDrawingPadding().padding(22.dp), contentAlignment = Alignment.Center) {
                     if (greeting) {
+                        if (celebrationUntil != 0L) BirthdayMotion(Modifier.fillMaxSize())
                         Column(horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             avatar?.let {
@@ -66,7 +66,7 @@ class AuroraEntryActivity : ComponentActivity() {
                             Text(openingSalutation(gender), color = cyan, fontFamily = graffiti, fontSize = 25.sp,
                                 textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
                             Text(displayName, color = Color.White, fontSize = 29.sp, textAlign = TextAlign.Center)
-                            if (birthday) Text("¡Feliz cumpleaños!", color = yellow, fontSize = 20.sp)
+                            if (celebrationUntil != 0L) Text("¡Feliz cumpleaños!", color = yellow, fontSize = 20.sp)
                         }
                     } else {
                         val phase = neonPhase()
@@ -88,7 +88,22 @@ class AuroraEntryActivity : ComponentActivity() {
             if (!greeting) delay(ENTRY_MS)
             if (displayName.isNotBlank()) {
                 greeting = true
-                delay(GREETING_MS)
+                if (celebrationUntil != 0L) {
+                    delay((celebrationUntil - SystemClock.elapsedRealtime()).coerceAtLeast(0L))
+                } else {
+                    delay(GREETING_MS)
+                    val today = Calendar.getInstance()
+                    val annual = getSharedPreferences("aurora_annual_celebrations", MODE_PRIVATE)
+                    val years = annual.getStringSet("years", emptySet()).orEmpty().toSet()
+                    val year = today.get(Calendar.YEAR)
+                    if (eligibleBirthday(NeonIdentity.preferences(this@AuroraEntryActivity).getString("birth", "").orEmpty(),
+                            today.get(Calendar.DAY_OF_MONTH), today.get(Calendar.MONTH) + 1, year, years) &&
+                        annual.edit().putStringSet("years", years + year.toString()).commit()
+                    ) {
+                        celebrationUntil = SystemClock.elapsedRealtime() + BIRTHDAY_MS
+                        delay(BIRTHDAY_MS)
+                    }
+                }
             }
             if (!isFinishing && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
                 startActivity(Intent(this@AuroraEntryActivity, MainActivity::class.java)
@@ -106,11 +121,13 @@ class AuroraEntryActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("greeting", greeting)
+        outState.putLong("birthday_until", celebrationUntil)
         super.onSaveInstanceState(outState)
     }
 
     companion object {
         internal const val ENTRY_MS = 2000L
         internal const val GREETING_MS = 1450L
+        internal const val BIRTHDAY_MS = 4000L
     }
 }
