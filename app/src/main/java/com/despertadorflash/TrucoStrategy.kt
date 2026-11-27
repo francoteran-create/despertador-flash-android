@@ -10,7 +10,8 @@ internal sealed interface TrucoAction {
     data class Say(val call: Call) : TrucoAction
     data class Use(val card: Card) : TrucoAction
 }
-internal data class RivalMove(val action: TrucoAction, val phrase: String, val mood: RivalMood)
+internal data class RivalMove(val action: TrucoAction, val mood: RivalMood,
+    val bluff: Boolean = false, val strong: Boolean = false)
 
 internal class TrucoStrategy(private val level: TrucoLevel, private val random: Random = Random.Default) {
     fun choose(view: TrucoView): RivalMove {
@@ -52,19 +53,15 @@ internal class TrucoStrategy(private val level: TrucoLevel, private val random: 
                 random.nextFloat() < .44f -> Call.FOLD
             else -> null
         }
-        if (voice != null) return RivalMove(TrucoAction.Say(voice), "¡${voice.text.uppercase()}!",
+        if (voice != null) return RivalMove(TrucoAction.Say(voice),
             when { voice == Call.REFUSE || voice == Call.FOLD -> RivalMood.WORRIED
-                bluff -> RivalMood.CHEEKY; else -> RivalMood.HAPPY })
+                bluff -> RivalMood.CHEEKY; else -> RivalMood.HAPPY },
+            bluff = bluff && (voice in trickCalls && hand <= .72f || voice == Call.ENVIDO && tantos <= .72f), strong = hand > .72f)
 
         val card = pickCard(view)
-        val lines = when {
-            view.current != null && card.strength > view.current.card.strength ->
-                listOf("¡Te enganché!", "Ahora sí.", "¡Linda carta!")
-            hand < .33f -> listOf("A ver qué sale…", "Está brava la mano.", "Vamos despacio.")
-            else -> listOf("Ahí va.", "Te toca, che.", "Vamos con esta.", "A ver esa vuelta.")
-        }
-        return RivalMove(TrucoAction.Use(card), lines.random(random),
-            if (bluff) RivalMood.CHEEKY else if (hand < .33f) RivalMood.WORRIED else RivalMood.CALM)
+        return RivalMove(TrucoAction.Use(card),
+            if (bluff) RivalMood.CHEEKY else if (hand < .33f) RivalMood.WORRIED else RivalMood.CALM,
+            bluff = bluff, strong = hand > .72f)
     }
 
 

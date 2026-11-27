@@ -46,6 +46,7 @@ class ProfileScreenTest {
     @Test
     fun savesProfileAndRestoresItAfterRecreation() {
         compose.onNodeWithTag("profileName").performScrollTo().performTextInput("María")
+        compose.onNodeWithTag("profileDisplayName").performScrollTo().performTextInput("Mara")
         compose.onNodeWithTag("profileNickname").performScrollTo().performTextInput("Luz")
         compose.onNodeWithText("Más datos personales").performScrollTo().performClick()
         compose.onNodeWithTag("profileContact").performScrollTo().performTextInput("Contacto")
@@ -58,6 +59,8 @@ class ProfileScreenTest {
         compose.activityRule.scenario.onActivity { activity ->
             val saved = activity.getSharedPreferences("aurora_profile", 0)
             assertEquals("María", saved.getString("name", null))
+            assertEquals("Mara", saved.getString("display_name", null))
+            assertEquals("Mara", NeonIdentity.displayName(activity))
             assertEquals("Luz", saved.getString("nickname", null))
             assertEquals("Contacto", saved.getString("contact", null))
             assertEquals("Prefiero texto", saved.getString("notes", null))

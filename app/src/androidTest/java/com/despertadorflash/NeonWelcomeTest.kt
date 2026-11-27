@@ -84,7 +84,9 @@ class NeonWelcomeTest {
     private fun enterName(gender: NeonGender) {
         compose.onNodeWithText("EMPEZAR").performClick()
         compose.onNodeWithText(gender.label).performClick()
-        compose.onNodeWithText("Nombre visible").performTextInput("Luz")
+        compose.onNodeWithText(gender.label).assertIsSelected()
+        compose.onNodeWithTag("displayNameInput").performScrollTo().performTextInput("Luz")
+        compose.onNodeWithTag("displayNamePreview").assertTextContains(openingSalutation(gender) + ", Luz")
         compose.onNodeWithText("CONTINUAR").performClick()
     }
 }

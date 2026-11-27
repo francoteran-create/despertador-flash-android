@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -33,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -45,11 +48,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -135,24 +142,17 @@ internal fun NeonWelcome(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             NeonHeading("Personalizá AURORA")
-                            NeonGender.entries.forEach { choice ->
-                                FilterChip(
-                                    selected = gender == choice,
-                                    onClick = {
+                            Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                NeonGender.entries.forEach { choice ->
+                                    GenderChoice(choice, gender == choice) {
                                         val changed = draft.selectGender(choice)
                                         gender = changed.gender
                                         selected = changed.avatar
-                                    },
-                                    label = { Text(choice.label) },
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                                )
+                                    }
+                                }
                             }
-                            OutlinedTextField(
-                                value = name, onValueChange = { name = it }, label = { Text("Nombre visible") },
-                                singleLine = true, isError = name.trim().length > 100,
-                                supportingText = { if (name.trim().length > 100) Text("Máximo 100 caracteres") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            DisplayNameField(name, gender) { name = it }
+
                         }
                         NeonAction("CONTINUAR", enabled = draft.canContinue()) { step = 2 }
                     }
@@ -181,6 +181,62 @@ internal fun NeonWelcome(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GenderChoice(choice: NeonGender, selected: Boolean, choose: () -> Unit) {
+    val frame = RoundedCornerShape(18.dp)
+    val edge = if (selected) listOf(cyan, yellow, cyan) else listOf(Color(0xFF355058), Color(0xFF25313B))
+    val fill = if (selected) listOf(Color(0xFF173B40), Color(0xFF222317)) else listOf(nearBlack, Color(0xFF111018))
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 53.dp).clip(frame)
+            .background(Brush.horizontalGradient(fill))
+            .border(if (selected) 2.dp else 1.dp, Brush.horizontalGradient(edge), frame)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = choose)
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(choice.label, color = if (selected) Color.White else Color(0xFFBBC6CC), modifier = Modifier.weight(1f),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+        // Radio semantics announce the selection; the check is the visual confirmation.
+        Canvas(Modifier.size(20.dp)) {
+            val tone = if (selected) yellow else Color(0xFF5D7C87)
+            drawCircle(tone, radius = size.minDimension * .43f,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
+            if (selected) {
+                drawLine(tone, Offset(size.width * .30f, size.height * .52f),
+                    Offset(size.width * .45f, size.height * .66f), 2.dp.toPx())
+                drawLine(tone, Offset(size.width * .44f, size.height * .66f),
+                    Offset(size.width * .72f, size.height * .36f), 2.dp.toPx())
+            }
+        }
+    }
+}
+
+@Composable
+private fun DisplayNameField(name: String, gender: NeonGender?, edit: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text("TU NOMBRE PARA MOSTRAR", color = cyan, fontFamily = graffiti, fontSize = 19.sp,
+            textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
+        Text("¿Cómo querés que AURORA te llame?", color = Color(0xFFCFDADF), textAlign = TextAlign.Center)
+        OutlinedTextField(
+            value = name, onValueChange = edit, placeholder = {
+                Text("Tu nombre", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }, singleLine = true, isError = name.trim().length > 100,
+            supportingText = { if (name.trim().length > 100) Text("Máximo 100 caracteres") },
+            textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = TextAlign.Center),
+            shape = RoundedCornerShape(16.dp),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = yellow, unfocusedBorderColor = cyan,
+                cursorColor = yellow, focusedContainerColor = Color(0xFF10252A), unfocusedContainerColor = nearBlack),
+            modifier = Modifier.fillMaxWidth(.96f).heightIn(min = 62.dp).testTag("displayNameInput")
+        )
+        if (name.isNotBlank() && gender != null) {
+            Text("${openingSalutation(gender)}, ${name.trim()}", color = yellow, fontSize = 19.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.testTag("displayNamePreview"))
         }
     }
 }

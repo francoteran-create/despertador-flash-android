@@ -1,10 +1,12 @@
 package com.despertadorflash
 
 import android.content.SharedPreferences
+import android.os.SystemClock
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -41,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -48,6 +51,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,16 +66,25 @@ internal class TrucoSession {
     var phrase by mutableStateOf("")
     var mood by mutableStateOf(RivalMood.CALM)
     var spoken by mutableIntStateOf(0)
+    var captionUntil = 0L
+        private set
+    var dialogue = TrucoDialogue()
+        private set
     var counted = false
     var paused by mutableStateOf(false)
     fun start(goal: Int, flor: Boolean) {
         match = TrucoMatch(goal, flor)
+        dialogue = TrucoDialogue()
+        phrase = ""
+        captionUntil = 0L
+        mood = RivalMood.CALM
         counted = false
         paused = false
         nextRevision()
     }
     fun nextRevision() { revision++ }
-    fun announce(line: String, expression: RivalMood) {
+    fun announce(line: String, expression: RivalMood, until: Long) {
+        captionUntil = until
         phrase = line
         mood = expression
         spoken++
@@ -79,11 +92,12 @@ internal class TrucoSession {
 }
 
 @Composable
-internal fun GamesCover(record: Int, back: () -> Unit, onBlocks: () -> Unit, onTruco: () -> Unit) {
+internal fun GamesCover(record: Int, playerName: String, back: () -> Unit, onBlocks: () -> Unit, onTruco: () -> Unit) {
     var guide by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         NeonHeader("Juegos", back)
+        if (playerName.isNotBlank()) Text(playerName, color = cyan, fontFamily = graffiti, fontSize = 17.sp)
         GameCoverCard("Bloques de neón", "Récord personal  $record", cyan, onBlocks) {
             Canvas(Modifier.size(96.dp)) {
                 val step = size.width / 5
@@ -146,6 +160,7 @@ internal fun TrucoScreen(session: TrucoSession, prefs: SharedPreferences, microp
     var wins by remember { mutableIntStateOf(prefs.getInt("won", 0)) }
     var losses by remember { mutableIntStateOf(prefs.getInt("lost", 0)) }
     val context = LocalContext.current
+    val playerName = remember(context) { NeonIdentity.displayName(context).ifBlank { "Vos" } }
     val avatarPair by produceState<Pair<Bitmap?, Bitmap?>>(null to null, character) {
         value = withContext(Dispatchers.IO) {
             val first = NeonIdentity.menuPortrait(context, 160)
@@ -161,7 +176,7 @@ internal fun TrucoScreen(session: TrucoSession, prefs: SharedPreferences, microp
     val revision = session.revision
     val player = remember(match, revision) { match?.view(Seat.HUMAN) }
     val opponent = if (character == 0) "La Rusa" else "El Pampa"
-    var caption by remember { mutableStateOf("") }
+    var caption by remember { mutableStateOf(session.phrase) }
 
     BackHandler {
         if (match != null) {
@@ -169,30 +184,61 @@ internal fun TrucoScreen(session: TrucoSession, prefs: SharedPreferences, microp
             session.phrase = ""
         } else back()
     }
+    fun announce(line: String?, mood: RivalMood) {
+        session.mood = mood
+        if (line != null) {
+            session.announce(line, mood, SystemClock.elapsedRealtime() + (seconds * 1000).toLong())
+            speak(line, voice)
+        }
+    }
+
+    fun afterHumanAction(active: TrucoMatch) {
+        val outcome = active.matchWinner ?: active.handWinner
+        if (outcome != null && SystemClock.elapsedRealtime() >= session.captionUntil) {
+            val humanWon = outcome == Seat.HUMAN
+            announce(session.dialogue.line(if (humanWon) RivalMoment.LOST else RivalMoment.WON, null,
+                SystemClock.elapsedRealtime(), chance = 1f), if (humanWon) RivalMood.WORRIED else RivalMood.HAPPY)
+        }
+        session.nextRevision()
+    }
+
+    LaunchedEffect(match, match?.handNumber) {
+        if (match != null) {
+            val trailing = match.score(Seat.HUMAN) - match.score(Seat.CPU) >= 3
+            val now = SystemClock.elapsedRealtime()
+            announce(session.dialogue.opening(match.handNumber, now, trailing, now >= session.captionUntil),
+                if (trailing) RivalMood.CHEEKY else RivalMood.CALM)
+        }
+    }
     LaunchedEffect(match, revision, session.paused) {
         if (match == null || session.paused || match.matchWinner != null || match.handWinner != null ||
             match.turn != Seat.CPU) return@LaunchedEffect
-        if (session.phrase.isNotBlank()) {
-            delay((seconds * 1000).toLong().coerceAtLeast(650))
-        } else delay(650)
-        val move = strategy.choose(match.view(Seat.CPU))
+        val remaining = (session.captionUntil - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
+        delay(maxOf(620, remaining))
+        val before = match.view(Seat.CPU)
+        val move = strategy.choose(before)
         val valid = when(val act = move.action) {
             is TrucoAction.Say -> match.call(Seat.CPU, act.call)
             is TrucoAction.Use -> match.play(Seat.CPU, act.card)
         }
         if (valid) {
-            val won = match.handWinner == Seat.CPU
-            val line = if (won && move.action is TrucoAction.Use) "¡Buena mano!" else move.phrase
-            session.announce(line, if (won) RivalMood.HAPPY else move.mood)
-            speak(line, voice)
+            val result = match.matchWinner ?: match.handWinner
+            val moment = rivalMoment(before, move, result)
+            val call = (move.action as? TrucoAction.Say)?.call
+            val line = session.dialogue.line(moment, call, SystemClock.elapsedRealtime(),
+                chance = if (result != null) 1f else if (call != null) .38f else .56f)
+            val mood = when(result) { Seat.CPU -> RivalMood.HAPPY; Seat.HUMAN -> RivalMood.WORRIED; else -> move.mood }
+            announce(line, mood)
             session.nextRevision()
         }
     }
-    LaunchedEffect(session.spoken, seconds, match) {
+    LaunchedEffect(session.spoken, match) {
         caption = if (match == null) "" else session.phrase
-        delay((seconds * 1000).toLong())
-        caption = ""
-        session.phrase = ""
+        if (caption.isNotBlank()) {
+            delay((session.captionUntil - SystemClock.elapsedRealtime()).coerceAtLeast(0L))
+            caption = ""
+            session.phrase = ""
+        }
     }
     LaunchedEffect(match, revision) {
         if (match?.matchWinner != null && !session.counted) {
@@ -221,8 +267,8 @@ internal fun TrucoScreen(session: TrucoSession, prefs: SharedPreferences, microp
             if (listening) GameListen(microphone, detected, listening, onListen)
         } else {
             GameListen(microphone, detected, listening, onListen)
-            Scoreboard(player, opponent)
-            Row(Modifier.fillMaxWidth().heightIn(min = 74.dp), verticalAlignment = Alignment.CenterVertically) {
+            Scoreboard(player, opponent, playerName, avatarPair.first)
+            Row(Modifier.fillMaxWidth().heightIn(min = 70.dp).testTag("trucoCaption"), verticalAlignment = Alignment.CenterVertically) {
                 RivalPortrait(avatarPair.second, session.mood, opponent)
                 AnimatedContent(targetState = caption, transitionSpec = { fadeIn() togetherWith fadeOut() },
                     modifier = Modifier.weight(1f).padding(horizontal = 10.dp)
@@ -240,21 +286,20 @@ internal fun TrucoScreen(session: TrucoSession, prefs: SharedPreferences, microp
             if (match.matchWinner != null || match.handWinner != null) {
                 WinPanel(match.matchWinner ?: match.handWinner!!, match.matchWinner != null) {
                     if (match.matchWinner != null) session.match = null
-                    else { match.nextHand(); session.phrase = ""; session.mood = RivalMood.CALM; session.nextRevision() }
+                    else { if (match.nextHand()) session.nextRevision() }
                 }
             } else {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    RivalPortrait(avatarPair.first, null, "Vos")
-                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                BoxWithConstraints(Modifier.fillMaxWidth().testTag("trucoHand"), contentAlignment = Alignment.Center) {
+                    val width = trucoHandCardWidth(maxWidth.value).dp
+                    Row(horizontalArrangement = Arrangement.spacedBy(HAND_CARD_GAP.dp)) {
                         player.own.forEachIndexed { index, card ->
                             key(card, match.handNumber) {
                                 val play = if (player.turn == Seat.HUMAN && player.bid == null && Call.FLOR !in player.calls) {
                                     {
-                                        if (match.play(Seat.HUMAN, card)) session.nextRevision()
+                                        if (match.play(Seat.HUMAN, card)) afterHumanAction(match)
                                     }
                                 } else null
-                                ArrivingCard(card, 65.dp, index * 85, play)
+                                ArrivingCard(card, width, index * 85, play)
                             }
                         }
                     }
@@ -267,7 +312,7 @@ internal fun TrucoScreen(session: TrucoSession, prefs: SharedPreferences, microp
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                 group.forEach { call ->
                                     OutlinedButton(onClick = {
-                                        if (match.call(Seat.HUMAN, call)) session.nextRevision()
+                                        if (match.call(Seat.HUMAN, call)) afterHumanAction(match)
                                     }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), contentPadding = PaddingValues(4.dp)) {
                                         Text(call.text, textAlign = TextAlign.Center)
                                     }
@@ -339,23 +384,40 @@ private fun GameListen(status: String, detection: String, listening: Boolean, to
 }
 
 @Composable
-private fun Scoreboard(view: TrucoView, opponent: String) {
+private fun Scoreboard(view: TrucoView, opponent: String, player: String, avatar: Bitmap?) {
     val frame = RoundedCornerShape(17.dp)
     Row(Modifier.fillMaxWidth().background(Color(0xFF10131B), frame)
-        .border(1.dp, Brush.horizontalGradient(listOf(cyan, magenta)), frame).padding(9.dp),
-        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text("Vos  ${view.points.getValue(Seat.HUMAN)}", color = cyan, fontFamily = graffiti, fontSize = 17.sp)
+        .border(1.dp, Brush.horizontalGradient(listOf(cyan, magenta)), frame).padding(8.dp)
+        .testTag("trucoScore"),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        RivalPortrait(avatar, null, player, size = 33.dp)
+        ScoreSide(player, view.points.getValue(Seat.HUMAN), cyan, Modifier.weight(1f))
         Text("A ${view.goal}", color = yellow, fontSize = 12.sp)
-        Text("$opponent  ${view.points.getValue(Seat.CPU)}", color = magenta, fontFamily = graffiti, fontSize = 17.sp)
+        ScoreSide(opponent, view.points.getValue(Seat.CPU), magenta, Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun RivalPortrait(bitmap: Bitmap?, mood: RivalMood?, name: String) {
-    Box(Modifier.size(57.dp).border(1.dp, if (mood == null) cyan else magenta, CircleShape),
+private fun ScoreSide(name: String, score: Int, ink: Color, modifier: Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(name, color = ink, fontFamily = graffiti, fontSize = 15.sp, modifier = Modifier.weight(1f),
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("$score", color = ink, fontFamily = graffiti, fontSize = 19.sp, maxLines = 1)
+    }
+}
+
+@Composable
+private fun RivalPortrait(bitmap: Bitmap?, mood: RivalMood?, name: String, size: Dp = 57.dp) {
+    val lean by animateFloatAsState(when (mood) {
+        RivalMood.CHEEKY -> -4f
+        RivalMood.WORRIED -> 3f
+        RivalMood.HAPPY -> -2f
+        else -> 0f
+    }, label = "Gesto del rival")
+    Box(Modifier.size(size).border(1.dp, if (mood == null) cyan else magenta, CircleShape),
         contentAlignment = Alignment.Center) {
         if (bitmap != null) Image(remember(bitmap) { bitmap.asImageBitmap() }, name,
-            Modifier.fillMaxSize().padding(2.dp), contentScale = ContentScale.Fit)
+            Modifier.fillMaxSize().padding(2.dp).graphicsLayer { rotationZ = lean }, contentScale = ContentScale.Fit)
         else Text(name.take(1), color = cyan, fontFamily = graffiti)
         if (mood != null && mood != RivalMood.CALM) {
             val expression = when (mood) { RivalMood.WORRIED -> "😬"; RivalMood.HAPPY -> "😄"; else -> "😉" }
@@ -368,29 +430,33 @@ private fun RivalPortrait(bitmap: Bitmap?, mood: RivalMood?, name: String) {
 }
 
 @Composable
-private fun TrucoSurface(view: TrucoView, hand: Int) {
+internal fun TrucoSurface(view: TrucoView, hand: Int) {
     val outline = RoundedCornerShape(22.dp)
-    Column(Modifier.fillMaxWidth().background(
+    val visible = view.tricks.lastOrNull()?.plays.orEmpty()
+    val displayed = listOfNotNull(view.current).ifEmpty { visible }
+    BoxWithConstraints(Modifier.fillMaxWidth().testTag("trucoTable").background(
         Brush.radialGradient(listOf(Color(0xFF153338), Color(0xFF0A1015), Color.Black)), outline)
-        .border(1.dp, Color(0xFF4A6473), outline).padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            repeat(view.opponentCount) { index -> key(hand, index) { ArrivingCard(null, 21.dp, index * 75) } }
-        }
-        val visible = view.tricks.lastOrNull()?.plays.orEmpty()
-        val displayed = listOfNotNull(view.current).ifEmpty { visible }
-        Row(Modifier.heightIn(min = 76.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            if (displayed.isEmpty()) Text("Mano: " + if (view.mano == Seat.HUMAN) "vos" else "rival",
-                color = cyan, style = MaterialTheme.typography.labelMedium)
-            displayed.forEach { play ->
-                key(hand, play.card) { ArrivingCard(play.card, 53.dp, 0) }
+        .border(1.dp, Color(0xFF4A6473), outline).padding(horizontal = 10.dp, vertical = 7.dp)) {
+        val width = trucoTableCardWidth(maxWidth.value).dp
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(if (displayed.isEmpty()) "Mano: " + if (view.mano == Seat.HUMAN) "vos" else "rival"
+                    else "Truco · ${view.handStake}", color = cyan, style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    repeat(view.opponentCount) { index -> key(hand, index) { ArrivingCard(null, 17.dp, index * 65) } }
+                }
             }
+            Row(Modifier.heightIn(min = width / .68f), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(TABLE_CARD_GAP.dp)) {
+                displayed.forEach { play ->
+                    key(hand, play.card) { ArrivingCard(play.card, width, 0) }
+                }
+            }
+            if (view.tricks.isNotEmpty()) Text(view.tricks.mapIndexed { index, trick ->
+                "${index + 1} · " + when(trick.winner) { Seat.HUMAN -> "Vos"; Seat.CPU -> "Rival"; null -> "Parda" }
+            }.joinToString("    "), color = Color(0xFFC6D5DB), fontSize = 12.sp)
         }
-        Text(view.tricks.mapIndexed { index, trick ->
-            "${index + 1} · " + when(trick.winner) { Seat.HUMAN -> "Vos"; Seat.CPU -> "Rival"; null -> "Parda" }
-        }.joinToString("    ").ifEmpty { "En mesa · Truco ${view.handStake}" },
-            color = Color(0xFFC6D5DB), fontSize = 12.sp)
     }
 }
 
@@ -455,11 +521,11 @@ internal fun PlayingCard(card: Card?, width: Dp, play: (() -> Unit)? = null) {
             } else {
                 val count = card.number
                 val rows = (count + 1) / 2
-                val unit = min(size.width * if (count == 1) .48f else .27f, size.height * .24f)
+                val unit = min(size.width * if (count == 1) .71f else .35f, size.height * if (count == 1) .47f else .25f)
                 repeat(count) { index ->
                     val x = if (count == 1 || index == count - 1 && count % 2 != 0) size.width / 2
                         else size.width * if (index % 2 == 0) .33f else .67f
-                    val y = if (rows == 1) size.height * .52f else size.height * (.23f + .56f * (index / 2) / (rows - 1))
+                    val y = if (rows == 1) size.height * .52f else size.height * (.26f + .47f * (index / 2) / (rows - 1))
                     translate(x - unit / 2, y - unit / 2) {
                         scale(unit / 100f, unit / 100f, pivot = Offset.Zero) { suitInk(card.suit, accent) }
                     }
@@ -469,17 +535,21 @@ internal fun PlayingCard(card: Card?, width: Dp, play: (() -> Unit)? = null) {
                 size = size, cornerRadius = CornerRadius(margin))
         }
         if (card != null) {
-            Text("${card.number}", color = accent, fontWeight = FontWeight.Bold, fontSize = (width.value / 4.7f).sp,
-                modifier = Modifier.align(Alignment.TopStart).padding(start = 5.dp, top = 3.dp))
-            Text("${card.number}", color = accent, fontWeight = FontWeight.Bold, fontSize = (width.value / 5.5f).sp,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 5.dp, bottom = 3.dp).graphicsLayer { rotationZ = 180f })
+            val labelInk = Color(0xFF1C2631)
+            Text("${card.number}", color = labelInk, fontWeight = FontWeight.Bold,
+                fontSize = (width.value / 3.8f).coerceIn(10f, 26f).sp, maxLines = 1,
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 6.dp, top = 2.dp))
+            Text(card.suit.label.replaceFirstChar(Char::uppercase), color = labelInk, fontWeight = FontWeight.SemiBold,
+                fontSize = (width.value / 6.4f).coerceIn(8f, 14f).sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 3.dp, vertical = 3.dp))
+
         }
     }
 }
 
 private fun DrawScope.faceArt(ink: Color, card: Card) {
-    val unit = size.width / 125f
-    translate(size.width * .12f, size.height * .17f) {
+    val unit = size.width / 110f
+    translate(size.width * .075f, size.height * .15f) {
         scale(unit, unit, pivot = Offset.Zero) {
             drawOval(Color(0xFFB18C50).copy(alpha = .27f), Offset(0f, 0f), Size(94f, 119f))
             drawOval(ink.copy(alpha = .68f), Offset(4f, 4f), Size(86f, 112f), style = Stroke(1.9f))

@@ -7,6 +7,8 @@ import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Surface
@@ -18,6 +20,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -42,32 +49,20 @@ class AuroraEntryActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val prefs = NeonIdentity.preferences(this)
         val identity = NeonIdentity.savedDraft(this)
-        displayName = prefs.getString("nickname", "").orEmpty().trim().ifBlank { identity.name.trim() }
+        displayName = identity.name
         gender = identity.gender
         celebrationUntil = savedInstanceState?.getLong("birthday_until") ?: 0L
         greeting = savedInstanceState?.getBoolean("greeting") ?: false
         setContent {
             val avatar by produceState<Bitmap?>(null) {
-                if (displayName.isNotBlank()) value = withContext(Dispatchers.IO) { NeonIdentity.menuPortrait(this@AuroraEntryActivity, 480) }
+                if (displayName.isNotBlank()) value = withContext(Dispatchers.IO) { NeonIdentity.menuPortrait(this@AuroraEntryActivity, 900) }
             }
             Surface(Modifier.fillMaxSize(), color = Color.Black) {
-                Box(Modifier.fillMaxSize().safeDrawingPadding().padding(22.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
                     if (greeting) {
                         if (celebrationUntil != 0L) BirthdayMotion(Modifier.fillMaxSize())
-                        Column(horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            avatar?.let {
-                                Image(remember(it) { it.asImageBitmap() }, "Avatar del perfil",
-                                    Modifier.fillMaxWidth().heightIn(max = 230.dp).aspectRatio(1f),
-                                    contentScale = ContentScale.Fit)
-                            }
-                            Text(openingSalutation(gender), color = cyan, fontFamily = graffiti, fontSize = 25.sp,
-                                textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
-                            Text(displayName, color = Color.White, fontSize = 29.sp, textAlign = TextAlign.Center)
-                            if (celebrationUntil != 0L) Text("¡Feliz cumpleaños!", color = yellow, fontSize = 20.sp)
-                        }
+                        FullAvatarGreeting(avatar, displayName, gender, celebrationUntil != 0L)
                     } else {
                         val phase = neonPhase()
                         Canvas(Modifier.fillMaxSize()) {
@@ -75,7 +70,7 @@ class AuroraEntryActivity : ComponentActivity() {
                             drawCircle(Brush.radialGradient(listOf(cyan.copy(alpha = glow), Color.Transparent),
                                 center = center, radius = size.minDimension * .46f), radius = size.minDimension * .46f)
                         }
-                        NeonLogo("interfaz/logo_aurora.png", Modifier.widthIn(max = 460.dp).fillMaxWidth(), opening = true)
+                        NeonLogo("interfaz/logo_aurora.png", Modifier.widthIn(max = 460.dp).fillMaxWidth(.9f), opening = true)
                     }
                 }
             }
@@ -129,5 +124,33 @@ class AuroraEntryActivity : ComponentActivity() {
         internal const val ENTRY_MS = 2000L
         internal const val GREETING_MS = 1450L
         internal const val BIRTHDAY_MS = 4000L
+    }
+}
+
+
+@Composable
+internal fun FullAvatarGreeting(avatar: Bitmap?, name: String, gender: NeonGender?, birthday: Boolean) {
+    val arrival = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { arrival.animateTo(1f, tween(340)) }
+    var captionPixels by remember { mutableIntStateOf(0) }
+    val captionHeight = if (captionPixels == 0) 75.dp else with(LocalDensity.current) { captionPixels.toDp() }
+    BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer {
+        alpha = arrival.value
+    }) {
+        val pictureRoom = centeredWelcomeHeight(maxHeight.value, captionHeight.value).dp
+        if (avatar != null) {
+            Image(remember(avatar) { avatar.asImageBitmap() }, "Avatar del perfil",
+                Modifier.align(Alignment.Center).fillMaxWidth(.90f).height(pictureRoom)
+                    .testTag("fullWelcomeAvatar"), contentScale = ContentScale.Fit)
+        }
+        Column(Modifier.align(if (avatar == null) Alignment.Center else Alignment.BottomCenter)
+            .fillMaxWidth(.92f).onSizeChanged { captionPixels = it.height }.padding(top = 3.dp, bottom = 12.dp)
+            .testTag("welcomeCaption"), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(openingSalutation(gender), color = cyan, fontFamily = graffiti, fontSize = 23.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
+            Text(name, color = yellow, fontFamily = graffiti, fontSize = 27.sp, lineHeight = 31.sp,
+                textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (birthday) Text("¡Feliz cumpleaños!", color = Color.White, fontSize = 18.sp)
+        }
     }
 }

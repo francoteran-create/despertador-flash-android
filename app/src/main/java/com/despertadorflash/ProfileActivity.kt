@@ -68,7 +68,7 @@ class ProfileActivity : ComponentActivity() {
     }
     private val editIdentity = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            draft = draft.copy(name = preferences.getString("name", "").orEmpty())
+            draft = draft.copy(displayName = NeonIdentity.displayName(this))
             avatar = avatar.copy(hdPortrait = NeonIdentity.menuPortrait(this, 640))
             message = "Identidad actualizada"
         }
@@ -100,6 +100,7 @@ class ProfileActivity : ComponentActivity() {
         draft = ProfileDraft(
             name = savedInstanceState?.getString("name") ?: preferences.getString("name", "").orEmpty(),
             nickname = savedInstanceState?.getString("nickname") ?: preferences.getString("nickname", "").orEmpty(),
+            displayName = savedInstanceState?.getString("display_name") ?: preferences.getString("display_name", "").orEmpty(),
             birth = savedInstanceState?.getString("birth") ?: preferences.getString("birth", "").orEmpty(),
             contact = savedInstanceState?.getString("contact") ?: preferences.getString("contact", "").orEmpty(),
             notes = savedInstanceState?.getString("notes") ?: preferences.getString("notes", "").orEmpty(),
@@ -155,6 +156,7 @@ class ProfileActivity : ComponentActivity() {
         super.onSaveInstanceState(outState)
         outState.putString("name", draft.name)
         outState.putString("nickname", draft.nickname)
+        outState.putString("display_name", draft.displayName)
         outState.putString("birth", draft.birth)
         outState.putString("contact", draft.contact)
         outState.putString("notes", draft.notes)
@@ -205,13 +207,14 @@ class ProfileActivity : ComponentActivity() {
     }
 
     private fun save() {
-        if (draft.name.trim().length > 100 || draft.nickname.trim().length > 100 ||
+        if (draft.name.trim().length > 100 || draft.nickname.trim().length > 100 || draft.displayName.trim().length > 100 ||
             draft.contact.length > 160 || draft.notes.length > 500
         ) {
             message = "Acortá los textos del perfil para poder guardarlos."
             return
         }
         preferences.edit().putString("name", draft.name.trim()).putString("nickname", draft.nickname.trim())
+            .putString("display_name", draft.displayName.trim().takeIf { it.isNotEmpty() })
             .putString("birth", draft.birth).putString("contact", draft.contact.trim())
             .putString("notes", draft.notes.trim()).putInt("cud", draft.cud)
             .putBoolean("photo", avatar.photo != null).apply()
