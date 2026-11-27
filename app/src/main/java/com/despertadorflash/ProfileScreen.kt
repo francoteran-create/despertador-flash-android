@@ -47,7 +47,7 @@ internal data class ProfileDraft(
     val cud: Int = 0
 )
 
-internal data class ProfileAvatar(val color: Int = 0, val figure: Boolean = false, val photo: Bitmap? = null)
+internal data class ProfileAvatar(val color: Int = 0, val figure: Boolean = false, val photo: Bitmap? = null, val hdPortrait: Bitmap? = null)
 
 private val mint = Color(0xFFA3F6DF)
 private val lilac = Color(0xFFCDC1FF)
@@ -72,6 +72,7 @@ internal fun ProfileScreen(
     onBack: () -> Unit,
     onPhoto: () -> Unit,
     onAvatar: (Int) -> Unit,
+    onEditIdentity: (() -> Unit)? = null,
     onBirthday: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit
@@ -94,6 +95,10 @@ internal fun ProfileScreen(
                 Column(Modifier.widthIn(max = 520.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     TextButton(onClick = onBack) { Text("‹  Volver") }
                     ProfileHeader(draft, avatar, importing, onPhoto) { avatarDialog = true }
+                    if (onEditIdentity != null) {
+                        OutlinedButton(onClick = onEditIdentity, enabled = !importing,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Editar identidad y avatar HD") }
+                    }
                     ProfileSection {
                         SectionTitle("Datos personales")
                         Text("Todos los campos son opcionales.", color = secondaryInk)
@@ -199,6 +204,10 @@ private fun ProfileHeader(
                 if (photo != null) {
                     Image(remember(photo) { photo.asImageBitmap() }, null, Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop)
+                } else if (portrait.hdPortrait != null) {
+                    val hd = portrait.hdPortrait
+                    Image(remember(hd) { hd.asImageBitmap() }, null, Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit)
                 } else if (portrait.figure) {
                     Canvas(Modifier.fillMaxSize()) {
                         drawCircle(ink, radius = size.width * .15f, center = Offset(center.x, size.height * .37f))

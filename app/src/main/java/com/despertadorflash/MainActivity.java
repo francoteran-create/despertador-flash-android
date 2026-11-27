@@ -41,6 +41,9 @@ public class MainActivity extends Activity {
  private static final int STARTUP_PERMISSIONS=4210;
  private boolean startupPermissionDialog=false;
  private boolean firstSetupScheduled=false;
+ private boolean neonWelcomeStarted=false;
+ private android.widget.ImageView profileShortcut;
+ private TextView profileShortcutLabel;
  boolean pendingAlarmLaunch=false; boolean pendingTimerLaunch=false;
  SpeechRecognizer homeRecognizer; boolean homeListening=false; TextView homeTranscript,homeSpeechStatus; Button homeSpeechToggle;
  SenseHistory homeSpeechHistory;
@@ -63,6 +66,9 @@ public class MainActivity extends Activity {
   }else if(pendingTimerLaunch){
    pendingTimerLaunch=false;
    showTimerFinished();
+  }else if(!alarmActive&&!timerAlertActive&&!neonWelcomeStarted&&NeonIdentity.shouldWelcome(this)){
+   neonWelcomeStarted=true;
+   startActivity(new Intent(this,NeonWelcomeActivity.class));
   }else if(!alarmActive&&!timerAlertActive&&!firstSetupScheduled&&!prefs.getBoolean("permissions_setup_429",false)){
    firstSetupScheduled=true;
    flashHandler.post(()->{if(!isFinishing()&&!alarmActive&&!timerAlertActive)showPermissionSetup(true);});
@@ -188,7 +194,7 @@ public class MainActivity extends Activity {
    else if(pendingTimerLaunch){pendingTimerLaunch=false;showTimerFinished();}
   }
  }
- @Override protected void onResume(){super.onResume();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false)){long armed=prefs.getLong("armed_at"+id,0L);if(armed==0L||armed<System.currentTimeMillis()-120000L)schedule(this,id);}}}}
+ @Override protected void onResume(){super.onResume();refreshProfileShortcut();if(prefs!=null){for(int id=0;id<5;id++){if(prefs.getBoolean("on"+id,false)){long armed=prefs.getLong("armed_at"+id,0L);if(armed==0L||armed<System.currentTimeMillis()-120000L)schedule(this,id);}}}}
  @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode==STARTUP_PERMISSIONS){startupPermissionDialog=false;showPermissionSetup(false);return;}if((requestCode==73||requestCode==74)&&grantResults.length>0){Toast.makeText(this,grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED?"Permiso concedido. Volvé a tocar Iniciar escucha continua.":"La escucha continua necesita ese permiso.",Toast.LENGTH_LONG).show();}if(requestCode==1&&grantResults.length>0&&grantResults[0]!=android.content.pm.PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Sin notificaciones, algunas alarmas podrían no mostrarse",Toast.LENGTH_LONG).show();}if(requestCode==44&&grantResults.length>0){if(grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)startHomeSpeech();else Toast.makeText(this,"AURORA necesita permiso de micrófono para transcribir",Toast.LENGTH_LONG).show();}if(requestCode==2&&grantResults.length>0){boolean granted=grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;Toast.makeText(this,granted?"Flash LED autorizado. Probá una alarma de 1 minuto.":"Flash LED deshabilitado: falta permiso de Cámara.",Toast.LENGTH_LONG).show();if(!alarmActive&&!timerAlertActive)render();}}
  private void exportSettings(){
   Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -346,6 +352,7 @@ public class MainActivity extends Activity {
   if(homeSpeechStatus!=null&&homeSpeechStatus.getText().toString().startsWith("MICRÓFONO"))homeSpeechStatus.setText("Micrófono apagado · tocá para escuchar");
  }
  void setupPage(){
+  profileShortcut=null;
   if(timer!=null){timer.cancel();timer=null;}
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
   root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(18),dp(18),dp(26));
@@ -395,7 +402,27 @@ public class MainActivity extends Activity {
   brand.setContentDescription("AURORA, asistente de accesibilidad sonora");
   top.addView(brand,new LinearLayout.LayoutParams(0,dp(76),1));
   LinearLayout settings=neonTile("AJUSTES",10,()->{settingsPage=true;render();});
-  top.addView(settings,new LinearLayout.LayoutParams(dp(78),dp(76)));hero.addView(top);
+  top.addView(settings,new LinearLayout.LayoutParams(dp(70),dp(76)));
+  profileShortcut=new android.widget.ImageView(this);
+  profileShortcut.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+  profileShortcut.setPadding(dp(4),dp(4),dp(4),dp(4));
+  profileShortcut.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  android.widget.FrameLayout profileAction=new android.widget.FrameLayout(this);
+  profileAction.setContentDescription("Abrir mi perfil");
+  profileAction.setFocusable(true);
+  profileAction.setOnClickListener(v->startActivity(new Intent(this,ProfileActivity.class)));
+  profileAction.setAccessibilityDelegate(new View.AccessibilityDelegate(){@Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){super.onInitializeAccessibilityNodeInfo(host,info);info.setClassName(Button.class.getName());}});
+  profileAction.setBackground(new android.graphics.drawable.RippleDrawable(
+   android.content.res.ColorStateList.valueOf(0x66ff59da),
+   AuroraDesign.surface(this,0xff171326,0xff07181d,0xffff59da,17),null));
+  profileAction.addView(profileShortcut,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  profileShortcutLabel=txt("Perfil",11);profileShortcutLabel.setGravity(Gravity.CENTER);
+  profileShortcutLabel.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+  profileAction.addView(profileShortcutLabel,new android.widget.FrameLayout.LayoutParams(-1,-1));
+  LinearLayout.LayoutParams portraitSize=new LinearLayout.LayoutParams(dp(52),dp(52));
+  portraitSize.leftMargin=dp(8);top.addView(profileAction,portraitSize);
+  refreshProfileShortcut();
+  hero.addView(top);
   TextView slogan=txt("TU MUNDO, ACCESIBLE",15);slogan.setGravity(Gravity.CENTER);slogan.setTypeface(null,Typeface.BOLD);slogan.setTextColor(0xffffff49);slogan.setPadding(0,0,0,dp(13));hero.addView(slogan);
   neonPair(hero,"ALARMA",0,()->{alarmsPage=true;render();},"TEMPORIZADOR",1,()->{timerPage=true;render();});
   neonPair(hero,"DETECCIÓN DE SONIDOS",2,()->openSense(SenseActivity.MODE_SOUND),"TRANSCRIPCIÓN",3,()->openSense(SenseActivity.MODE_SPEECH));
@@ -403,9 +430,16 @@ public class MainActivity extends Activity {
   neonPair(hero,"SENTIR LA MÚSICA",6,()->startActivity(new Intent(this,AuroraMusicActivity.class)),"COMUNICAR",7,()->{communicationPage=true;render();});
   neonPair(hero,"AURORA VOZ",8,()->startActivity(new Intent(this,AuroraVoiceActivity.class)),"MOSTRADOR",9,()->startActivity(new Intent(this,AuroraCounterActivity.class)));
  }
+ private void refreshProfileShortcut(){
+  if(profileShortcut==null)return;
+  android.graphics.Bitmap avatar=NeonIdentity.menuPortrait(this,dp(52));
+  profileShortcut.setImageBitmap(avatar);
+  profileShortcut.setVisibility(avatar==null?View.GONE:View.VISIBLE);
+  profileShortcutLabel.setVisibility(avatar==null?View.VISIBLE:View.GONE);
+ }
  LinearLayout neonTile(String label,int icon,Runnable navigate){
   LinearLayout tile=new LinearLayout(this);tile.setOrientation(LinearLayout.VERTICAL);tile.setGravity(Gravity.CENTER);tile.setPadding(dp(4),dp(6),dp(4),dp(6));
-  tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x55fff94a),AuroraDesign.surface(this,0xe6163438,0xf2061018,0xff25eaff,18),null));
+  tile.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x55fff94a),AuroraDesign.surface(this,0xf012242b,0xf2070b14,0xff25eaff,20),null));
   tile.setElevation(dp(5));if(Build.VERSION.SDK_INT>=28){tile.setOutlineAmbientShadowColor(0xff00eaff);tile.setOutlineSpotShadowColor(0xff00eaff);}
   tile.setClickable(true);tile.setFocusable(true);tile.setContentDescription(label);tile.setOnClickListener(v->navigate.run());
   tile.setAccessibilityDelegate(new View.AccessibilityDelegate(){@Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){super.onInitializeAccessibilityNodeInfo(host,info);info.setClassName(Button.class.getName());}});

@@ -5,6 +5,13 @@ sonidos del entorno, recibir avisos, usar alarmas y convertir voz en texto.
 El reconocimiento de sonidos es probabilístico y NO sustituye dispositivos
 certificados de seguridad ni servicios de emergencia.
 
+## AURORA 4.35 · Neon Experience
+
+El selector usa `assets/neon/catalogo.json` y los 32 WebP en `avatares/`
+como fuente de verdad. La APK incluye el logo fijo en `interfaz/logo_aurora.png`.
+GitHub Actions verifica los bytes de los originales y publica la APK ARM64 y
+el MASTER PDF en un único ZIP. Las maquetas y la demo no se empaquetan.
+
 ## AURORA 4.34 · Compose Pilot
 
 La rama `aurora-4.34-compose-pilot` parte del commit auditado `7f8953c`.
